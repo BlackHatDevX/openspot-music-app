@@ -45,6 +45,108 @@ Our goal is to provide a user-centric music platform that is accessible to every
 -   **Beautiful & Responsive UI**: A clean, modern, and intuitive interface that works flawlessly on desktop, tablets, and mobile.
 -   **Persistent Player**: Your queue and playback state are saved, so you can pick up right where you left off after a refresh.
 -   **Completely Free & Ad-Free**: Enjoy uninterrupted music without any cost or advertisements.
+-   **Advanced Proxy Support**: Built-in proxy rotation system for enhanced reliability and privacy.
+
+## 🔒 Proxy Manager
+
+OpenSpot includes a sophisticated proxy management system that automatically rotates through different proxy servers to ensure reliable access to music streaming services. This feature helps bypass rate limits and provides enhanced privacy.
+
+### 🚀 Quick Setup
+
+1. Create a `proxies.txt` file in your project root
+2. Add your proxy configurations (see formats below)
+3. The app will automatically load and rotate through your proxies
+
+### 📝 Supported Proxy Formats
+
+The proxy manager supports multiple formats and proxy types:
+
+#### **Format 1: URL Format with Authentication**
+```
+http://username:password@proxy.example.com:8080
+https://username:password@proxy.example.com:8443
+socks5://username:password@proxy.example.com:1080
+socks4://username:password@proxy.example.com:1080
+```
+
+#### **Format 2: URL Format without Authentication**
+```
+http://proxy.example.com:8080
+https://proxy.example.com:8443
+socks5://proxy.example.com:1080
+socks4://proxy.example.com:1080
+```
+
+#### **Format 3: Legacy Format with Authentication**
+```
+proxy.example.com:8080:username:password
+proxy.example.com:3128:username:password
+```
+
+#### **Format 4: Simple Format (No Authentication)**
+```
+proxy.example.com:8080
+proxy.example.com:3128
+```
+
+### 🔧 Supported Proxy Types
+
+- **HTTP**: Standard HTTP proxies
+- **HTTPS**: Secure HTTP proxies
+- **SOCKS4**: SOCKS version 4 proxies
+- **SOCKS5**: SOCKS version 5 proxies (recommended)
+
+### 📋 Example `proxies.txt` Configuration
+
+```txt
+# HTTP proxies with authentication
+http://user:pass@proxy1.example.com:8080
+https://user:pass@proxy2.example.com:8443
+
+# SOCKS proxies
+socks5://user:pass@proxy3.example.com:1080
+socks4://proxy4.example.com:1080
+
+# Legacy format (defaults to HTTP)
+proxy5.example.com:8080:username:password
+proxy6.example.com:3128
+
+# Simple format (no auth)
+proxy7.example.com:8080
+proxy8.example.com:3128
+
+# Comments and empty lines are ignored
+# You can mix different formats in the same file
+```
+
+### ⚙️ Features
+
+- **🔄 Automatic Rotation**: Random proxy selection for each request
+- **🛡️ Graceful Fallback**: Falls back to direct connection if no proxies work
+- **📊 Smart Logging**: Detailed statistics and usage information
+- **🔧 Error Handling**: Invalid proxy entries are skipped gracefully
+- **🚀 Multi-Protocol**: Supports HTTP, HTTPS, SOCKS4, and SOCKS5
+- **🔐 Optional Auth**: Works with and without authentication
+- **⚡ Performance**: Optimized request queuing and retry logic
+
+### 🎯 Benefits
+
+- **Enhanced Privacy**: Route requests through different IP addresses
+- **Rate Limit Bypass**: Distribute requests across multiple proxies
+- **Improved Reliability**: Automatic failover to working proxies
+- **Geographic Flexibility**: Access content from different regions
+- **No Single Point of Failure**: Multiple proxy fallbacks
+
+### 🔍 Monitoring
+
+The proxy manager provides comprehensive logging:
+
+```bash
+📡 Loaded 10 valid proxies
+📊 Proxy types: {"http":4,"https":2,"socks5":3,"socks4":1}
+🔄 Using SOCKS5 proxy: proxy3.example.com:1080 (auth: username)
+⚠️ No valid proxy available, making direct request
+```
 
 ## 🚀 Live Demo
 
@@ -69,13 +171,53 @@ We are working hard to bring OpenSpot to all your devices. Native applications w
 -   **Language**: [TypeScript](https://www.typescriptlang.org/)
 -   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 -   **UI/Animation**: [Framer Motion](https://www.framer.com/motion/), [Lucide React](https://lucide.dev/)
+-   **Proxy Management**: [Undici](https://github.com/nodejs/undici) ProxyAgent
 -   **Deployment**: [Vercel](https://vercel.com/)
+
+## 🛠️ Installation & Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/BlackHatDevX/openspot-music-app.git
+   cd openspot-music-app
+   ```
+
+2. **Install dependencies**
+   ```bash
+   yarn install
+   ```
+
+3. **Configure proxies (optional)**
+   ```bash
+   # Create proxies.txt file in project root
+   touch proxies.txt
+   
+   # Add your proxy configurations
+   echo "http://user:pass@proxy.example.com:8080" >> proxies.txt
+   ```
+
+4. **Start the development server**
+   ```bash
+   yarn dev
+   ```
+
+5. **Build for production**
+   ```bash
+   yarn build
+   yarn start
+   ```
 
 ## 🤝 Contributing & Community
 
 OpenSpot is a opensource project. We welcome all contributions, from bug fixes to feature suggestions. Help us make OpenSpot the best free music platform out there!
 
 Our initial goal is to reach **10 stars and forks**! If you like the project, please consider starring and forking the repository to show your support.
+
+## 🙏 Special Thanks
+
+**OpenSpot is powered by the amazing API provided by dab.yeet.su**
+
+We extend our heartfelt gratitude to the team behind dab.yeet.su for providing the robust music streaming API that makes OpenSpot possible. Their reliable service enables us to deliver high-quality music streaming and search functionality to our users.
 
 
 ## 👤 Author & Contact
