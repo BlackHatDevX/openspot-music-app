@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 interface UseSearchReturn {
   query: string;
@@ -42,6 +43,7 @@ export function TopBar({
 }: TopBarProps) {
   const [searchFocused, setSearchFocused] = useState(false);
   const { query, setQuery, searchTracks, clearResults } = searchState;
+  const { t } = useTranslation();
 
   const handleSearchSubmit = () => {
     if (query.trim()) {
@@ -106,13 +108,13 @@ export function TopBar({
 
         <View style={styles.centerContent}>
           {currentView === 'home' ? (
-            <Text style={styles.title}>OpenSpot</Text>
+            <Text style={styles.title}>{t('top_bar_title')}</Text>
           ) : (
             <View style={styles.searchContainer}>
               <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search for songs, artists..."
+                placeholder={t('top_bar_search_placeholder')}
                 placeholderTextColor="#888"
                 value={query}
                 onChangeText={handleSearchChange}
@@ -135,10 +137,10 @@ export function TopBar({
                 onPress={handleSearchSubmit}
                 disabled={!query.trim()}
               >
-                <Ionicons 
-                  name="search" 
-                  size={18} 
-                  color={query.trim() ? "#1DB954" : "#444"} 
+                <Ionicons
+                  name="search"
+                  size={18}
+                  color={query.trim() ? "#1DB954" : "#444"}
                 />
               </TouchableOpacity>
             </View>
