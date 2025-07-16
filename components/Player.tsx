@@ -23,6 +23,7 @@ import { Track } from '../types/music';
 import { MusicAPI } from '../lib/music-api';
 import { FullScreenPlayer } from './FullScreenPlayer';
 import { useLikedSongs } from '../hooks/useLikedSongs';
+import { useTranslation } from 'react-i18next';
 
 interface PlayerProps {
   track: Track;
@@ -42,6 +43,7 @@ export function Player({
   onQueueToggle,
 }: PlayerProps) {
   const player = useAudioPlayer();
+  const { t } = useTranslation();
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,13 +51,13 @@ export function Player({
   const [isMuted, setIsMuted] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
-  
+
   // Download modal states
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'success' | 'error'>('idle');
   const [downloadError, setDownloadError] = useState<string>('');
-  
+
   const { isLiked, toggleLike } = useLikedSongs();
   const rotationValue = useRef(new Animated.Value(0)).current;
   const rotationAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -136,7 +138,7 @@ export function Player({
       if (!isSeeking && timeSinceLastSeek > 200 && status.currentTime !== undefined) {
         setPosition(status.currentTime * 1000); // Convert to milliseconds
       }
-      
+
       // Always update duration
       if (status.duration !== undefined) {
         setDuration(status.duration * 1000); // Convert to milliseconds
@@ -169,7 +171,7 @@ export function Player({
     if (rotationAnimationRef.current) {
       rotationAnimationRef.current.stop();
     }
-    
+
     rotationAnimationRef.current = Animated.loop(
       Animated.timing(rotationValue, {
         toValue: 1,
@@ -178,7 +180,7 @@ export function Player({
       }),
       { iterations: -1 }
     );
-    
+
     rotationAnimationRef.current.start();
   };
 
@@ -195,16 +197,16 @@ export function Player({
       console.log('🎵 Audio already loading, skipping duplicate call');
       return;
     }
-    
+
     // Check if we're loading the same track - if so, don't reload
     if (currentTrackIdRef.current === track.id) {
       console.log('🎵 Same track, skipping reload');
       return;
     }
-    
+
     setIsLoading(true);
     currentTrackIdRef.current = track.id;
-    
+
     try {
       // Reset player state for new track
       setPosition(0);
@@ -214,7 +216,7 @@ export function Player({
       console.log('🎵 Loading stream URL for track:', track.id);
       const audioUrl = await MusicAPI.getStreamUrl(track.id.toString());
       console.log('🔗 Stream URL received:', audioUrl);
-      
+
       // Replace the current audio source with metadata for background playback
       player.replace({
         uri: audioUrl,
@@ -234,7 +236,7 @@ export function Player({
 
   const handlePlayPause = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     if (player) {
       try {
         if (isPlaying) {
@@ -251,9 +253,9 @@ export function Player({
 
   const handleNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     console.log('🎵 handleNext called - repeatMode:', musicQueue.repeatMode);
-    
+
     // Check if we're in repeat one mode
     if (musicQueue.repeatMode === 'one') {
       // For repeat one, restart the current track without calling musicQueue.playNext()
@@ -265,7 +267,7 @@ export function Player({
       }
       return;
     }
-    
+
     // Normal next track logic
     const nextTrack = musicQueue.playNext();
     if (nextTrack) {
@@ -363,16 +365,16 @@ export function Player({
       console.log('📥 Download already in progress, ignoring request');
       return;
     }
-    
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     // Auto-pause the music when download starts
     if (isPlaying && player) {
       player.pause();
       onPlayingChange(false);
       console.log('🎵 Music paused for download');
     }
-    
+
     // Reset download state
     if (isMountedRef.current) {
       setDownloadProgress(0);
@@ -380,11 +382,11 @@ export function Player({
       setDownloadError('');
       setIsDownloadModalOpen(true);
     }
-    
+
     try {
       // Check if sharing is available
       const isAvailable = await Sharing.isAvailableAsync();
-      
+
       if (!isAvailable) {
         if (isMountedRef.current) {
           setDownloadError('Sharing is not available on this device');
@@ -392,19 +394,19 @@ export function Player({
         }
         return;
       }
-      
+
       if (isMountedRef.current) {
         setDownloadStatus('downloading');
       }
       console.log('📥 Starting download for track:', track.title);
-      
+
       // Get the streaming URL
       const audioUrl = await MusicAPI.getStreamUrl(track.id.toString());
-      
+
       // Create a safe filename
       const safeFileName = `${track.title.replace(/[^a-zA-Z0-9\s]/g, '')}_${track.artist.replace(/[^a-zA-Z0-9\s]/g, '')}.mp3`;
       const fileUri = FileSystem.documentDirectory + safeFileName;
-      
+
       // Start the download with progress tracking
       const downloadResumable = FileSystem.createDownloadResumable(
         audioUrl,
@@ -418,12 +420,12 @@ export function Player({
           }
         }
       );
-      
+
       const downloadResult = await downloadResumable.downloadAsync();
-      
+
       if (downloadResult) {
         console.log('📥 Download completed:', downloadResult.uri);
-        
+
         // Share the downloaded file
         try {
           await Sharing.shareAsync(downloadResult.uri, {
@@ -431,22 +433,22 @@ export function Player({
             dialogTitle: `Share ${track.title} by ${track.artist}`,
             UTI: 'public.audio'
           });
-          
+
           console.log('📥 File shared successfully');
         } catch (shareError) {
           console.log('📥 File downloaded but sharing failed:', shareError);
           // Still mark as success since file was downloaded
         }
-        
+
         try {
           if (isMountedRef.current) {
             setDownloadStatus('success');
-            
+
             // Clear any existing timeout
             if (downloadTimeoutRef.current) {
               clearTimeout(downloadTimeoutRef.current);
             }
-            
+
             // Auto-close modal after 3 seconds with proper cleanup
             downloadTimeoutRef.current = setTimeout(() => {
               if (isMountedRef.current) {
@@ -471,7 +473,7 @@ export function Player({
           }
         }
       }
-      
+
     } catch (error) {
       console.error('Download failed:', error);
       if (isMountedRef.current) {
@@ -492,7 +494,7 @@ export function Player({
         clearTimeout(downloadTimeoutRef.current);
         downloadTimeoutRef.current = null;
       }
-      
+
       if (isMountedRef.current) {
         setIsDownloadModalOpen(false);
       }
@@ -624,7 +626,7 @@ export function Player({
           </TouchableOpacity>
         </View>
       </LinearGradient>
-      
+
       {/* Download Modal */}
       <Modal
         visible={isDownloadModalOpen}
@@ -641,7 +643,7 @@ export function Player({
               {/* Header */}
               <View style={styles.modalHeader}>
                 <Ionicons name="download" size={24} color="#1DB954" />
-                <Text style={styles.modalTitle}>Download</Text>
+                <Text style={styles.modalTitle}>{t('player_modal_download_title')}</Text>
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={handleCloseDownloadModal}
@@ -672,13 +674,13 @@ export function Player({
                 {/* Status Content */}
                 <View style={styles.statusContainer}>
                   {downloadStatus === 'idle' && (
-                    <Text style={styles.statusText}>Preparing download...</Text>
+                    <Text style={styles.statusText}>{t('player_modal_prepare_download')}</Text>
                   )}
-                  
+
                   {downloadStatus === 'downloading' && (
                     <>
                       <ActivityIndicator size="large" color="#1DB954" style={styles.spinner} />
-                      <Text style={styles.statusText}>Downloading...</Text>
+                      <Text style={styles.statusText}>{t('player_modal_downloading')}</Text>
                       <View style={styles.downloadProgressContainer}>
                         <View style={styles.downloadProgressBar}>
                           <View style={[styles.progressFillBar, { width: `${downloadProgress}%` }]} />
@@ -687,21 +689,21 @@ export function Player({
                       </View>
                     </>
                   )}
-                  
+
                   {downloadStatus === 'success' && (
                     <>
                       <Ionicons name="checkmark-circle" size={48} color="#1DB954" style={styles.successIcon} />
-                      <Text style={styles.successText}>Download Complete!</Text>
+                      <Text style={styles.successText}>{t('player_modal_download_complete')}</Text>
                       <Text style={styles.successSubtext}>
-                        Saved to your music library
+                        {t('player_modal_download_complete_subtext')}
                       </Text>
                     </>
                   )}
-                  
+
                   {downloadStatus === 'error' && (
                     <>
                       <Ionicons name="alert-circle" size={48} color="#ff4444" style={styles.errorIcon} />
-                      <Text style={styles.errorText}>Download Failed</Text>
+                      <Text style={styles.errorText}>{t('player_modal_download_failed')}</Text>
                       <Text style={styles.errorSubtext}>{downloadError}</Text>
                       <TouchableOpacity
                         style={styles.retryButton}
@@ -710,7 +712,7 @@ export function Player({
                           setTimeout(() => handleDownload(), 300);
                         }}
                       >
-                        <Text style={styles.retryButtonText}>Try Again</Text>
+                        <Text style={styles.retryButtonText}>{t('player_modal_download_try_again')}</Text>
                       </TouchableOpacity>
                     </>
                   )}
@@ -720,7 +722,7 @@ export function Player({
           </View>
         </View>
       </Modal>
-      
+
       {/* Full Screen Player */}
       <FullScreenPlayer
         isOpen={isFullScreenOpen}

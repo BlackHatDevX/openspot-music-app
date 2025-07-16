@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Track } from '@/types/music';
 import { MusicAPI } from '@/lib/music-api';
 import { useLikedSongs } from '@/hooks/useLikedSongs';
+import { useTranslation } from 'react-i18next';
 
 interface LikedSongsProps {
   onTrackSelect: (track: Track, trackList?: Track[], startIndex?: number) => void;
@@ -33,6 +34,7 @@ export function LikedSongs({
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const likedTracks = getLikedSongsAsTrack();
+  const { t } = useTranslation();
 
   // Animation values for header
   const headerHeight = scrollY.interpolate({
@@ -69,7 +71,7 @@ export function LikedSongs({
           style={styles.albumCover}
           contentFit="cover"
         />
-        
+
         <View style={styles.trackInfo}>
           <Text
             style={[
@@ -166,12 +168,12 @@ export function LikedSongs({
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="heart-outline" size={64} color="#888" />
-      <Text style={styles.emptyTitle}>No liked songs yet</Text>
+      <Text style={styles.emptyTitle}>{t('no_liked_songs_title')}</Text>
       <Text style={styles.emptySubtitle}>
-        Songs you like will appear here
+        {t('no_liked_songs_subtitle')}
       </Text>
       <Text style={styles.emptyHint}>
-        Tap the heart icon on any song to add it to your liked songs
+        {t('no_liked_songs_empty_hint')}
       </Text>
     </View>
   );
@@ -179,7 +181,7 @@ export function LikedSongs({
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Baking your favorite songs...</Text>
+        <Text style={styles.loadingText}>{t('no_liked_songs_loading')}</Text>
       </View>
     );
   }
