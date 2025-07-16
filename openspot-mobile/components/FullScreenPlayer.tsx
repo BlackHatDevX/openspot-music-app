@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 
 import { Track } from '../types/music';
 import { useLikedSongs } from '../hooks/useLikedSongs';
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -67,6 +68,7 @@ export function FullScreenPlayer({
   const { isLiked, toggleLike } = useLikedSongs();
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
+  const { t } = useTranslation();
 
   const formatTime = (millis: number) => {
     const totalSeconds = Math.floor(millis / 1000);
@@ -137,7 +139,7 @@ export function FullScreenPlayer({
     >
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
-        
+
         {/* Background Image with Blur */}
         <View style={styles.backgroundContainer}>
           <Image
@@ -157,7 +159,7 @@ export function FullScreenPlayer({
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <Ionicons name="chevron-down" size={28} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Now Playing</Text>
+          <Text style={styles.headerTitle}>{t('full_screen_player_now_playing')}</Text>
           <TouchableOpacity style={styles.moreButton}>
             <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
           </TouchableOpacity>
@@ -209,29 +211,29 @@ export function FullScreenPlayer({
           {/* Controls */}
           <View style={styles.controls}>
             <TouchableOpacity onPress={handleLike} style={styles.controlButton}>
-            <Ionicons 
-                name={isLiked(track.id) ? "heart" : "heart-outline"} 
-                size={24} 
-                color={isLiked(track.id) ? "#1DB954" : "#fff"} 
+              <Ionicons
+                name={isLiked(track.id) ? "heart" : "heart-outline"}
+                size={24}
+                color={isLiked(track.id) ? "#1DB954" : "#fff"}
               />
             </TouchableOpacity>
-            
+
             <TouchableOpacity onPress={handlePrevious} style={styles.controlButton}>
               <Ionicons name="play-skip-back" size={32} color="#fff" />
             </TouchableOpacity>
-            
+
             <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
-              <Ionicons 
-                name={isPlaying ? "pause" : "play"} 
-                size={32} 
-                color="#000" 
+              <Ionicons
+                name={isPlaying ? "pause" : "play"}
+                size={32}
+                color="#000"
               />
             </TouchableOpacity>
-            
+
             <TouchableOpacity onPress={handleNext} style={styles.controlButton}>
               <Ionicons name="play-skip-forward" size={32} color="#fff" />
             </TouchableOpacity>
-            
+
             <TouchableOpacity onPress={handleDownload} style={styles.controlButton}>
               <Ionicons name="download" size={24} color="#fff" />
             </TouchableOpacity>
@@ -246,7 +248,7 @@ export function FullScreenPlayer({
                 color={isLiked(track.id) ? "#1DB954" : "#fff"} 
               />
             </TouchableOpacity> */}
-            
+
           </View>
         </View>
       </SafeAreaView>

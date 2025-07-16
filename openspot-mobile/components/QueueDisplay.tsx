@@ -16,6 +16,7 @@ import { BlurView } from 'expo-blur';
 import { Track } from '@/types/music';
 import { MusicAPI } from '@/lib/music-api';
 import { useLikedSongs } from '@/hooks/useLikedSongs';
+import { useTranslation } from 'react-i18next';
 
 interface QueueDisplayProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export function QueueDisplay({
   currentTrack,
 }: QueueDisplayProps) {
   const { isLiked, toggleLike } = useLikedSongs();
+  const { t } = useTranslation();
 
   const renderTrackItem = ({ item, index }: { item: Track; index: number }) => {
     const isCurrentTrack = currentTrack?.id === item.id;
@@ -62,7 +64,7 @@ export function QueueDisplay({
           style={styles.albumCover}
           contentFit="cover"
         />
-        
+
         <View style={styles.trackInfo}>
           <Text
             style={[
@@ -119,10 +121,10 @@ export function QueueDisplay({
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons name="chevron-down" size={24} color="#fff" />
           </TouchableOpacity>
-          
-          <Text style={styles.headerTitle}>Queue</Text>
+
+          <Text style={styles.headerTitle}>{t('queue_display_header_title')}</Text>
           <Text style={styles.headerSubtitle}>
-            {musicQueue.tracks.length} song{musicQueue.tracks.length !== 1 ? 's' : ''}
+            {t('queue_display_queue_length', { count: musicQueue.tracks.length })}
           </Text>
         </View>
       </LinearGradient>
@@ -176,7 +178,7 @@ export function QueueDisplay({
         onPress={musicQueue.clearQueue}
       >
         <Ionicons name="trash-outline" size={20} color="#888" />
-        <Text style={styles.controlButtonText}>Clear</Text>
+        <Text style={styles.controlButtonText}>{t('queue_display_clear')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -184,9 +186,9 @@ export function QueueDisplay({
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="list-outline" size={64} color="#888" />
-      <Text style={styles.emptyTitle}>Queue is empty</Text>
+      <Text style={styles.emptyTitle}>{t('queue_display_queue_empty_title')}</Text>
       <Text style={styles.emptySubtitle}>
-        Add some songs to start listening
+        {t('queue_display_queue_empty_subtitle')}
       </Text>
     </View>
   );
@@ -202,7 +204,7 @@ export function QueueDisplay({
         <BlurView intensity={10} style={styles.blurContainer}>
           {renderHeader()}
           {renderQueueControls()}
-          
+
           {musicQueue.tracks.length === 0 ? (
             renderEmptyState()
           ) : (

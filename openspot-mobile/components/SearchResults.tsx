@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Track } from '@/types/music';
 import { MusicAPI } from '@/lib/music-api';
 import { useLikedSongs } from '@/hooks/useLikedSongs';
+import { useTranslation } from 'react-i18next';
 
 interface UseSearchReturn {
   query: string;
@@ -44,6 +45,7 @@ export function SearchResults({
 }: SearchResultsProps) {
   const { results, isLoading, error, hasMore, loadMore, query } = searchState;
   const { isLiked, toggleLike } = useLikedSongs();
+  const { t } = useTranslation();
 
   const renderTrackItem = ({ item, index }: { item: Track; index: number }) => {
     const isCurrentTrack = currentTrack?.id === item.id;
@@ -62,7 +64,7 @@ export function SearchResults({
           style={styles.albumCover}
           contentFit="cover"
         />
-        
+
         <View style={styles.trackInfo}>
           <Text
             style={[
@@ -116,11 +118,11 @@ export function SearchResults({
 
   const renderFooter = () => {
     if (!hasMore) return null;
-    
+
     return (
       <View style={styles.loadingFooter}>
         <ActivityIndicator size="small" color="#1DB954" />
-        <Text style={styles.loadingText}>Loading more...</Text>
+        <Text style={styles.loadingText}>{t('search_results_loading_more')}</Text>
       </View>
     );
   };
@@ -135,7 +137,7 @@ export function SearchResults({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1DB954" />
-        <Text style={styles.loadingText}>Searching...</Text>
+        <Text style={styles.loadingText}>{t('search_results_loading')}</Text>
       </View>
     );
   }
@@ -144,7 +146,7 @@ export function SearchResults({
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle" size={48} color="#ff4444" />
-        <Text style={styles.errorText}>Search Error</Text>
+        <Text style={styles.errorText}>{t('search_results_error_title')}</Text>
         <Text style={styles.errorSubtext}>{error}</Text>
       </View>
     );
@@ -154,8 +156,8 @@ export function SearchResults({
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="search" size={48} color="#888" />
-        <Text style={styles.emptyText}>No results found</Text>
-        <Text style={styles.emptySubtext}>Try searching for something else</Text>
+        <Text style={styles.emptyText}>{t('search_results_empty_title')}</Text>
+        <Text style={styles.emptySubtext}>{t('search_results_empty_subtitle')}</Text>
       </View>
     );
   }
