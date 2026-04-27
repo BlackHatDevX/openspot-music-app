@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,11 +25,13 @@ import { PlaylistStorage, Playlist } from '@/lib/playlist-storage';
 import { DownloadButton } from './DownloadButton';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const IS_TABLET = SCREEN_WIDTH >= 768;
+const IS_LANDSCAPE = SCREEN_WIDTH > SCREEN_HEIGHT;
 
 interface FullScreenPlayerProps {
   isOpen: boolean;
   onClose: () => void;
-  track: Track;
+  track: Track | null;
   isPlaying: boolean;
   onPlayingChange: (playing: boolean) => void;
   position: number;
@@ -70,6 +72,10 @@ export function FullScreenPlayer({
   onQueueToggle,
   onPlaylistsUpdated,
 }: FullScreenPlayerProps & { onPlaylistsUpdated?: () => void }) {
+  if (!track) {
+    return null;
+  }
+
   const { isLiked, toggleLike } = useLikedSongs();
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
@@ -208,20 +214,20 @@ export function FullScreenPlayer({
           </TouchableOpacity>
         </View>
 
-                <View style={styles.content}>
+                <View style={[styles.content, IS_LANDSCAPE && styles.contentLandscape]}>
                     <View style={styles.albumArtContainer}>
             <Image
               source={{ uri: track.images.large }}
-              style={styles.albumArt}
+              style={[styles.albumArt, IS_LANDSCAPE && styles.albumArtLandscape, IS_TABLET && styles.albumArtTablet]}
               contentFit="cover"
             />
           </View>
 
                     <View style={styles.trackInfo}>
-            <Text style={styles.trackTitle} numberOfLines={1}>
+            <Text style={[styles.trackTitle, IS_TABLET && styles.trackTitleTablet]} numberOfLines={2}>
               {track.title}
             </Text>
-            <Text style={styles.trackArtist} numberOfLines={1}>
+            <Text style={[styles.trackArtist, IS_TABLET && styles.trackArtistTablet]} numberOfLines={2}>
               {track.artist}
             </Text>
           </View>
@@ -249,27 +255,27 @@ export function FullScreenPlayer({
 
                     <View style={styles.controls}>
             <TouchableOpacity onPress={handleLike} style={styles.controlButton}>
-            <Ionicons 
-                name={isLiked(track.id) ? "heart" : "heart-outline"} 
-                size={24} 
-                color={isLiked(track.id) ? "#1DB954" : "#fff"} 
+            <Ionicons
+                name={isLiked(track.id) ? "heart" : "heart-outline"}
+                size={IS_TABLET ? 28 : 24}
+                color={isLiked(track.id) ? "#1DB954" : "#fff"}
               />
             </TouchableOpacity>
-            
+
             <TouchableOpacity onPress={handlePrevious} style={styles.controlButton}>
-              <Ionicons name="play-skip-back" size={32} color="#fff" />
+              <Ionicons name="play-skip-back" size={IS_TABLET ? 40 : 32} color="#fff" />
             </TouchableOpacity>
-            
-            <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
-              <Ionicons 
-                name={isPlaying ? "pause" : "play"} 
-                size={32} 
-                color="#000" 
+
+            <TouchableOpacity onPress={handlePlayPause} style={[styles.playButton, IS_TABLET && styles.playButtonTablet]}>
+              <Ionicons
+                name={isPlaying ? "pause" : "play"}
+                size={IS_TABLET ? 40 : 32}
+                color="#000"
               />
             </TouchableOpacity>
-            
+
             <TouchableOpacity onPress={handleNext} style={styles.controlButton}>
-              <Ionicons name="play-skip-forward" size={32} color="#fff" />
+              <Ionicons name="play-skip-forward" size={IS_TABLET ? 40 : 32} color="#fff" />
             </TouchableOpacity>
             <DownloadButton track={track} style={styles.controlButton} />
           </View>
@@ -292,8 +298,8 @@ export function FullScreenPlayer({
                 end={{ x: 1, y: 1 }}
                 style={styles.addPlaylistButtonGradient}
               >
-                <Ionicons name="add-circle" size={24} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.addPlaylistButtonText}>Add to Playlist</Text>
+                <Ionicons name="add-circle" size={IS_TABLET ? 28 : 24} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={[styles.addPlaylistButtonText, IS_TABLET && styles.addPlaylistButtonTextTablet]}>Add to Playlist</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -540,5 +546,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 8,
+  },
+  contentLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 40,
+  },
+  albumArtLandscape: {
+    width: SCREEN_HEIGHT * 0.5,
+    height: SCREEN_HEIGHT * 0.5,
+  },
+  albumArtTablet: {
+    width: SCREEN_WIDTH * 0.35,
+    height: SCREEN_WIDTH * 0.35,
+  },
+  trackTitleTablet: {
+    fontSize: 28,
+  },
+  trackArtistTablet: {
+    fontSize: 22,
+  },
+  playButtonTablet: {
+    padding: 20,
+    borderRadius: 40,
+  },
+  addPlaylistButtonTextTablet: {
+    fontSize: 18,
   },
 }); 

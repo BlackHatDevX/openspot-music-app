@@ -5,7 +5,7 @@ import { Track } from '../types/music';
 const LIKED_SONGS_STORAGE_KEY = 'openspot_liked_songs';
 
 interface LikedSong {
-  id: number;
+  id: string | number;
   title: string;
   artist: string;
   albumTitle?: string;
@@ -22,9 +22,9 @@ interface LikedSong {
 interface LikedSongsContextType {
   likedSongs: LikedSong[];
   isLoading: boolean;
-  isLiked: (trackId: number) => boolean;
+  isLiked: (trackId: string | number) => boolean;
   likeSong: (track: Track) => void;
-  unlikeSong: (trackId: number) => void;
+  unlikeSong: (trackId: string | number) => void;
   toggleLike: (track: Track) => void;
   likedCount: number;
   recentlyLiked: LikedSong[];
@@ -72,7 +72,7 @@ export function LikedSongsProvider({ children }: LikedSongsProviderProps) {
   }, []);
 
   
-  const isLiked = useCallback((trackId: number): boolean => {
+  const isLiked = useCallback((trackId: string | number): boolean => {
     return likedSongs.some(song => song.id === trackId);
   }, [likedSongs]);
 
@@ -98,7 +98,7 @@ export function LikedSongsProvider({ children }: LikedSongsProviderProps) {
   }, [likedSongs, isLiked, saveLikedSongs]);
 
   
-  const unlikeSong = useCallback((trackId: number) => {
+  const unlikeSong = useCallback((trackId: string | number) => {
     const songToUnlike = likedSongs.find(song => song.id === trackId);
     if (!songToUnlike) {
       return;

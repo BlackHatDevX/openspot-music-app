@@ -85,7 +85,7 @@ export default function TabLayout() {
         toggleQueue,
       }}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+      <SafeAreaView edges={['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: '#000' }}>
         <View style={{ flex: 1, position: 'relative' }}>
           <Tabs
             screenOptions={{

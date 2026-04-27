@@ -2,17 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Linking } from 'react-native';
 
 const APP_LOGO = require('@/assets/images/adaptive-icon.png'); 
-const DAB_LOGO = require('@/assets/images/144.png'); 
 const APP_NAME = 'OpenSpot';
-const CURRENT_VERSION = 'v2.0.4';
+const CURRENT_VERSION = 'v2.0.5';
 const RELEASES_URL = 'https://github.com/BlackHatDevX/openspot-music-app/releases';
 const GITHUB_REPO_URL = 'https://github.com/BlackHatDevX/openspot-music-app';
-const Cr = "VlVjNU0xcFlTbXhhUTBKcFpWTkNhMWxYU1hWbFYxWnNaRU0xZW1SUlBUMD0=";
-const ed = atob(Cr);
-const it = atob(ed);
-const s = atob(it);
-
-
 
 export default function UpdateScreen() {
   const [latestVersion, setLatestVersion] = useState(CURRENT_VERSION);
@@ -37,15 +30,12 @@ export default function UpdateScreen() {
     <View style={styles.container}>
       <View style={styles.logoContainer}>
       <Image source={APP_LOGO} style={styles.logo} />
-      <Image source={DAB_LOGO} style={styles.logo} />
       </View>
-      <Text style={styles.credits}>
-        {s}
-      </Text>
       <Text style={styles.appName}>{APP_NAME}</Text>
       <Text style={styles.description}>
         OpenSpot is a free and open-source music streaming application designed for a seamless, high-fidelity listening experience. 
       </Text>
+      <Text style={styles.credit}>Made with ❤️ by <Text style={styles.creditName}>jashgro</Text></Text>
       <Text style={styles.version}>Current Version: <Text style={{ color: '#1DB954' }}>{CURRENT_VERSION}</Text></Text>
       <Text style={styles.version}>Latest Version: <Text style={{ color: updateAvailable ? '#ff4444' : '#1DB954' }}>{latestVersion}</Text></Text>
       {updateAvailable ? (
@@ -106,15 +96,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
+  credit: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  creditName: {
+    color: '#1DB954',
+    fontWeight: '600',
+  },
   logoContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
-  },
-  credits: {
-    color: '#1DB954',
-    fontSize: 12,
     marginBottom: 18,
   },
 });

@@ -46,7 +46,7 @@ export class NotificationService {
         },
         trigger: null,
       });
-      this.currentTrackId = track.id;
+      this.currentTrackId = typeof track.id === 'number' ? track.id : Number(track.id);
     } catch (error) {
       console.error("Failed to show/update media notification:", error);
     }

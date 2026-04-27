@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   Animated,
   ActivityIndicator,
 } from 'react-native';
-import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { Audio, AVPlaybackStatus, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
+import * as Notifications from 'expo-notifications';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,15 +21,13 @@ import * as Sharing from 'expo-sharing';
 
 import { Track } from '../types/music';
 import { MusicAPI } from '../lib/music-api';
+import { NotificationService } from '../lib/notification-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FullScreenPlayer } from './FullScreenPlayer';
 import { useLikedSongs } from '../hooks/useLikedSongs';
-import { NotificationService } from '../lib/notification-service';
-import { WakelockService } from '../lib/wakelock-service';
-import * as Notifications from 'expo-notifications';
 
 interface PlayerProps {
-  track: Track;
+  track: Track | null;
   isPlaying: boolean;
   onPlayingChange: (playing: boolean) => void;
   musicQueue: any; 
@@ -44,7 +43,11 @@ export function Player({
   musicQueue,
   onQueueToggle,
 }: PlayerProps) {
-  const player = useAudioPlayer();
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  if (!track) {
+    return null;
+  }
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,29 +55,32 @@ export function Player({
   const [isMuted, setIsMuted] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
-  
-  
+
+
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'success' | 'error'>('idle');
   const [downloadError, setDownloadError] = useState<string>('');
-  
+
   const { isLiked, toggleLike } = useLikedSongs();
   const rotationValue = useRef(new Animated.Value(0)).current;
   const rotationAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isMountedRef = useRef(true);
   const downloadTimeoutRef = useRef<number | null>(null);
-  const currentTrackIdRef = useRef<number | null>(null);
+  const currentTrackIdRef = useRef<string | number | null>(null);
   const lastSeekTimeRef = useRef<number>(0);
+  const isInitialLoadRef = useRef(true);
 
-  
+
   useEffect(() => {
     const configureAudioSession = async () => {
       try {
-        await setAudioModeAsync({
-          playsInSilentMode: true,
-          interruptionMode: 'duckOthers',
-          shouldPlayInBackground: true,
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          interruptionModeIOS: InterruptionModeIOS.DuckOthers,
+          interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+          shouldDuckAndroid: true,
         });
       } catch (error) {
         console.error('Failed to configure audio session:', error);
@@ -82,51 +88,10 @@ export function Player({
     };
 
     configureAudioSession();
+
+    NotificationService.initialize();
   }, []);
 
-  
-  useEffect(() => {
-    const initializeServices = async () => {
-      try {
-        await NotificationService.initialize();
-      } catch (error) {
-        console.error('Failed to initialize services:', error);
-      }
-    };
-
-    initializeServices();
-  }, []);
-
-  
-  useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-      const { actionIdentifier, notification } = response;
-      const data = notification.request.content.data;
-
-      if (data?.type === 'media') {
-        switch (actionIdentifier) {
-          case 'play_pause':
-            handlePlayPause();
-            break;
-          case 'next':
-            handleNext();
-            break;
-          case 'previous':
-            handlePrevious();
-            break;
-          case 'close':
-            onPlayingChange(false);
-            NotificationService.hideMediaNotification();
-            WakelockService.deactivate();
-            break;
-        }
-      }
-    });
-
-    return () => subscription.remove();
-  }, [track, isPlaying, musicQueue]);
-
-  
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -134,18 +99,14 @@ export function Player({
       if (downloadTimeoutRef.current) {
         clearTimeout(downloadTimeoutRef.current);
       }
-      
-      if (player) {
+
+      if (soundRef.current) {
         try {
-          player.pause();
+          soundRef.current.unloadAsync();
         } catch (e) {
-          
-          console.warn('Player pause on unmount failed:', e);
+          console.warn('Sound unload on unmount failed:', e);
         }
       }
-      
-      NotificationService.hideMediaNotification();
-      WakelockService.deactivate();
     };
   }, []); 
 
@@ -163,57 +124,27 @@ export function Player({
   useEffect(() => {
     if (track) {
       loadAudio();
-      
+
+      NotificationService.showOrUpdateMediaNotification(track, isPlaying);
     }
   }, [track.id]); 
 
   
   useEffect(() => {
-    if (player) {
+    if (soundRef.current) {
       if (isPlaying) {
-        player.play();
-        
-        WakelockService.activate();
-        NotificationService.showOrUpdateMediaNotification(track, true);
+        soundRef.current.playAsync();
       } else {
-        player.pause();
-        
-        WakelockService.deactivate();
-        NotificationService.showOrUpdateMediaNotification(track, false);
+        soundRef.current.pauseAsync();
       }
     }
-  }, [isPlaying, player, track]);
 
-  
-  useEffect(() => {
-    if (!player) return;
+    if (track) {
+      NotificationService.showOrUpdateMediaNotification(track, isPlaying);
+    }
+  }, [isPlaying, track]);
 
-    const positionSubscription = player.addListener('playbackStatusUpdate', (status) => {
-      
-      const timeSinceLastSeek = Date.now() - lastSeekTimeRef.current;
-      if (!isSeeking && timeSinceLastSeek > 200 && status.currentTime !== undefined) {
-        setPosition(status.currentTime * 1000); 
-      }
-      
-      
-      if (status.duration !== undefined) {
-        setDuration(status.duration * 1000); 
-      }
-    });
 
-    const finishSubscription = player.addListener('playbackStatusUpdate', (status) => {
-      if (status.isLoaded && status.didJustFinish) {
-        handleNext();
-      }
-    });
-
-    return () => {
-      positionSubscription?.remove();
-      finishSubscription?.remove();
-    };
-  }, [player, isSeeking, musicQueue.repeatMode]);
-
-  
   useEffect(() => {
     if (isPlaying) {
       startRotation();
@@ -221,6 +152,32 @@ export function Player({
       stopRotation();
     }
   }, [isPlaying]);
+
+  useEffect(() => {
+    if (!soundRef.current) return;
+
+    const updateStatus = (status: AVPlaybackStatus) => {
+      if (status.isLoaded) {
+        const timeSinceLastSeek = Date.now() - lastSeekTimeRef.current;
+        if (!isSeeking && timeSinceLastSeek > 200) {
+          setPosition(status.positionMillis);
+        }
+        setDuration(status.durationMillis || 0);
+
+        if (status.didJustFinish) {
+          handleNext();
+        }
+      }
+    };
+
+    soundRef.current.setOnPlaybackStatusUpdate(updateStatus);
+
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.setOnPlaybackStatusUpdate(null);
+      }
+    };
+  }, [soundRef.current, isSeeking, musicQueue.repeatMode]);
 
   const startRotation = () => {
     if (rotationAnimationRef.current) {
@@ -247,107 +204,164 @@ export function Player({
   };
 
   const loadAudio = async () => {
-    
+    if (!track) return;
+
     if (isLoading) {
       return;
     }
-    
+
     if (currentTrackIdRef.current === track.id) {
       return;
     }
     setIsLoading(true);
     currentTrackIdRef.current = track.id;
     try {
-      
+
       setPosition(0);
       setDuration(0);
-      
+
       let audioUrl: string | null = null;
       try {
         const offlineData = await AsyncStorage.getItem(`offline_${track.id}`);
         if (offlineData) {
           const { fileUri } = JSON.parse(offlineData);
-          
+
           const fileInfo = await FileSystem.getInfoAsync(fileUri);
           if (fileInfo.exists) {
             audioUrl = fileUri;
           }
         }
       } catch (e) {
-        
+
       }
-      
+
       if (!audioUrl) {
         audioUrl = await MusicAPI.getStreamUrl(track.id.toString());
       }
-      
-      player.replace({
-        uri: audioUrl,
-      });
-      
-      player.volume = volume;
+
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+      }
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUrl },
+        { shouldPlay: !isInitialLoadRef.current, volume: isMuted ? 0 : volume },
+        (status: AVPlaybackStatus) => {
+          if (status.isLoaded) {
+            const timeSinceLastSeek = Date.now() - lastSeekTimeRef.current;
+            if (!isSeeking && timeSinceLastSeek > 200) {
+              setPosition(status.positionMillis);
+            }
+            setDuration(status.durationMillis || 0);
+
+            if (status.didJustFinish) {
+              handleNext();
+            }
+          }
+        }
+      );
+
+      soundRef.current = sound;
+
+      if (!isInitialLoadRef.current && !isPlaying) {
+        onPlayingChange(true);
+      }
+
+      isInitialLoadRef.current = false;
     } catch (error) {
       console.error('Error loading audio:', error);
-      
+
       Alert.alert('Playback Error', 'Failed to load audio. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePlayPause = async () => {
+  const handlePlayPause = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    if (player) {
+
+    if (soundRef.current) {
       try {
         if (isPlaying) {
-          player.pause();
+          await soundRef.current.pauseAsync();
         } else {
-          player.play();
+          await soundRef.current.playAsync();
         }
         onPlayingChange(!isPlaying);
       } catch (error) {
         console.error('Error in handlePlayPause:', error);
       }
     }
-  };
+  }, [isPlaying, onPlayingChange]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (musicQueue.repeatMode === 'one') {
-      if (player) {
-        player.seekTo(0);
-        player.play();
+      if (soundRef.current) {
+        soundRef.current.replayAsync();
         onPlayingChange(true);
       }
       return;
     }
-    
-    
+
+
     const nextTrack = musicQueue.playNext();
     if (nextTrack) {
       onPlayingChange(true);
     } else {
       onPlayingChange(false);
     }
-  };
+  }, [musicQueue.repeatMode, onPlayingChange]);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const prevTrack = musicQueue.playPrevious();
     if (prevTrack) {
       onPlayingChange(true);
     }
-  };
+  }, [onPlayingChange]);
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log('Notification response received:', response);
+      console.log('Action identifier:', response.actionIdentifier);
+
+      switch (response.actionIdentifier) {
+        case 'previous':
+          console.log('Previous button pressed');
+          handlePrevious();
+          break;
+        case 'play_pause':
+          console.log('Play/Pause button pressed');
+          handlePlayPause();
+          break;
+        case 'next':
+          console.log('Next button pressed');
+          handleNext();
+          break;
+        case 'close':
+          console.log('Close button pressed');
+          NotificationService.hideMediaNotification();
+          onPlayingChange(false);
+          break;
+        default:
+          console.log('Unknown action:', response.actionIdentifier);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [handlePrevious, handlePlayPause, handleNext, onPlayingChange]);
 
   const handleSeek = async (value: number) => {
-    if (player) {
+    if (soundRef.current) {
       try {
-        
+
         setPosition(value);
-        
-        player.seekTo(value / 1000);
-        
+
+        await soundRef.current.setPositionAsync(value);
+
         lastSeekTimeRef.current = Date.now();
       } catch (error) {
         console.error('Error seeking:', error);
@@ -360,13 +374,13 @@ export function Player({
   };
 
   const handleSliderComplete = async (value: number) => {
-    if (player) {
+    if (soundRef.current) {
       try {
-        
+
         setPosition(value);
-        
-        player.seekTo(value / 1000);
-        
+
+        await soundRef.current.setPositionAsync(value);
+
         lastSeekTimeRef.current = Date.now();
       } catch (error) {
         console.error('Error seeking:', error);
@@ -383,10 +397,10 @@ export function Player({
   };
 
   const handleVolumeChange = async (value: number) => {
-    
+
     setVolume(value);
-    if (player) {
-      player.volume = value;
+    if (soundRef.current) {
+      await soundRef.current.setVolumeAsync(isMuted ? 0 : value);
     }
   };
 
@@ -394,8 +408,8 @@ export function Player({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
-    if (player) {
-      player.volume = newMutedState ? 0 : volume;
+    if (soundRef.current) {
+      await soundRef.current.setVolumeAsync(newMutedState ? 0 : volume);
     }
   };
 
@@ -416,10 +430,10 @@ export function Player({
     }
     
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    
-    if (isPlaying && player) {
-      player.pause();
+
+
+    if (isPlaying && soundRef.current) {
+      soundRef.current.pauseAsync();
       onPlayingChange(false);
     }
     
