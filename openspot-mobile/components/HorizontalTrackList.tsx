@@ -4,6 +4,8 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Track } from '@/types/music';
 import { MusicAPI } from '@/lib/music-api';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -11,17 +13,26 @@ interface HorizontalTrackListProps {
   title: string;
   tracks: Track[];
   onTrackSelect: (track: Track, trackList?: Track[], startIndex?: number) => void;
+  onAddToQueue?: (track: Track) => void;
   isPlaying: boolean;
   currentTrack: Track | null;
 }
 
-export function HorizontalTrackList({ title, tracks, onTrackSelect, isPlaying, currentTrack }: HorizontalTrackListProps) {
+export function HorizontalTrackList({ title, tracks, onTrackSelect, onAddToQueue, isPlaying, currentTrack }: HorizontalTrackListProps) {
+  const scheme = useColorScheme();
+  const isDark = scheme !== 'light';
+  const accent = isDark ? '#1DB954' : '#167c3a';
+  const { t } = useTranslation();
   const renderTrackItem = ({ item, index }: { item: Track; index: number }) => {
     const isCurrentTrack = currentTrack?.id === item.id;
     return (
       <View style={styles.cardWrapper}>
         <TouchableOpacity
-          style={[styles.card, isCurrentTrack && styles.currentTrackCard]}
+          style={[
+            styles.card,
+            { backgroundColor: isDark ? '#181818' : '#fffaf2', borderColor: isDark ? '#232323' : '#e4d5c5' },
+            isCurrentTrack && [styles.currentTrackCard, { borderColor: accent }],
+          ]}
           onPress={() => onTrackSelect(item, tracks, index)}
           activeOpacity={0.85}
         >
@@ -32,7 +43,7 @@ export function HorizontalTrackList({ title, tracks, onTrackSelect, isPlaying, c
               contentFit="cover"
             />
             <TouchableOpacity
-              style={styles.playButton}
+              style={[styles.playButton, { backgroundColor: accent }]}
               onPress={() => onTrackSelect(item, tracks, index)}
               activeOpacity={0.7}
             >
@@ -44,9 +55,30 @@ export function HorizontalTrackList({ title, tracks, onTrackSelect, isPlaying, c
             </TouchableOpacity>
           </View>
           <View style={styles.cardTextContainer}>
-            <Text style={[styles.trackTitle, isCurrentTrack && styles.currentTrackText]} numberOfLines={1}>{item.title}</Text>
+            <Text
+              style={[
+                styles.trackTitle,
+                { color: isDark ? '#fff' : '#2d2219' },
+                isCurrentTrack && [styles.currentTrackText, { color: accent }],
+              ]}
+              numberOfLines={2}
+            >
+              {item.title}
+            </Text>
             {!isCurrentTrack && (
-              <Text style={[styles.trackArtist, isCurrentTrack && styles.currentTrackText]} numberOfLines={1}>{item.artist}</Text>
+              <Text style={[styles.trackArtist, { color: isDark ? '#888' : '#7a6251' }]} numberOfLines={1}>
+                {item.artist}
+              </Text>
+            )}
+            {onAddToQueue && (
+              <TouchableOpacity
+                style={[styles.queueButton, { borderColor: isDark ? '#2d2d2d' : '#d8c8b8' }]}
+                onPress={() => onAddToQueue(item)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add" size={14} color={isDark ? '#fff' : '#2d2219'} />
+                <Text style={[styles.queueButtonText, { color: isDark ? '#fff' : '#2d2219' }]}>{t('components.queue')}</Text>
+              </TouchableOpacity>
             )}
           </View>
         </TouchableOpacity>
@@ -56,7 +88,7 @@ export function HorizontalTrackList({ title, tracks, onTrackSelect, isPlaying, c
 
   return (
     <View style={styles.sectionContainer}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#2d2219' }]}>{title}</Text>
       <FlatList
         data={tracks}
         renderItem={renderTrackItem}
@@ -69,9 +101,9 @@ export function HorizontalTrackList({ title, tracks, onTrackSelect, isPlaying, c
   );
 }
 
-const CARD_WIDTH = 120;
-const CARD_HEIGHT = 170;
-const ALBUM_SIZE = 110;
+const CARD_WIDTH = 138;
+const CARD_HEIGHT = 194;
+const ALBUM_SIZE = 120;
 
 const styles = StyleSheet.create({
   sectionContainer: {
@@ -95,7 +127,7 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    backgroundColor: '#181818',
+    borderWidth: 1,
     borderRadius: 18,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -145,21 +177,39 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     width: '100%',
     paddingHorizontal: 10,
-    marginTop: 4,
-    paddingBottom: 12, 
+    marginTop: 2,
+    paddingBottom: 10,
+    minHeight: 56,
+    justifyContent: 'flex-start',
   },
   trackTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#fff',
-    marginBottom: 2,
+    marginBottom: 3,
+    lineHeight: 18,
   },
   trackArtist: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#888',
-    marginBottom: 2,
+    lineHeight: 16,
   },
   currentTrackText: {
     color: '#1DB954',
+  },
+  queueButton: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  queueButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 }); 

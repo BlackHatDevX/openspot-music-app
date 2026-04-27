@@ -6,6 +6,7 @@ const LIKED_SONGS_STORAGE_KEY = 'openspot_liked_songs';
 
 interface LikedSong {
   id: string | number;
+  provider?: 'saavn' | 'ytmusic';
   title: string;
   artist: string;
   albumTitle?: string;
@@ -84,6 +85,7 @@ export function LikedSongsProvider({ children }: LikedSongsProviderProps) {
 
     const likedSong: LikedSong = {
       id: track.id,
+      provider: track.provider,
       title: track.title,
       artist: track.artist,
       albumTitle: track.albumTitle,
@@ -134,6 +136,7 @@ export function LikedSongsProvider({ children }: LikedSongsProviderProps) {
   const getLikedSongsAsTrack = useCallback((): Track[] => {
     return likedSongs.map(song => ({
       id: song.id,
+      provider: song.provider,
       title: song.title,
       artist: song.artist,
       artistId: 0, 

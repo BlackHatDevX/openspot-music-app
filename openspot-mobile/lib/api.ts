@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { SearchResponse, SearchParams, Track } from '../types/music';
+import { SearchResponse, SearchParams, Track, Album, Artist, PlaylistSearchItem } from '../types/music';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
@@ -29,8 +29,70 @@ export class MusicApi {
   private static searchCache = new Map<string, Promise<SearchResponse>>();
   private static streamCache = new Map<string, Promise<string>>();
 
+  private static getPageFromOffset(offset: number, limit: number): number {
+    // Saavn search endpoints are 1-based for page indexing.
+    return Math.floor(offset / limit) + 1;
+  }
+
   static async search(params: SearchParams): Promise<SearchResponse> {
+    if (params.type === 'album') {
+      return this.searchAlbums(params.q, params.offset || 0, 20);
+    }
+    if (params.type === 'artist') {
+      return this.searchArtists(params.q, params.offset || 0, 20);
+    }
+    if (params.type === 'playlist') {
+      return this.searchPlaylists(params.q, params.offset || 0, 20);
+    }
     return this.searchTracks(params.q, params.offset || 0, 20);
+  }
+
+  static async getAlbumSongs(albumId: string): Promise<Track[]> {
+    try {
+      const response = await MusicApiClient.get('/api/albums', {
+        params: { id: albumId, limit: 1000 },
+      });
+      const songs = this.extractSongsFromEntityResponse(response.data);
+      return songs.map((item: any) => this.transformSongToTrack(item));
+    } catch (error) {
+      console.error('Api album songs error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`MusicApi album songs failed: ${error.message}`);
+      }
+      throw new Error('MusicApi album songs request failed');
+    }
+  }
+
+  static async getArtistSongs(artistId: string): Promise<Track[]> {
+    try {
+      const response = await MusicApiClient.get('/api/artists', {
+        params: { id: artistId, limit: 1000 },
+      });
+      const songs = this.extractSongsFromEntityResponse(response.data);
+      return songs.map((item: any) => this.transformSongToTrack(item));
+    } catch (error) {
+      console.error('Api artist songs error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`MusicApi artist songs failed: ${error.message}`);
+      }
+      throw new Error('MusicApi artist songs request failed');
+    }
+  }
+
+  static async getPlaylistSongs(playlistId: string): Promise<Track[]> {
+    try {
+      const response = await MusicApiClient.get('/api/playlists', {
+        params: { id: playlistId, limit: 1000 },
+      });
+      const songs = this.extractSongsFromEntityResponse(response.data);
+      return songs.map((item: any) => this.transformSongToTrack(item));
+    } catch (error) {
+      console.error('Api playlist songs error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`MusicApi playlist songs failed: ${error.message}`);
+      }
+      throw new Error('MusicApi playlist songs request failed');
+    }
   }
 
   static async searchTracks(query: string, offset: number = 0, limit: number = 20): Promise<SearchResponse> {
@@ -50,12 +112,63 @@ export class MusicApi {
     return requestPromise;
   }
 
+  static async searchArtists(query: string, offset: number = 0, limit: number = 20): Promise<SearchResponse> {
+    const cacheKey = `saavn_search_artists_${query}_${offset}_${limit}`;
+
+    if (this.searchCache.has(cacheKey)) {
+      return this.searchCache.get(cacheKey)!;
+    }
+
+    const requestPromise = this.performArtistSearch(query, offset, limit);
+    this.searchCache.set(cacheKey, requestPromise);
+
+    requestPromise.finally(() => {
+      this.searchCache.delete(cacheKey);
+    });
+
+    return requestPromise;
+  }
+
+  static async searchPlaylists(query: string, offset: number = 0, limit: number = 20): Promise<SearchResponse> {
+    const cacheKey = `saavn_search_playlists_${query}_${offset}_${limit}`;
+
+    if (this.searchCache.has(cacheKey)) {
+      return this.searchCache.get(cacheKey)!;
+    }
+
+    const requestPromise = this.performPlaylistSearch(query, offset, limit);
+    this.searchCache.set(cacheKey, requestPromise);
+
+    requestPromise.finally(() => {
+      this.searchCache.delete(cacheKey);
+    });
+
+    return requestPromise;
+  }
+
+  static async searchAlbums(query: string, offset: number = 0, limit: number = 20): Promise<SearchResponse> {
+    const cacheKey = `saavn_search_albums_${query}_${offset}_${limit}`;
+
+    if (this.searchCache.has(cacheKey)) {
+      return this.searchCache.get(cacheKey)!;
+    }
+
+    const requestPromise = this.performAlbumSearch(query, offset, limit);
+    this.searchCache.set(cacheKey, requestPromise);
+
+    requestPromise.finally(() => {
+      this.searchCache.delete(cacheKey);
+    });
+
+    return requestPromise;
+  }
+
   private static async performSearch(query: string, offset: number, limit: number): Promise<SearchResponse> {
     try {
       const response = await MusicApiClient.get('/api/search/songs', {
         params: {
           query,
-          page: Math.floor(offset / limit),
+          page: this.getPageFromOffset(offset, limit),
           limit,
         },
       });
@@ -74,6 +187,9 @@ export class MusicApi {
     if (!data.success || !data.data) {
       return {
         tracks: [],
+        albums: [],
+        artists: [],
+        playlists: [],
         pagination: {
           offset: 0,
           total: 0,
@@ -88,10 +204,270 @@ export class MusicApi {
 
     return {
       tracks,
+      albums: [],
+      artists: [],
+      playlists: [],
       pagination: {
         offset: data.data.start || 0,
         total: data.data.total || tracks.length,
         hasMore: (data.data.start || 0) + tracks.length < (data.data.total || tracks.length),
+      },
+    };
+  }
+
+  private static extractSongsFromEntityResponse(data: any): any[] {
+    if (!data?.success || !data?.data) {
+      return [];
+    }
+
+    const payload = data.data;
+    if (Array.isArray(payload?.songs)) return payload.songs;
+    if (Array.isArray(payload?.topSongs)) return payload.topSongs;
+    if (Array.isArray(payload?.list)) return payload.list;
+    if (Array.isArray(payload?.results)) return payload.results;
+    if (Array.isArray(payload)) {
+      const first = payload[0];
+      if (Array.isArray(first?.songs)) return first.songs;
+      if (Array.isArray(first?.topSongs)) return first.topSongs;
+      if (Array.isArray(first?.list)) return first.list;
+    }
+    return [];
+  }
+
+  private static async performArtistSearch(query: string, offset: number, limit: number): Promise<SearchResponse> {
+    try {
+      const response = await MusicApiClient.get('/api/search/artists', {
+        params: {
+          query,
+          page: this.getPageFromOffset(offset, limit),
+          limit,
+        },
+      });
+
+      return this.transformArtistSearchResponse(response.data);
+    } catch (error) {
+      console.error('Api artist search error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`MusicApi artist search failed: ${error.message}`);
+      }
+      throw new Error('MusicApi artist search request failed');
+    }
+  }
+
+  private static async performPlaylistSearch(query: string, offset: number, limit: number): Promise<SearchResponse> {
+    try {
+      const response = await MusicApiClient.get('/api/search/playlists', {
+        params: {
+          query,
+          page: this.getPageFromOffset(offset, limit),
+          limit,
+        },
+      });
+
+      return this.transformPlaylistSearchResponse(response.data);
+    } catch (error) {
+      console.error('Api playlist search error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`MusicApi playlist search failed: ${error.message}`);
+      }
+      throw new Error('MusicApi playlist search request failed');
+    }
+  }
+
+  private static async performAlbumSearch(query: string, offset: number, limit: number): Promise<SearchResponse> {
+    try {
+      const response = await MusicApiClient.get('/api/search/albums', {
+        params: {
+          query,
+          page: this.getPageFromOffset(offset, limit),
+          limit,
+        },
+      });
+
+      return this.transformAlbumSearchResponse(response.data);
+    } catch (error) {
+      console.error('Api album search error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`MusicApi album search failed: ${error.message}`);
+      }
+      throw new Error('MusicApi album search request failed');
+    }
+  }
+
+  private static transformAlbumSearchResponse(data: any): SearchResponse {
+    if (!data.success || !data.data) {
+      return {
+        tracks: [],
+        albums: [],
+        artists: [],
+        playlists: [],
+        pagination: {
+          offset: 0,
+          total: 0,
+          hasMore: false,
+        },
+      };
+    }
+
+    const albums: Album[] = (data.data.results || []).map((item: any) => 
+      this.transformAlbumToAlbum(item)
+    );
+
+    return {
+      tracks: [],
+      albums,
+      artists: [],
+      playlists: [],
+      pagination: {
+        offset: data.data.start || 0,
+        total: data.data.total || albums.length,
+        hasMore: (data.data.start || 0) + albums.length < (data.data.total || albums.length),
+      },
+    };
+  }
+
+  private static transformArtistSearchResponse(data: any): SearchResponse {
+    if (!data.success || !data.data) {
+      return {
+        tracks: [],
+        albums: [],
+        artists: [],
+        playlists: [],
+        pagination: {
+          offset: 0,
+          total: 0,
+          hasMore: false,
+        },
+      };
+    }
+
+    const artists: Artist[] = (data.data.results || []).map((item: any) =>
+      this.transformArtist(item)
+    );
+
+    return {
+      tracks: [],
+      albums: [],
+      artists,
+      playlists: [],
+      pagination: {
+        offset: data.data.start || 0,
+        total: data.data.total || artists.length,
+        hasMore: (data.data.start || 0) + artists.length < (data.data.total || artists.length),
+      },
+    };
+  }
+
+  private static transformPlaylistSearchResponse(data: any): SearchResponse {
+    if (!data.success || !data.data) {
+      return {
+        tracks: [],
+        albums: [],
+        artists: [],
+        playlists: [],
+        pagination: {
+          offset: 0,
+          total: 0,
+          hasMore: false,
+        },
+      };
+    }
+
+    const playlists: PlaylistSearchItem[] = (data.data.results || []).map((item: any) =>
+      this.transformPlaylist(item)
+    );
+
+    return {
+      tracks: [],
+      albums: [],
+      artists: [],
+      playlists,
+      pagination: {
+        offset: data.data.start || 0,
+        total: data.data.total || playlists.length,
+        hasMore: (data.data.start || 0) + playlists.length < (data.data.total || playlists.length),
+      },
+    };
+  }
+
+  private static transformArtist(item: any): Artist {
+    const images = item.image || [];
+    const smallImage = images.find((img: any) => img.quality === '50x50')?.url || images[0]?.url || '';
+    const thumbnailImage = images.find((img: any) => img.quality === '150x150')?.url || images[1]?.url || smallImage;
+    const largeImage = images.find((img: any) => img.quality === '500x500')?.url || images[2]?.url || thumbnailImage;
+
+    return {
+      id: item.id || '',
+      name: decodeHtmlEntities(item.name || ''),
+      url: item.url || '',
+      followerCount: item.followerCount || null,
+      isVerified: Boolean(item.isVerified),
+      dominantLanguage: item.dominantLanguage || '',
+      dominantType: item.dominantType || '',
+      role: item.role || '',
+      image: images,
+      images: {
+        small: smallImage,
+        thumbnail: thumbnailImage,
+        large: largeImage,
+      },
+    };
+  }
+
+  private static transformPlaylist(item: any): PlaylistSearchItem {
+    const images = item.image || [];
+    const smallImage = images.find((img: any) => img.quality === '50x50')?.url || images[0]?.url || '';
+    const thumbnailImage = images.find((img: any) => img.quality === '150x150')?.url || images[1]?.url || smallImage;
+    const largeImage = images.find((img: any) => img.quality === '500x500')?.url || images[2]?.url || thumbnailImage;
+
+    return {
+      id: item.id || '',
+      name: decodeHtmlEntities(item.name || ''),
+      description: decodeHtmlEntities(item.description || ''),
+      type: item.type || '',
+      songCount: item.songCount || null,
+      followerCount: item.followerCount || null,
+      explicitContent: Boolean(item.explicitContent),
+      language: item.language || '',
+      url: item.url || '',
+      image: images,
+      images: {
+        small: smallImage,
+        thumbnail: thumbnailImage,
+        large: largeImage,
+      },
+    };
+  }
+
+  private static transformAlbumToAlbum(item: any): Album {
+    const primaryArtist = item.artists?.primary?.[0]?.name || item.artists?.all?.[0]?.name || 'Unknown';
+
+    const images = item.image || [];
+    const smallImage = images.find((img: any) => img.quality === '50x50')?.url || images[0]?.url || '';
+    const thumbnailImage = images.find((img: any) => img.quality === '150x150')?.url || images[1]?.url || smallImage;
+    const largeImage = images.find((img: any) => img.quality === '500x500')?.url || images[2]?.url || thumbnailImage;
+
+    return {
+      id: item.id,
+      name: decodeHtmlEntities(item.name || ''),
+      description: decodeHtmlEntities(item.description || ''),
+      year: item.year || null,
+      type: item.type || '',
+      playCount: item.playCount || null,
+      language: item.language || '',
+      explicitContent: item.explicitContent || false,
+      artists: item.artists || {
+        primary: [],
+        featured: [],
+        all: [],
+      },
+      songCount: item.songCount || null,
+      url: item.url || '',
+      image: images,
+      images: {
+        small: smallImage,
+        thumbnail: thumbnailImage,
+        large: largeImage,
       },
     };
   }
@@ -112,6 +488,7 @@ export class MusicApi {
 
     return {
       id: item.id,
+      provider: 'saavn',
       title: decodeHtmlEntities(item.name || item.title || ''),
       artist: decodeHtmlEntities(primaryArtist),
       artistId: 0,

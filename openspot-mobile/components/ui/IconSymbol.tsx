@@ -14,10 +14,11 @@ const MAPPING = {
   'magnifyingglass': 'search',
   'books.vertical.fill': 'library-books',
   'arrow.down.circle.fill': 'download',
+  'gearshape.fill': 'settings',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-  "checkmark.shield.fill": "update",
+  'checkmark.shield.fill': 'verified-user',
 } as IconMapping;
 
 

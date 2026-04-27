@@ -81,6 +81,92 @@ export function useMusicQueue() {
     }));
   }, []);
 
+  const addNext = useCallback((track: Track) => {
+    setQueue(prev => {
+      const insertIndex = prev.currentIndex >= 0 ? prev.currentIndex + 1 : prev.tracks.length;
+      const nextTracks = [...prev.tracks];
+      nextTracks.splice(insertIndex, 0, track);
+
+      const nextOriginalTracks = [...prev.originalTracks];
+      const originalInsertIndex = prev.isShuffled
+        ? nextOriginalTracks.length
+        : insertIndex;
+      nextOriginalTracks.splice(originalInsertIndex, 0, track);
+
+      return {
+        ...prev,
+        tracks: nextTracks,
+        originalTracks: nextOriginalTracks,
+      };
+    });
+  }, []);
+
+  const removeFromQueue = useCallback((index: number) => {
+    setQueue(prev => {
+      if (index < 0 || index >= prev.tracks.length) {
+        return prev;
+      }
+
+      const removedTrack = prev.tracks[index];
+      const nextTracks = prev.tracks.filter((_, i) => i !== index);
+      const originalIndex = prev.originalTracks.findIndex((item) => item.id === removedTrack.id);
+      const nextOriginalTracks =
+        originalIndex >= 0
+          ? prev.originalTracks.filter((_, i) => i !== originalIndex)
+          : prev.originalTracks;
+
+      let nextCurrentIndex = prev.currentIndex;
+      if (nextTracks.length === 0) {
+        nextCurrentIndex = -1;
+      } else if (index === prev.currentIndex) {
+        nextCurrentIndex = Math.min(index, nextTracks.length - 1);
+      } else if (index < prev.currentIndex) {
+        nextCurrentIndex = prev.currentIndex - 1;
+      }
+
+      return {
+        ...prev,
+        tracks: nextTracks,
+        originalTracks: nextOriginalTracks,
+        currentIndex: nextCurrentIndex,
+      };
+    });
+  }, []);
+
+  const moveQueueItem = useCallback((fromIndex: number, toIndex: number) => {
+    setQueue(prev => {
+      if (
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= prev.tracks.length ||
+        toIndex >= prev.tracks.length ||
+        fromIndex === toIndex
+      ) {
+        return prev;
+      }
+
+      const nextTracks = [...prev.tracks];
+      const [movedTrack] = nextTracks.splice(fromIndex, 1);
+      nextTracks.splice(toIndex, 0, movedTrack);
+
+      let nextCurrentIndex = prev.currentIndex;
+      if (prev.currentIndex === fromIndex) {
+        nextCurrentIndex = toIndex;
+      } else if (fromIndex < prev.currentIndex && toIndex >= prev.currentIndex) {
+        nextCurrentIndex = prev.currentIndex - 1;
+      } else if (fromIndex > prev.currentIndex && toIndex <= prev.currentIndex) {
+        nextCurrentIndex = prev.currentIndex + 1;
+      }
+
+      return {
+        ...prev,
+        tracks: nextTracks,
+        originalTracks: prev.isShuffled ? prev.originalTracks : nextTracks,
+        currentIndex: nextCurrentIndex,
+      };
+    });
+  }, []);
+
   
   const getCurrentTrack = useCallback((): Track | null => {
     if (queue.currentIndex >= 0 && queue.currentIndex < queue.tracks.length) {
@@ -226,6 +312,9 @@ export function useMusicQueue() {
     queue,
     setQueueTracks,
     addToQueue,
+    addNext,
+    removeFromQueue,
+    moveQueueItem,
     getCurrentTrack,
     playNext,
     playPrevious,

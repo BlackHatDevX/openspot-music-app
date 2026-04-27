@@ -1,12 +1,16 @@
 # Changelog
 
-## OpenSpot v2.0.4 (Android & iOS - React Native)
+## OpenSpot v2.0.5 (Android & iOS - React Native)
 
-* **New API integrated** → [#32](https://github.com/BlackHatDevX/openspot-music-app/issues/32)
-* **Aggressive wakelock implementation** to fix **background app kill issues** on MIUI / HyperOS / other aggressive ROMs → [#30](https://github.com/BlackHatDevX/openspot-music-app/issues/30), [#20](https://github.com/BlackHatDevX/openspot-music-app/issues/20), [#19](https://github.com/BlackHatDevX/openspot-music-app/issues/19)
-* **HyperOS navigation bar override issue resolved** → [#28](https://github.com/BlackHatDevX/openspot-music-app/issues/28)
-* **Media controls notification (Play/Pause/Next/Previous)** → still in **beta** → [#9](https://github.com/BlackHatDevX/openspot-music-app/issues/9)
-* **Downloads list infinite loading bug fixed**
+### New Features
+
+* **i18n**: Supports 8 languages (de, en, es, fr, he, hi, ru, zh).
+* **API**: Supports Savan API and YouTube API.
+* **Search**: Users can now search public playlists, albums, and artists (Savan API only).
+* **UI**: Revamped UI with a new welcome screen and settings screen.
+* **Theme**: Dark mode, light mode, and auto mode supported.
+
+
 
 * **iOS** → Tested on iOS 26 simulator via Expo Go. Works fine ([video](https://drive.google.com/file/d/1ArNbQBzgbwpwE0llvHZt1BTHcqbX54N_/view)).
   ⚠️ No Apple Developer Account (\$100/year), so `.ipa` and TestFlight builds are not available. Community help for iOS builds is welcome!

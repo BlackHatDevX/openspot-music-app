@@ -1,27 +1,24 @@
 import React, { useContext } from 'react';
 import { View, StyleSheet, StatusBar, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
 import { useSearch } from '@/hooks/useSearch';
 import { TopBar } from '@/components/TopBar';
 import { SearchResults } from '@/components/SearchResults';
 import { MusicPlayerContext } from './_layout';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function SearchScreen() {
   const searchState = useSearch();
-  const { handleTrackSelect, isPlaying, currentTrack } = useContext(MusicPlayerContext);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      searchState.clearResults();
-    }, [])
-  );
+  const { handleTrackSelect, musicQueue, isPlaying, currentTrack } = useContext(MusicPlayerContext);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme !== 'light';
+  const background = isDark ? '#050505' : '#f5efe6';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" translucent={false} />
+    <SafeAreaView style={[styles.container, { backgroundColor: background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={background} translucent={false} />
       <TopBar
         currentView="search"
         onViewChange={() => {}}
@@ -34,6 +31,7 @@ export default function SearchScreen() {
         <SearchResults
           searchState={searchState}
           onTrackSelect={handleTrackSelect}
+          onAddToQueue={musicQueue.addToQueue}
           isPlaying={isPlaying}
           currentTrack={currentTrack}
         />
@@ -45,7 +43,6 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
   },
   mainContent: {
     paddingTop: 16,

@@ -11,8 +11,21 @@ import { MusicAPI } from '@/lib/music-api';
 import { MusicPlayerContext } from './_layout';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTranslation } from 'react-i18next';
 
 export default function DownloadsScreen() {
+  const { t } = useTranslation();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme !== 'light';
+  const theme = {
+    background: isDark ? '#050505' : '#f5efe6',
+    surface: isDark ? '#121212' : '#fffaf2',
+    border: isDark ? '#272727' : '#e4d5c5',
+    textPrimary: isDark ? '#fff' : '#2d2219',
+    textSecondary: isDark ? '#888' : '#7a6251',
+    accent: isDark ? '#1DB954' : '#167c3a',
+  };
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
@@ -46,9 +59,9 @@ export default function DownloadsScreen() {
           
           
           try {
-            const res = await MusicAPI.search({ q: id, type: 'track' });
-            if (res.tracks && res.tracks.length > 0) {
-              return res.tracks[0];
+            const resolved = await MusicAPI.resolveTrackById(id);
+            if (resolved) {
+              return resolved;
             }
           } catch (apiError) {
             console.warn(`API fallback failed for track ${id}:`, apiError);
@@ -125,20 +138,20 @@ export default function DownloadsScreen() {
       return () => { mounted = false; };
     }, [item.id]);
     return (
-      <View style={styles.trackRow}>
+      <View style={[styles.trackRow, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <Image source={{ uri: thumbUri || item.images.large }} style={styles.albumArt} contentFit="cover" />
         <View style={styles.info}>
-          <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.artist} numberOfLines={1}>{item.artist}</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={1}>{item.title}</Text>
+          <Text style={[styles.artist, { color: theme.textSecondary }]} numberOfLines={1}>{item.artist}</Text>
         </View>
         <TouchableOpacity onPress={() => toggleLike(item)} style={styles.iconButton}>
-          <Ionicons name={isLiked(item.id) ? 'heart' : 'heart-outline'} size={22} color={isLiked(item.id) ? '#1DB954' : '#fff'} />
+          <Ionicons name={isLiked(item.id) ? 'heart' : 'heart-outline'} size={22} color={isLiked(item.id) ? theme.accent : theme.textPrimary} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handleDelete(item)} style={styles.iconButton}>
           <Ionicons name="trash" size={22} color="#ff4444" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handlePlay(index)} style={styles.iconButton}>
-          <Ionicons name="play" size={22} color="#1DB954" />
+          <Ionicons name="play" size={22} color={theme.accent} />
         </TouchableOpacity>
       </View>
     );
@@ -149,23 +162,23 @@ export default function DownloadsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Downloads</Text>
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>{t('components.downloads')}</Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={handleShuffle} style={styles.headerButton}>
-              <Ionicons name="shuffle" size={22} color="#fff" />
+            <TouchableOpacity onPress={handleShuffle} style={[styles.headerButton, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <Ionicons name="shuffle" size={22} color={theme.textPrimary} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => handlePlay(0)} style={styles.headerButton}>
-              <Ionicons name="play" size={22} color="#1DB954" />
+            <TouchableOpacity onPress={() => handlePlay(0)} style={[styles.headerButton, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <Ionicons name="play" size={22} color={theme.accent} />
             </TouchableOpacity>
           </View>
         </View>
         {loading ? (
           <ActivityIndicator size="large" color="#1DB954" style={{ marginTop: 40 }} />
         ) : tracks.length === 0 ? (
-          <Text style={styles.emptyText}>No offline music found.</Text>
+          <Text style={[styles.emptyText, { color: theme.textSecondary }]}>{t('components.no_offline_music')}</Text>
         ) : (
           <FlatList
             data={tracks}
@@ -209,11 +222,15 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#181818',
+    borderWidth: 1,
+    borderColor: '#242424',
   },
   trackRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#181818',
+    borderWidth: 1,
+    borderColor: '#242424',
     borderRadius: 12,
     marginBottom: 12,
     padding: 10,

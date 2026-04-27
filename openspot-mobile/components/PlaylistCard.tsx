@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface PlaylistCardProps {
   playlist: {
@@ -12,11 +13,20 @@ interface PlaylistCardProps {
   onShuffle?: () => void;
   onPlay?: () => void;
   onLongPress?: () => void;
+  theme?: {
+    surface: string;
+    border: string;
+    textPrimary: string;
+    textSecondary: string;
+    accent: string;
+    icon: string;
+  };
 }
 
-export function PlaylistCard({ playlist, onPress, onShuffle, onPlay, onLongPress }: PlaylistCardProps) {
+export function PlaylistCard({ playlist, onPress, onShuffle, onPlay, onLongPress, theme }: PlaylistCardProps) {
+  const { t } = useTranslation();
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, theme && { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <TouchableOpacity
         style={styles.infoArea}
         onPress={onPress}
@@ -24,18 +34,18 @@ export function PlaylistCard({ playlist, onPress, onShuffle, onPlay, onLongPress
         delayLongPress={350}
         activeOpacity={0.85}
        >
-        <Image source={{ uri: playlist.cover }} style={styles.cover} resizeMode="cover" />
+        <Image source={{ uri: playlist.cover }} style={[styles.cover, theme && { borderColor: theme.border }]} resizeMode="cover" />
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>{playlist.name}</Text>
-          <Text style={styles.count}>{playlist.trackCount} {playlist.trackCount === 1 ? 'song' : 'songs'}</Text>
+          <Text style={[styles.name, theme && { color: theme.textPrimary }]} numberOfLines={1}>{playlist.name}</Text>
+          <Text style={[styles.count, theme && { color: theme.textSecondary }]}>{playlist.trackCount} {playlist.trackCount === 1 ? t('components.song') : t('components.songs')}</Text>
         </View>
       </TouchableOpacity>
       <View style={styles.actionRow}>
         <TouchableOpacity style={styles.iconButton} onPress={onShuffle}>
-          <Ionicons name="shuffle" size={20} color="#fff" />
+          <Ionicons name="shuffle" size={20} color={theme?.icon ?? "#fff"} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton} onPress={onPlay}>
-          <Ionicons name="play" size={20} color="#1DB954" />
+          <Ionicons name="play" size={20} color={theme?.accent ?? "#1DB954"} />
         </TouchableOpacity>
       </View>
     </View>
@@ -47,6 +57,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#181818',
+    borderWidth: 1,
+    borderColor: '#242424',
     borderRadius: 12,
     marginBottom: 14,
     padding: 12,

@@ -7,12 +7,27 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { LikedSongsProvider } from '@/hooks/useLikedSongs';
+import { ThemeModeProvider } from '@/hooks/theme-mode';
+import '@/lib/i18n';
 
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function AppNavigation() {
   const colorScheme = useColorScheme();
+
+  return (
+    <LikedSongsProvider>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <StatusBar style={colorScheme === 'light' ? 'dark' : 'light'} />
+    </LikedSongsProvider>
+  );
+}
+
+export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -29,13 +44,9 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <LikedSongsProvider>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="light" />
-      </LikedSongsProvider>
+      <ThemeModeProvider>
+        <AppNavigation />
+      </ThemeModeProvider>
     </SafeAreaProvider>
   );
 }

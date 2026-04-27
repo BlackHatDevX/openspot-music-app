@@ -6,14 +6,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { Track } from '../types/music';
 import { PlaylistStorage } from '@/lib/playlist-storage';
+import { useTranslation } from 'react-i18next';
 
 interface DownloadButtonProps {
   track: Track;
   style?: any;
   onDownloaded?: (filePath: string) => void;
+  iconColor?: string;
+  accentColor?: string;
 }
 
-export const DownloadButton: React.FC<DownloadButtonProps> = ({ track, style, onDownloaded }) => {
+export const DownloadButton: React.FC<DownloadButtonProps> = ({ track, style, onDownloaded, iconColor = '#fff', accentColor = '#1DB954' }) => {
+  const { t } = useTranslation();
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showDownloadAlert, setShowDownloadAlert] = useState(false);
@@ -82,7 +86,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({ track, style, on
         await PlaylistStorage.savePlaylists(playlists);
       }
       
-      const audioUrl = await import('../lib/music-api').then(m => m.MusicAPI.getStreamUrl(track.id.toString()));
+      const audioUrl = await import('../lib/music-api').then(m => m.MusicAPI.getStreamUrl(track.id.toString(), track));
       const safeFileName = `offline_${track.id}.mp3`;
       const fileUri = FileSystem.documentDirectory + safeFileName;
       const downloadResumable = FileSystem.createDownloadResumable(audioUrl, fileUri);
@@ -120,25 +124,25 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({ track, style, on
       {isDownloaded ? (
         <View style={[styles.controlButton, style, { borderRadius: 50, opacity: 0.7, alignItems: 'center' }]}
         >
-          <Ionicons name="checkmark" size={20} color="#fff" />
+          <Ionicons name="checkmark" size={20} color={iconColor} />
         </View>
       ) : isDownloading ? (
         <View style={[styles.controlButton, style, { borderRadius: 50, opacity: 0.7, alignItems: 'center' }]}
         >
           <Animated.View style={{ transform: [{ translateY: bounceAnim }] }}>
-            <Ionicons name="cloud-download-outline" size={20} color="#1DB954" style={{ marginRight: 4 }} />
+            <Ionicons name="cloud-download-outline" size={20} color={accentColor} style={{ marginRight: 4 }} />
           </Animated.View>
         </View>
       ) : (
         <TouchableOpacity onPress={handleDownload} style={[styles.controlButton, style]}>
-          <Ionicons name="download" size={24} color="#fff" />
+          <Ionicons name="download" size={24} color={iconColor} />
         </TouchableOpacity>
       )}
       {showDownloadAlert && downloadedPath && (
-        <View style={styles.downloadAlertBox}>
+        <View style={[styles.downloadAlertBox, { backgroundColor: accentColor, shadowColor: accentColor }]}>
           <Ionicons name="checkmark-circle" size={28} color="#fff" style={{ marginRight: 10 }} />
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Downloaded!</Text>
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{t('components.downloaded')}</Text>
             <Text style={{ color: '#fff', fontSize: 13, marginTop: 2, flexWrap: 'wrap' }}>{downloadedPath}</Text>
           </View>
         </View>

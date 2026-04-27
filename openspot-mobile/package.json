@@ -17,6 +17,7 @@
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
+    "@tnfangel/ytmusic-api": "^5.3.0",
     "axios": "^1.10.0",
     "expo": "~53.0.17",
     "expo-audio": "^0.4.8",
@@ -40,9 +41,12 @@
     "expo-symbols": "~0.4.5",
     "expo-system-ui": "~5.0.10",
     "expo-web-browser": "~14.2.0",
+    "i18next": "^26.0.8",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-i18next": "^17.0.6",
     "react-native": "0.79.6",
+    "react-native-draggable-flatlist": "^4.0.3",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
@@ -57,7 +61,9 @@
     "@types/react": "~19.0.10",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
-    "typescript": "~5.8.3"
+    "i18next-scanner": "^4.6.0",
+    "typescript": "~5.8.3",
+    "vinyl-fs": "^4.0.2"
   },
   "private": true
 }

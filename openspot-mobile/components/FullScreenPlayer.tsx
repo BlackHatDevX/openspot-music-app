@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,8 @@ import { Track } from '../types/music';
 import { useLikedSongs } from '../hooks/useLikedSongs';
 import { PlaylistStorage, Playlist } from '@/lib/playlist-storage';
 import { DownloadButton } from './DownloadButton';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const IS_TABLET = SCREEN_WIDTH >= 768;
@@ -75,8 +77,25 @@ export function FullScreenPlayer({
   if (!track) {
     return null;
   }
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme !== 'light';
+  const theme = useMemo(
+    () => ({
+      base: isDark ? '#000000' : '#f5efe6',
+      glass: isDark ? 'rgba(255,255,255,0.08)' : 'transparent',
+      glassBorder: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.8)',
+      textPrimary: isDark ? '#ffffff' : '#1a1a1a',
+      textSecondary: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+      accent: isDark ? '#1DB954' : '#167c3a',
+      track: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
+      icon: isDark ? '#ffffff' : '#1a1a1a',
+      shadow: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.15)',
+    }),
+    [isDark]
+  );
 
   const { isLiked, toggleLike } = useLikedSongs();
+  const { t } = useTranslation();
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -190,51 +209,55 @@ export function FullScreenPlayer({
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.base} />
         <View style={styles.backgroundContainer}>
           <Image
             source={{ uri: track.images.large }}
             style={styles.backgroundImage}
             contentFit="cover"
           />
-          <BlurView intensity={80} style={styles.blurOverlay} />
+          <BlurView intensity={100} tint={isDark ? 'dark' : 'light'} style={styles.blurOverlay} />
           <LinearGradient
-            colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)', '#000']}
+            colors={isDark ? ['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.9)'] : ['rgba(245,239,230,0.3)', 'rgba(245,239,230,0.6)', '#f5efe6']}
             style={styles.gradient}
           />
         </View>
 
                 <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="chevron-down" size={28} color="#fff" />
+          <TouchableOpacity onPress={handleClose} style={[styles.headerButton, { backgroundColor: theme.glass }] }>
+            <Ionicons name="chevron-down" size={24} color={theme.icon} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Now Playing</Text>
-          <TouchableOpacity style={styles.moreButton} onPress={handleShare}>
-            <Ionicons name="share-social" size={24} color="#fff" />
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>{t('player.now_playing')}</Text>
+          <TouchableOpacity style={[styles.headerButton, { backgroundColor: theme.glass }]} onPress={handleShare}>
+            <Ionicons name="share-social" size={24} color={theme.icon} />
           </TouchableOpacity>
         </View>
 
                 <View style={[styles.content, IS_LANDSCAPE && styles.contentLandscape]}>
                     <View style={styles.albumArtContainer}>
-            <Image
-              source={{ uri: track.images.large }}
-              style={[styles.albumArt, IS_LANDSCAPE && styles.albumArtLandscape, IS_TABLET && styles.albumArtTablet]}
-              contentFit="cover"
-            />
+            <View style={[styles.albumArtWrapper, IS_LANDSCAPE && styles.albumArtWrapperLandscape, IS_TABLET && styles.albumArtWrapperTablet]}>
+              <BlurView intensity={20} tint={isDark ? 'dark' : 'light'} style={styles.albumArtGlass}>
+                <Image
+                  source={{ uri: track.images.large }}
+                  style={[styles.albumArt, IS_LANDSCAPE && styles.albumArtLandscape, IS_TABLET && styles.albumArtTablet]}
+                  contentFit="cover"
+                />
+              </BlurView>
+            </View>
           </View>
 
                     <View style={styles.trackInfo}>
-            <Text style={[styles.trackTitle, IS_TABLET && styles.trackTitleTablet]} numberOfLines={2}>
+            <Text style={[styles.trackTitle, { color: theme.textPrimary }, IS_TABLET && styles.trackTitleTablet]} numberOfLines={2}>
               {track.title}
             </Text>
-            <Text style={[styles.trackArtist, IS_TABLET && styles.trackArtistTablet]} numberOfLines={2}>
+            <Text style={[styles.trackArtist, { color: theme.textSecondary }, IS_TABLET && styles.trackArtistTablet]} numberOfLines={2}>
               {track.artist}
             </Text>
           </View>
 
                     <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <Text style={styles.timeText}>{formatTime(isSeeking ? seekPosition : position)}</Text>
+              <Text style={[styles.timeText, { color: theme.textSecondary }]}>{formatTime(isSeeking ? seekPosition : position)}</Text>
               <View style={styles.sliderContainer}>
                 <Slider
                   style={styles.slider}
@@ -244,43 +267,50 @@ export function FullScreenPlayer({
                   onValueChange={handleSliderChange}
                   onSlidingStart={handleSliderStart}
                   onSlidingComplete={handleSliderComplete}
-                  minimumTrackTintColor="#1DB954"
-                  maximumTrackTintColor="#4B5563"
-                  thumbTintColor="#1DB954"
+                  minimumTrackTintColor={theme.accent}
+                  maximumTrackTintColor={theme.track}
+                  thumbTintColor={theme.accent}
                 />
               </View>
-              <Text style={styles.timeText}>{formatTime(duration)}</Text>
+              <Text style={[styles.timeText, { color: theme.textSecondary }]}>{formatTime(duration)}</Text>
             </View>
           </View>
 
                     <View style={styles.controls}>
-            <TouchableOpacity onPress={handleLike} style={styles.controlButton}>
+            <TouchableOpacity onPress={handleLike} style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}>
             <Ionicons
                 name={isLiked(track.id) ? "heart" : "heart-outline"}
                 size={IS_TABLET ? 28 : 24}
-                color={isLiked(track.id) ? "#1DB954" : "#fff"}
+                color={isLiked(track.id) ? theme.accent : theme.icon}
               />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handlePrevious} style={styles.controlButton}>
-              <Ionicons name="play-skip-back" size={IS_TABLET ? 40 : 32} color="#fff" />
+            <TouchableOpacity onPress={handlePrevious} style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}>
+              <Ionicons name="play-skip-back" size={IS_TABLET ? 40 : 32} color={theme.icon} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handlePlayPause} style={[styles.playButton, IS_TABLET && styles.playButtonTablet]}>
+            <TouchableOpacity onPress={handlePlayPause} style={[styles.playButton, { backgroundColor: theme.accent }, IS_TABLET && styles.playButtonTablet]}>
               <Ionicons
                 name={isPlaying ? "pause" : "play"}
                 size={IS_TABLET ? 40 : 32}
-                color="#000"
+                color="#fff"
               />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleNext} style={styles.controlButton}>
-              <Ionicons name="play-skip-forward" size={IS_TABLET ? 40 : 32} color="#fff" />
+            <TouchableOpacity onPress={handleNext} style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}>
+              <Ionicons name="play-skip-forward" size={IS_TABLET ? 40 : 32} color={theme.icon} />
             </TouchableOpacity>
-            <DownloadButton track={track} style={styles.controlButton} />
+            <DownloadButton track={track} style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]} iconColor={theme.icon} accentColor={theme.accent} />
           </View>
 
                     <View style={styles.bottomControls}>
+            <TouchableOpacity
+              onPress={handleQueueToggle}
+              style={[styles.glassButton, styles.bottomButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="list" size={IS_TABLET ? 26 : 22} color={theme.icon} />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={async () => {
                 const pls = await PlaylistStorage.getPlaylists();
@@ -289,49 +319,41 @@ export function FullScreenPlayer({
                 setSelected(preSelected);
                 setShowAddModal(true);
               }}
-              style={styles.addPlaylistButton}
+              style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}
               activeOpacity={0.85}
             >
-              <LinearGradient
-                colors={["black", "black"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.addPlaylistButtonGradient}
-              >
-                <Ionicons name="add-circle" size={IS_TABLET ? 28 : 24} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={[styles.addPlaylistButtonText, IS_TABLET && styles.addPlaylistButtonTextTablet]}>Add to Playlist</Text>
-              </LinearGradient>
+              <Ionicons name="add-circle" size={IS_TABLET ? 26 : 22} color={theme.icon} />
             </TouchableOpacity>
           </View>
         </View>
                 <Modal visible={showAddModal} transparent animationType="fade" onRequestClose={() => setShowAddModal(false)}>
-          <View style={styles.addModalOverlay}>
-            <View style={styles.addModalBox}>
-              <Text style={styles.addModalTitle}>Add to Playlist</Text>
-              {playlists.filter(pl => pl.name !== 'offline').length === 0 && <Text style={{ color: '#888', marginBottom: 12 }}>No playlists found.</Text>}
+          <BlurView intensity={40} tint={isDark ? 'dark' : 'light'} style={styles.addModalOverlay}>
+            <View style={[styles.addModalBox, { backgroundColor: isDark ? '#1a1a1a' : '#fff', borderColor: theme.glassBorder }]}>
+              <Text style={[styles.addModalTitle, { color: theme.textPrimary }]}>{t('components.add_to_playlist')}</Text>
+              {playlists.filter(pl => pl.name !== 'offline').length === 0 && <Text style={{ color: theme.textSecondary, marginBottom: 12 }}>{t('components.no_playlists')}</Text>}
               {playlists.filter(pl => pl.name !== 'offline').map(pl => (
                 <TouchableOpacity
                   key={pl.name}
-                  style={styles.addModalItem}
+                  style={[styles.addModalItem, { backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5' }]}
                   onPress={() => toggleSelect(pl.name)}
                 >
                   <Ionicons
                     name={selected.includes(pl.name) ? 'checkbox' : 'square-outline'}
                     size={22}
-                    color={selected.includes(pl.name) ? '#1DB954' : '#888'}
+                    color={selected.includes(pl.name) ? theme.accent : theme.textSecondary}
                   />
-                  <Text style={{ color: '#fff', marginLeft: 10 }}>{pl.name}</Text>
+                  <Text style={{ color: theme.textPrimary, marginLeft: 10 }}>{pl.name}</Text>
                 </TouchableOpacity>
               ))}
-              <TouchableOpacity style={[styles.addModalButton, { backgroundColor: '#1DB954' }]} onPress={handleAddToPlaylist} disabled={adding}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{adding ? 'Updating...' : 'Update'}</Text>
+              <TouchableOpacity style={[styles.addModalButton, { backgroundColor: theme.accent }]} onPress={handleAddToPlaylist} disabled={adding}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{adding ? t('components.updating') : t('components.update')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.addModalCancel} onPress={() => setShowAddModal(false)}>
-                <Text style={{ color: '#fff', fontSize: 15 }}>Cancel</Text>
+                <Text style={[styles.addModalCancelText, { color: theme.textPrimary }]}>{t('components.cancel')}</Text>
               </TouchableOpacity>
-              {addSuccess && <Text style={{ color: '#1DB954', marginTop: 10 }}>Added to playlist!</Text>}
+              {addSuccess && <Text style={{ color: theme.accent, marginTop: 10 }}>{t('components.added_to_playlist')}</Text>}
             </View>
-          </View>
+          </BlurView>
         </Modal>
       </SafeAreaView>
     </Modal>
@@ -377,8 +399,13 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     zIndex: 1,
   },
-  closeButton: {
-    padding: 8,
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backdropFilter: 'blur(20px)',
   },
   headerTitle: {
     color: '#fff',
@@ -398,14 +425,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  albumArt: {
-    width: SCREEN_WIDTH * 0.8,
-    height: SCREEN_WIDTH * 0.8,
-    borderRadius: 12,
+  albumArtWrapper: {
+    borderRadius: 20,
+    padding: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 40,
+    elevation: 20,
+  },
+  albumArtGlass: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  albumArt: {
+    width: SCREEN_WIDTH * 0.75,
+    height: SCREEN_WIDTH * 0.75,
+    borderRadius: 16,
   },
   trackInfo: {
     alignItems: 'center',
@@ -449,21 +485,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 40,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    gap: 16,
   },
-  controlButton: {
-    padding: 12,
+  glassButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glassButtonShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   playButton: {
-    backgroundColor: '#1DB954',
+    width: 64,
+    height: 64,
     borderRadius: 32,
-    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#1DB954',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   bottomControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginBottom: 40,
+    paddingHorizontal: 32,
   },
   bottomButton: {
     padding: 12,
@@ -472,16 +528,20 @@ const styles = StyleSheet.create({
   },
   addModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   addModalBox: {
-    backgroundColor: '#181818',
-    borderRadius: 16,
-    padding: 24,
-    width: '80%',
+    borderRadius: 24,
+    padding: 28,
+    width: '85%',
     alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.3,
+    shadowRadius: 40,
+    elevation: 20,
   },
   addModalTitle: {
     color: '#fff',
@@ -494,6 +554,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     alignSelf: 'flex-start',
+    padding: 12,
+    borderRadius: 12,
+    width: '100%',
   },
   addModalButton: {
     marginTop: 18,
@@ -503,25 +566,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addModalCancel: {
-    marginTop: 10,
+    marginTop: 12,
+  },
+  addModalCancelText: {
+    fontSize: 15,
   },
   addPlaylistButton: {
-    borderRadius: 32,
-    overflow: 'hidden',
-    shadowColor: '#1DB954',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-    marginHorizontal: 16,
-  },
-  addPlaylistButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    borderRadius: 32,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 28,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   addPlaylistButtonText: {
     color: '#fff',
@@ -554,12 +616,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   albumArtLandscape: {
-    width: SCREEN_HEIGHT * 0.5,
-    height: SCREEN_HEIGHT * 0.5,
+    width: SCREEN_HEIGHT * 0.45,
+    height: SCREEN_HEIGHT * 0.45,
+  },
+  albumArtWrapperLandscape: {
+    padding: 3,
+  },
+  albumArtWrapperTablet: {
+    padding: 3,
   },
   albumArtTablet: {
-    width: SCREEN_WIDTH * 0.35,
-    height: SCREEN_WIDTH * 0.35,
+    width: SCREEN_WIDTH * 0.32,
+    height: SCREEN_WIDTH * 0.32,
   },
   trackTitleTablet: {
     fontSize: 28,

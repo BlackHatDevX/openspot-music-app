@@ -2,6 +2,8 @@ import * as Notifications from "expo-notifications";
 import { Track } from "@/types/music";
 
 const MEDIA_NOTIFICATION_ID = "media-notification";
+const MEDIA_CATEGORY_ID = "media-controls";
+const MEDIA_CHANNEL_ID = "media-controls";
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
@@ -25,13 +27,32 @@ Notifications.setNotificationHandler({
 });
 
 export class NotificationService {
-  private static currentTrackId: number | null = null;
+  private static currentTrackId: string | number | null = null;
+  private static initialized = false;
+  private static initPromise: Promise<boolean> | null = null;
+  private static lastSignature: string | null = null;
+
+  private static getTrackSignature(track: Track, isPlaying: boolean): string {
+    return `${track.id}|${track.title}|${track.artist}|${isPlaying ? "1" : "0"}`;
+  }
 
   static async showOrUpdateMediaNotification(track: Track, isPlaying: boolean) {
     try {
+      if (!track?.id) return;
+
+      if (!this.initialized) {
+        const ok = await this.initialize();
+        if (!ok) return;
+      }
+
+      const nextSignature = this.getTrackSignature(track, isPlaying);
+      if (this.lastSignature === nextSignature) {
+        return;
+      }
+
       await Notifications.dismissNotificationAsync(MEDIA_NOTIFICATION_ID).catch(() => {});
       await Notifications.scheduleNotificationAsync({
-        identifier: MEDIA_NOTIFICATION_ID, 
+        identifier: MEDIA_NOTIFICATION_ID,
         content: {
           title: track.title,
           body: isPlaying ? `Playing • ${track.artist}` : `Paused • ${track.artist}`,
@@ -40,13 +61,16 @@ export class NotificationService {
             trackId: track.id,
             isPlaying,
           },
-          categoryIdentifier: "media-controls",
+          categoryIdentifier: MEDIA_CATEGORY_ID,
+          sound: null,
           sticky: true,
           priority: Notifications.AndroidNotificationPriority.HIGH,
+          ...(process.env.EXPO_OS === "android" ? { channelId: MEDIA_CHANNEL_ID } : {}),
         },
         trigger: null,
       });
-      this.currentTrackId = typeof track.id === 'number' ? track.id : Number(track.id);
+      this.currentTrackId = track.id;
+      this.lastSignature = nextSignature;
     } catch (error) {
       console.error("Failed to show/update media notification:", error);
     }
@@ -55,7 +79,9 @@ export class NotificationService {
   static async hideMediaNotification() {
     try {
       await Notifications.dismissNotificationAsync(MEDIA_NOTIFICATION_ID);
+      await Notifications.cancelScheduledNotificationAsync(MEDIA_NOTIFICATION_ID).catch(() => {});
       this.currentTrackId = null;
+      this.lastSignature = null;
     } catch (error) {
       console.error("Failed to hide media notification:", error);
     }
@@ -63,7 +89,7 @@ export class NotificationService {
 
   static async setupNotificationCategories() {
     try {
-      await Notifications.setNotificationCategoryAsync("media-controls", [
+      await Notifications.setNotificationCategoryAsync(MEDIA_CATEGORY_ID, [
         {
           identifier: "previous",
           buttonTitle: "Prev",
@@ -106,7 +132,7 @@ export class NotificationService {
 
   static async createNotificationChannel() {
     try {
-      await Notifications.setNotificationChannelAsync("media-controls", {
+      await Notifications.setNotificationChannelAsync(MEDIA_CHANNEL_ID, {
         name: "Media Controls",
         description: "Music playback controls",
         importance: Notifications.AndroidImportance.HIGH,
@@ -124,17 +150,27 @@ export class NotificationService {
   }
 
   static async initialize() {
-    try {
-      const hasPermission = await this.requestPermissions();
-      if (!hasPermission) return false;
+    if (this.initialized) return true;
+    if (this.initPromise) return this.initPromise;
 
-      await this.setupNotificationCategories();
-      await this.createNotificationChannel();
+    this.initPromise = (async () => {
+      try {
+        const hasPermission = await this.requestPermissions();
+        if (!hasPermission) return false;
 
-      return true;
-    } catch (error) {
-      console.error("Failed to initialize notification service:", error);
-      return false;
-    }
+        await this.setupNotificationCategories();
+        await this.createNotificationChannel();
+
+        this.initialized = true;
+        return true;
+      } catch (error) {
+        console.error("Failed to initialize notification service:", error);
+        return false;
+      } finally {
+        this.initPromise = null;
+      }
+    })();
+
+    return this.initPromise;
   }
 }

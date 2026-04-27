@@ -1,4 +1,4 @@
-import React, { useState, createContext } from 'react';
+import React, { useMemo, useState, createContext, useRef } from 'react';
 import { Tabs } from 'expo-router';
 import { Player } from '@/components/Player';
 import { QueueDisplay } from '@/components/QueueDisplay';
@@ -11,6 +11,8 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Track } from '@/types/music';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MusicAPI } from '@/lib/music-api';
+import { useTranslation } from 'react-i18next';
 
 interface MusicPlayerContextType {
   musicQueue: ReturnType<typeof useMusicQueue>;
@@ -34,13 +36,31 @@ export const MusicPlayerContext = createContext<MusicPlayerContextType>({
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const isDark = colorScheme !== 'light';
   const musicQueue = useMusicQueue();
   const likedSongs = useLikedSongs();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const pendingPlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const tabTheme = useMemo(
+    () => ({
+      background: isDark ? '#121212' : '#fffaf2',
+      border: isDark ? '#272727' : '#e4d5c5',
+      active: isDark ? '#1DB954' : '#167c3a',
+      inactive: isDark ? '#9a9a9a' : '#7a6251',
+      safeArea: isDark ? '#050505' : '#f5efe6',
+    }),
+    [isDark]
+  );
 
   const handleTrackSelect = (track: Track, trackList?: Track[], startIndex?: number) => {
+    if (pendingPlayTimeoutRef.current) {
+      clearTimeout(pendingPlayTimeoutRef.current);
+      pendingPlayTimeoutRef.current = null;
+    }
+
     if (musicQueue.currentTrack?.id === track.id) {
       setIsPlaying(!isPlaying);
       return;
@@ -51,8 +71,10 @@ export default function TabLayout() {
     } else {
       musicQueue.setQueueTracks([track], 0);
     }
-    setTimeout(() => {
+    void MusicAPI.addToRecentlyPlayed(track);
+    pendingPlayTimeoutRef.current = setTimeout(() => {
       setIsPlaying(true);
+      pendingPlayTimeoutRef.current = null;
     }, 100);
   };
 
@@ -85,17 +107,19 @@ export default function TabLayout() {
         toggleQueue,
       }}
     >
-      <SafeAreaView edges={['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: '#000' }}>
+      <SafeAreaView edges={['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: tabTheme.safeArea }}>
         <View style={{ flex: 1, position: 'relative' }}>
           <Tabs
             screenOptions={{
-              tabBarActiveTintColor: '#fff',
+              tabBarActiveTintColor: tabTheme.active,
+              tabBarInactiveTintColor: tabTheme.inactive,
               headerShown: false,
               tabBarButton: HapticTab,
               tabBarBackground: TabBarBackground,
               tabBarStyle: {
-                backgroundColor: '#000', 
-                borderTopWidth: 0,
+                backgroundColor: tabTheme.background,
+                borderTopWidth: 1,
+                borderTopColor: tabTheme.border,
                 height: 64 + insets.bottom, 
                 paddingBottom: insets.bottom, 
               },
@@ -107,7 +131,7 @@ export default function TabLayout() {
             <Tabs.Screen
               name="index"
               options={{
-                title: 'Home',
+                title: t('tabs.home'),
                 tabBarIcon: ({ color }) => (
                   <IconSymbol size={28} name="house.fill" color={color} />
                 ),
@@ -116,7 +140,7 @@ export default function TabLayout() {
             <Tabs.Screen
               name="search"
               options={{
-                title: 'Search',
+                title: t('tabs.search'),
                 tabBarIcon: ({ color }) => (
                   <IconSymbol size={28} name="magnifyingglass" color={color} />
                 ),
@@ -125,7 +149,7 @@ export default function TabLayout() {
             <Tabs.Screen
               name="library"
               options={{
-                title: 'Library',
+                title: t('tabs.library'),
                 tabBarIcon: ({ color }) => (
                   <IconSymbol size={28} name="books.vertical.fill" color={color} />
                 ),
@@ -134,7 +158,7 @@ export default function TabLayout() {
             <Tabs.Screen
               name="downloads"
               options={{
-                title: 'Downloads',
+                title: t('tabs.downloads'),
                 tabBarIcon: ({ color }) => (
                   <IconSymbol size={28} name="arrow.down.circle.fill" color={color} />
                 ),
@@ -143,10 +167,16 @@ export default function TabLayout() {
             <Tabs.Screen
               name="update"
               options={{
-                title: 'Update',
+                title: t('settings.settings'),
                 tabBarIcon: ({ color }) => (
-                  <IconSymbol size={28} name="checkmark.shield.fill" color={color} />
+                  <IconSymbol size={28} name="gearshape.fill" color={color} />
                 ),
+              }}
+            />
+            <Tabs.Screen
+              name="media/[type]/[id]"
+              options={{
+                href: null,
               }}
             />
           </Tabs>

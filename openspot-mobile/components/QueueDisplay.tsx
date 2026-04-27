@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import { BlurView } from 'expo-blur';
 import { Track } from '@/types/music';
 import { MusicAPI } from '@/lib/music-api';
 import { useLikedSongs } from '@/hooks/useLikedSongs';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTranslation } from 'react-i18next';
 
 interface QueueDisplayProps {
   isOpen: boolean;
@@ -35,6 +37,23 @@ export function QueueDisplay({
   currentTrack,
 }: QueueDisplayProps) {
   const { isLiked, toggleLike } = useLikedSongs();
+  const { t } = useTranslation();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme !== 'light';
+  const theme = useMemo(
+    () => ({
+      base: isDark ? '#000000' : '#f5efe6',
+      glass: isDark ? 'rgba(255,255,255,0.08)' : 'transparent',
+      glassBorder: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+      textPrimary: isDark ? '#ffffff' : '#1a1a1a',
+      textSecondary: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+      accent: isDark ? '#1DB954' : '#167c3a',
+      track: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
+      icon: isDark ? '#ffffff' : '#1a1a1a',
+      disabled: isDark ? '#444' : '#ccc',
+    }),
+    [isDark]
+  );
 
   const renderTrackItem = ({ item, index }: { item: Track; index: number }) => {
     const isCurrentTrack = currentTrack?.id === item.id;
@@ -44,14 +63,15 @@ export function QueueDisplay({
       <TouchableOpacity
         style={[
           styles.trackItem,
-          isCurrentTrack && styles.currentTrackItem,
+          isCurrentTrack && [styles.currentTrackItem, { backgroundColor: theme.glass }],
         ]}
         onPress={() => onTrackSelect(item, index)}
       >
         <View style={styles.trackNumber}>
           <Text style={[
             styles.trackNumberText,
-            isCurrentTrack && styles.currentTrackText,
+            { color: theme.textSecondary },
+            isCurrentTrack && { color: theme.accent },
           ]}>
             {index + 1}
           </Text>
@@ -67,7 +87,8 @@ export function QueueDisplay({
           <Text
             style={[
               styles.trackTitle,
-              isCurrentTrack && styles.currentTrackText,
+              { color: theme.textPrimary },
+              isCurrentTrack && { color: theme.accent },
             ]}
             numberOfLines={1}
           >
@@ -76,13 +97,14 @@ export function QueueDisplay({
           <Text
             style={[
               styles.trackArtist,
-              isCurrentTrack && styles.currentTrackText,
+              { color: theme.textSecondary },
+              isCurrentTrack && { color: theme.accent },
             ]}
             numberOfLines={1}
           >
             {item.artist}
           </Text>
-          <Text style={styles.trackDuration}>
+          <Text style={[styles.trackDuration, { color: theme.textSecondary }]}>
             {MusicAPI.formatDuration(item.duration)}
           </Text>
         </View>
@@ -90,18 +112,50 @@ export function QueueDisplay({
         <View style={styles.trackActions}>
           <TouchableOpacity
             style={styles.actionButton}
+            onPress={() => musicQueue.moveQueueItem(index, Math.max(0, index - 1))}
+            disabled={index === 0}
+          >
+            <Ionicons
+              name="arrow-up"
+              size={18}
+              color={index === 0 ? theme.disabled : theme.textSecondary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => musicQueue.moveQueueItem(index, Math.min(musicQueue.tracks.length - 1, index + 1))}
+            disabled={index === musicQueue.tracks.length - 1}
+          >
+            <Ionicons
+              name="arrow-down"
+              size={18}
+              color={index === musicQueue.tracks.length - 1 ? theme.disabled : theme.textSecondary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => toggleLike(item)}
           >
             <Ionicons
               name={isTrackLiked ? "heart" : "heart-outline"}
               size={20}
-              color={isTrackLiked ? "#1DB954" : "#888"}
+              color={isTrackLiked ? theme.accent : theme.textSecondary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => musicQueue.removeFromQueue(index)}
+          >
+            <Ionicons
+              name="close-circle-outline"
+              size={20}
+              color={theme.textSecondary}
             />
           </TouchableOpacity>
 
           {isCurrentTrack && (
             <View style={styles.playingIndicator}>
-              <Ionicons name="volume-high" size={16} color="#1DB954" />
+              <Ionicons name="volume-high" size={16} color={theme.accent} />
             </View>
           )}
         </View>
@@ -112,17 +166,17 @@ export function QueueDisplay({
   const renderHeader = () => (
     <View style={styles.header}>
       <LinearGradient
-        colors={['#1a1a1a', '#000']}
+        colors={isDark ? ['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)'] : ['rgba(245,239,230,0.8)', 'rgba(245,239,230,0.95)']}
         style={styles.headerGradient}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="chevron-down" size={24} color="#fff" />
+          <TouchableOpacity style={[styles.closeButton, { backgroundColor: theme.glass }]} onPress={onClose}>
+            <Ionicons name="chevron-down" size={24} color={theme.icon} />
           </TouchableOpacity>
           
-          <Text style={styles.headerTitle}>Queue</Text>
-          <Text style={styles.headerSubtitle}>
-            {musicQueue.tracks.length} song{musicQueue.tracks.length !== 1 ? 's' : ''}
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>{t('components.queue')}</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+            {musicQueue.tracks.length} {musicQueue.tracks.length !== 1 ? t('components.songs') : t('components.song')}
           </Text>
         </View>
       </LinearGradient>
@@ -130,63 +184,67 @@ export function QueueDisplay({
   );
 
   const renderQueueControls = () => (
-    <View style={styles.queueControls}>
+    <View style={[styles.queueControls, { borderBottomColor: theme.glassBorder }]}>
       <TouchableOpacity
         style={[
           styles.controlButton,
-          musicQueue.isShuffled && styles.activeControlButton
+          { backgroundColor: theme.glass },
+          musicQueue.isShuffled && [styles.activeControlButton, { backgroundColor: theme.accent }]
         ]}
         onPress={musicQueue.toggleShuffle}
       >
         <Ionicons
           name="shuffle"
           size={20}
-          color={musicQueue.isShuffled ? "#fff" : "#888"}
+          color={musicQueue.isShuffled ? "#fff" : theme.textSecondary}
         />
         <Text style={[
           styles.controlButtonText,
+          { color: theme.textSecondary },
           musicQueue.isShuffled && styles.activeControlButtonText
         ]}>
-          Shuffle
+          {t('components.shuffle')}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[
           styles.controlButton,
-          musicQueue.repeatMode !== 'off' && styles.activeControlButton
+          { backgroundColor: theme.glass },
+          musicQueue.repeatMode !== 'off' && [styles.activeControlButton, { backgroundColor: theme.accent }]
         ]}
         onPress={musicQueue.toggleRepeat}
       >
         <Ionicons
           name={musicQueue.repeatMode === 'one' ? "repeat-outline" : "repeat"}
           size={20}
-          color={musicQueue.repeatMode !== 'off' ? "#fff" : "#888"}
+          color={musicQueue.repeatMode !== 'off' ? "#fff" : theme.textSecondary}
         />
         <Text style={[
           styles.controlButtonText,
+          { color: theme.textSecondary },
           musicQueue.repeatMode !== 'off' && styles.activeControlButtonText
         ]}>
-          {musicQueue.repeatMode === 'one' ? 'Repeat One' : 'Repeat'}
+          {musicQueue.repeatMode === 'one' ? t('components.repeat_one') : t('components.repeat')}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.controlButton}
+        style={[styles.controlButton, { backgroundColor: theme.glass }]}
         onPress={musicQueue.clearQueue}
       >
-        <Ionicons name="trash-outline" size={20} color="#888" />
-        <Text style={styles.controlButtonText}>Clear</Text>
+        <Ionicons name="trash-outline" size={20} color={theme.textSecondary} />
+        <Text style={[styles.controlButtonText, { color: theme.textSecondary }]}>{t('components.clear')}</Text>
       </TouchableOpacity>
     </View>
   );
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="list-outline" size={64} color="#888" />
-      <Text style={styles.emptyTitle}>Queue is empty</Text>
-      <Text style={styles.emptySubtitle}>
-        Add some songs to start listening
+      <Ionicons name="list-outline" size={64} color={theme.textSecondary} />
+      <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>{t('components.queue_empty')}</Text>
+      <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+        {t('components.queue_empty_hint')}
       </Text>
     </View>
   );
@@ -198,8 +256,8 @@ export function QueueDisplay({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        <BlurView intensity={10} style={styles.blurContainer}>
+      <View style={[styles.container, { backgroundColor: theme.base }]}>
+        <BlurView intensity={isDark ? 10 : 0} tint={isDark ? 'dark' : 'light'} style={styles.blurContainer}>
           {renderHeader()}
           {renderQueueControls()}
           
@@ -229,7 +287,6 @@ export function QueueDisplay({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
   },
   blurContainer: {
     flex: 1,
@@ -248,17 +305,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 20,
-    padding: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
     marginBottom: 8,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#888',
   },
   queueControls: {
     flexDirection: 'row',
@@ -266,7 +325,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
   },
   controlButton: {
     flexDirection: 'row',
@@ -274,13 +332,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: '#1a1a1a',
   },
   activeControlButton: {
-    backgroundColor: '#1DB954',
   },
   controlButtonText: {
-    color: '#888',
     fontSize: 12,
     marginLeft: 6,
   },
@@ -300,7 +355,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   currentTrackItem: {
-    backgroundColor: '#1a1a1a',
   },
   trackNumber: {
     width: 24,
@@ -309,7 +363,6 @@ const styles = StyleSheet.create({
   },
   trackNumberText: {
     fontSize: 14,
-    color: '#888',
   },
   albumCover: {
     width: 40,
@@ -324,20 +377,16 @@ const styles = StyleSheet.create({
   trackTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
     marginBottom: 2,
   },
   trackArtist: {
     fontSize: 12,
-    color: '#888',
     marginBottom: 2,
   },
   trackDuration: {
     fontSize: 10,
-    color: '#666',
   },
   currentTrackText: {
-    color: '#1DB954',
   },
   trackActions: {
     flexDirection: 'row',
@@ -360,13 +409,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#888',
     textAlign: 'center',
   },
 }); 

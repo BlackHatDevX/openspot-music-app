@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,8 @@ import { NotificationService } from '../lib/notification-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FullScreenPlayer } from './FullScreenPlayer';
 import { useLikedSongs } from '../hooks/useLikedSongs';
+import { useColorScheme } from '../hooks/useColorScheme';
+import { useTranslation } from 'react-i18next';
 
 interface PlayerProps {
   track: Track | null;
@@ -44,6 +46,22 @@ export function Player({
   onQueueToggle,
 }: PlayerProps) {
   const soundRef = useRef<Audio.Sound | null>(null);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme !== 'light';
+  const theme = useMemo(
+    () => ({
+      card: isDark ? '#181a1f' : '#fffaf2',
+      cardSubtle: isDark ? '#222733' : '#efe4d6',
+      textPrimary: isDark ? '#ffffff' : '#2d2219',
+      textSecondary: isDark ? '#b9c0d6' : '#7a6251',
+      icon: isDark ? '#ffffff' : '#2d2219',
+      accent: isDark ? '#1DB954' : '#167c3a',
+      progressBg: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(45,34,25,0.18)',
+      progressFill: isDark ? '#ffffff' : '#2d2219',
+      border: isDark ? '#2a2f3a' : '#e4d5c5',
+    }),
+    [isDark]
+  );
 
   if (!track) {
     return null;
@@ -61,13 +79,16 @@ export function Player({
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'success' | 'error'>('idle');
   const [downloadError, setDownloadError] = useState<string>('');
+  const [shareMode, setShareMode] = useState(false);
 
   const { isLiked, toggleLike } = useLikedSongs();
+  const { t } = useTranslation();
   const rotationValue = useRef(new Animated.Value(0)).current;
   const rotationAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isMountedRef = useRef(true);
   const downloadTimeoutRef = useRef<number | null>(null);
   const currentTrackIdRef = useRef<string | number | null>(null);
+  const loadRequestIdRef = useRef(0);
   const lastSeekTimeRef = useRef<number>(0);
   const isInitialLoadRef = useRef(true);
 
@@ -95,6 +116,7 @@ export function Player({
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      loadRequestIdRef.current += 1;
       currentTrackIdRef.current = null;
       if (downloadTimeoutRef.current) {
         clearTimeout(downloadTimeoutRef.current);
@@ -116,9 +138,9 @@ export function Player({
       isShuffled: musicQueue.isShuffled,
       repeatMode: musicQueue.repeatMode,
       currentIndex: musicQueue.currentIndex,
-      queueLength: musicQueue.queue.length
+      queueLength: musicQueue.queueLength
     });
-  }, [musicQueue.isShuffled, musicQueue.repeatMode, musicQueue.currentIndex, musicQueue.queue.length]);
+  }, [musicQueue.isShuffled, musicQueue.repeatMode, musicQueue.currentIndex, musicQueue.queueLength]);
 
   
   useEffect(() => {
@@ -206,13 +228,9 @@ export function Player({
   const loadAudio = async () => {
     if (!track) return;
 
-    if (isLoading) {
-      return;
-    }
+    if (currentTrackIdRef.current === track.id && soundRef.current) return;
 
-    if (currentTrackIdRef.current === track.id) {
-      return;
-    }
+    const requestId = ++loadRequestIdRef.current;
     setIsLoading(true);
     currentTrackIdRef.current = track.id;
     try {
@@ -236,11 +254,19 @@ export function Player({
       }
 
       if (!audioUrl) {
-        audioUrl = await MusicAPI.getStreamUrl(track.id.toString());
+        audioUrl = await MusicAPI.getStreamUrl(track.id.toString(), track);
+      }
+
+      if (requestId !== loadRequestIdRef.current) {
+        return;
       }
 
       if (soundRef.current) {
-        await soundRef.current.unloadAsync();
+        try {
+          await soundRef.current.unloadAsync();
+        } catch (e) {
+          console.warn('Previous sound unload failed:', e);
+        }
       }
 
       const { sound } = await Audio.Sound.createAsync(
@@ -261,6 +287,15 @@ export function Player({
         }
       );
 
+      if (requestId !== loadRequestIdRef.current) {
+        try {
+          await sound.unloadAsync();
+        } catch (e) {
+          console.warn('Stale sound unload failed:', e);
+        }
+        return;
+      }
+
       soundRef.current = sound;
 
       if (!isInitialLoadRef.current && !isPlaying) {
@@ -273,7 +308,9 @@ export function Player({
 
       Alert.alert('Playback Error', 'Failed to load audio. Please try again.');
     } finally {
-      setIsLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -439,6 +476,7 @@ export function Player({
     
     
     if (isMountedRef.current) {
+      setShareMode(true);
       setDownloadProgress(0);
       setDownloadStatus('idle');
       setDownloadError('');
@@ -460,7 +498,7 @@ export function Player({
       if (isMountedRef.current) {
         setDownloadStatus('downloading');
       }
-      const audioUrl = await MusicAPI.getStreamUrl(track.id.toString());
+      const audioUrl = await MusicAPI.getStreamUrl(track.id.toString(), track);
       
       
       const safeFileName = `${track.title.replace(/[^a-zA-Z0-9\s]/g, '')}_${track.artist.replace(/[^a-zA-Z0-9\s]/g, '')}.mp3`;
@@ -548,6 +586,7 @@ export function Player({
       
       if (isMountedRef.current) {
         setIsDownloadModalOpen(false);
+        setShareMode(false);
       }
     } catch (error) {
       console.error('Error closing download modal:', error);
@@ -575,7 +614,7 @@ export function Player({
   return (
     <>
     <View style={styles.cardroot}>
-      <View style={styles.cardContainer}>
+      <View style={[styles.cardContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <TouchableOpacity
           style={styles.cardTouchable}
           activeOpacity={0.85}
@@ -587,8 +626,8 @@ export function Player({
             contentFit="cover"
           />
           <View style={styles.cardInfoArea}>
-            <Text style={styles.cardTitle} numberOfLines={1}>{track.title}</Text>
-            <Text style={styles.cardArtist} numberOfLines={1}>{track.artist}</Text>
+            <Text style={[styles.cardTitle, { color: theme.textPrimary }]} numberOfLines={1}>{track.title}</Text>
+            <Text style={[styles.cardArtist, { color: theme.textSecondary }]} numberOfLines={1}>{track.artist}</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -596,18 +635,25 @@ export function Player({
           onPress={() => toggleLike(track)}
           activeOpacity={0.7}
         >
-          <Ionicons name={isLiked(track.id) ? 'heart' : 'heart-outline'} size={24} color={isLiked(track.id) ? '#1DB954' : '#fff'} />
+          <Ionicons name={isLiked(track.id) ? 'heart' : 'heart-outline'} size={24} color={isLiked(track.id) ? theme.accent : theme.icon} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.cardIconButton}
+          onPress={onQueueToggle}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="list" size={24} color={theme.icon} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.cardIconButton}
           onPress={handlePlayPause}
           activeOpacity={0.7}
         >
-          <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#fff" />
+          <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color={theme.icon} />
         </TouchableOpacity>
         </View>
-        <View style={styles.whiteProgressBarBg}>
-        <View style={[styles.whiteProgressBarFill, { width: duration > 0 ? `${(position / duration) * 100}%` : '0%' }]} />
+        <View style={[styles.whiteProgressBarBg, { backgroundColor: theme.progressBg }]}>
+        <View style={[styles.whiteProgressBarFill, { backgroundColor: theme.progressFill, width: duration > 0 ? `${(position / duration) * 100}%` : '0%' }]} />
       </View>
       </View>
       
@@ -626,7 +672,7 @@ export function Player({
             >
                             <View style={styles.modalHeader}>
                 <Ionicons name="download" size={24} color="#1DB954" />
-                <Text style={styles.modalTitle}>Download</Text>
+                <Text style={styles.modalTitle}>{shareMode ? t('player.share') : t('components.download')}</Text>
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={handleCloseDownloadModal}
@@ -653,14 +699,14 @@ export function Player({
 
                                 <View style={styles.statusContainer}>
                   {downloadStatus === 'idle' && (
-                    <Text style={styles.statusText}>Preparing download...</Text>
+                    <Text style={styles.statusText}>{t('components.preparing_download')}</Text>
                   )}
                   
                   {downloadStatus === 'downloading' && (
                     <>
                       <ActivityIndicator size="large" color="#1DB954" style={styles.spinner} />
-                      <Text style={styles.statusText}>Downloading...</Text>
-                      <Text style={styles.statusText}>To save media, share it to your music library</Text>
+                      <Text style={styles.statusText}>{t('components.downloading')}</Text>
+                      <Text style={styles.statusText}>{t('components.download_hint')}</Text>
                       <View style={styles.downloadProgressContainer}>
                         <View style={styles.downloadProgressBar}>
                           <View style={[styles.progressFillBar, { width: `${downloadProgress}%` }]} />
@@ -673,14 +719,14 @@ export function Player({
                   {downloadStatus === 'success' && (
                     <>
                       <Ionicons name="checkmark-circle" size={48} color="#1DB954" style={styles.successIcon} />
-                      <Text style={styles.successText}>Download Complete!</Text>
+                      <Text style={styles.successText}>{t('components.download_complete')}</Text>
                     </>
                   )}
                   
                   {downloadStatus === 'error' && (
                     <>
                       <Ionicons name="alert-circle" size={48} color="#ff4444" style={styles.errorIcon} />
-                      <Text style={styles.errorText}>Download Failed</Text>
+                      <Text style={styles.errorText}>{t('components.download_failed')}</Text>
                       <Text style={styles.errorSubtext}>{downloadError}</Text>
                       <TouchableOpacity
                         style={styles.retryButton}
@@ -689,7 +735,7 @@ export function Player({
                           setTimeout(() => handleShare(), 300);
                         }}
                       >
-                        <Text style={styles.retryButtonText}>Try Again</Text>
+                        <Text style={styles.retryButtonText}>{t('components.try_again')}</Text>
                       </TouchableOpacity>
                     </>
                   )}
@@ -730,6 +776,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#1a2341',
     borderRadius: 16,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
@@ -978,7 +1025,7 @@ const styles = StyleSheet.create({
   },
   cardroot: {
     width: '100%',
-    backgroundColor: '#1a2341',
+    backgroundColor: 'transparent',
     borderRadius: 16,
     flexDirection: 'column',
   },

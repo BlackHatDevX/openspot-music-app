@@ -12,9 +12,17 @@ interface PlaylistListProps {
   onPlaylistShuffle?: (playlist: any) => void;
   onPlaylistPlay?: (playlist: any) => void;
   onPlaylistLongPress?: (playlist: any) => void;
+  theme?: {
+    surface: string;
+    border: string;
+    textPrimary: string;
+    textSecondary: string;
+    accent: string;
+    icon: string;
+  };
 }
 
-export function PlaylistList({ playlists, onPlaylistPress, onPlaylistShuffle, onPlaylistPlay, onPlaylistLongPress }: PlaylistListProps) {
+export function PlaylistList({ playlists, onPlaylistPress, onPlaylistShuffle, onPlaylistPlay, onPlaylistLongPress, theme }: PlaylistListProps) {
   return (
     <View>
       {playlists.map((playlist, idx) => (
@@ -25,6 +33,7 @@ export function PlaylistList({ playlists, onPlaylistPress, onPlaylistShuffle, on
           onShuffle={onPlaylistShuffle ? () => onPlaylistShuffle(playlist) : undefined}
           onPlay={onPlaylistPlay ? () => onPlaylistPlay(playlist) : undefined}
           onLongPress={onPlaylistLongPress ? () => onPlaylistLongPress(playlist) : undefined}
+          theme={theme}
         />
       ))}
     </View>

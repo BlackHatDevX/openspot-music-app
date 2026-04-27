@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Track } from '@/types/music';
 import { MusicAPI } from '@/lib/music-api';
 import { useLikedSongs } from '@/hooks/useLikedSongs';
+import { useTranslation } from 'react-i18next';
 
 interface LikedSongsProps {
   onTrackSelect: (track: Track, trackList?: Track[], startIndex?: number) => void;
@@ -30,6 +31,7 @@ export function LikedSongs({
   currentTrack,
 }: LikedSongsProps) {
   const { likedSongs, isLoading, toggleLike, getLikedSongsAsTrack } = useLikedSongs();
+  const { t } = useTranslation();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const likedTracks = getLikedSongsAsTrack();
@@ -138,9 +140,9 @@ export function LikedSongs({
           <View style={styles.headerIcon}>
             <Ionicons name="heart" size={80} color="#fff" />
           </View>
-          <Text style={styles.headerTitle}>Liked Songs</Text>
+          <Text style={styles.headerTitle}>{t('components.liked_songs')}</Text>
           <Text style={styles.headerSubtitle}>
-            {likedSongs.length} song{likedSongs.length !== 1 ? 's' : ''}
+            {likedSongs.length} {likedSongs.length !== 1 ? t('components.songs') : t('components.song')}
           </Text>
         </View>
       </LinearGradient>
@@ -157,7 +159,7 @@ export function LikedSongs({
           onPress={() => onTrackSelect(likedTracks[0], likedTracks, 0)}
         >
           <Ionicons name="play" size={24} color="#fff" />
-          <Text style={styles.playAllText}>Play All</Text>
+          <Text style={styles.playAllText}>{t('components.play_all')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -166,12 +168,12 @@ export function LikedSongs({
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="heart-outline" size={64} color="#888" />
-      <Text style={styles.emptyTitle}>No liked songs yet</Text>
+      <Text style={styles.emptyTitle}>{t('components.no_liked_songs')}</Text>
       <Text style={styles.emptySubtitle}>
-        Songs you like will appear here
+        {t('components.liked_songs_hint')}
       </Text>
       <Text style={styles.emptyHint}>
-        Tap the heart icon on any song to add it to your liked songs
+        {t('components.liked_songs_hint_2')}
       </Text>
     </View>
   );
@@ -179,7 +181,7 @@ export function LikedSongs({
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Baking your favorite songs...</Text>
+        <Text style={styles.loadingText}>{t('components.baking_favorites')}</Text>
       </View>
     );
   }

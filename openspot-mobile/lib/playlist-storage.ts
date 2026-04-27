@@ -9,6 +9,7 @@ export interface Playlist {
 }
 
 const PLAYLISTS_KEY = 'user_playlists';
+const TRACK_DATA_KEY = 'user_track_data';
 
 export const PlaylistStorage = {
   async getPlaylists(): Promise<Playlist[]> {
@@ -34,6 +35,9 @@ export const PlaylistStorage = {
       }
     }
     await this.savePlaylists(playlists);
+    
+    // Store track data for later retrieval
+    await this.saveTrackData(track);
   },
   async removeTrackFromPlaylist(trackId: string, playlistName: string) {
     const playlists = await this.getPlaylists();
@@ -44,12 +48,42 @@ export const PlaylistStorage = {
     }
     await this.savePlaylists(playlists);
   },
+  async saveTrackData(track: Track) {
+    try {
+      const trackId = track.id.toString();
+      const key = `${TRACK_DATA_KEY}_${trackId}`;
+      await AsyncStorage.setItem(key, JSON.stringify(track));
+    } catch (error) {
+      console.error('Failed to save track data:', error);
+    }
+  },
+  async getTrackData(trackId: string): Promise<Track | null> {
+    try {
+      const key = `${TRACK_DATA_KEY}_${trackId}`;
+      const data = await AsyncStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Failed to get track data:', error);
+      return null;
+    }
+  },
   async getPlaylistTracks(playlist: Playlist) {
     const tracks: Track[] = [];
     for (const id of playlist.trackIds) {
+      // First try to get from stored track data
+      const storedTrack = await this.getTrackData(id);
+      if (storedTrack) {
+        tracks.push(storedTrack);
+        continue;
+      }
+      
+      // Fallback to search if not stored
       try {
-        const res = await MusicAPI.search({ q: id, type: 'track' });
-        if (res.tracks && res.tracks.length > 0) tracks.push(res.tracks[0]);
+        const track = await MusicAPI.resolveTrackById(id);
+        if (track) {
+          tracks.push(track);
+          await this.saveTrackData(track);
+        }
       } catch {}
     }
     return tracks;
