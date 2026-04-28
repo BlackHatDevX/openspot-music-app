@@ -17,8 +17,10 @@
 
 * Fixed theming issues.
 * Fixed incorrect track duration.
+* Fixed background playback issues on some devices.
 * Fixed player-related bugs.
 * Fixed artist songs not loading completely (pagination improved).
+
 
 ### Changes
 
