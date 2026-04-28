@@ -1,6 +1,36 @@
 # Changelog
 
-## OpenSpot v2.0.5 (Android & iOS - React Native)
+## OpenSpot v3.0.0 (Android - React Native)
+
+### New Features
+
+* **UI**: Fully revamped UI for a cleaner and smoother experience.
+* **Playback Controls**: Improved notification controls with headset and lockscreen support.
+* **Mini Player**: Capsule-style mini player support on compatible devices (OnePlus, etc).
+
+### Improvements
+
+* **YouTube API**: More stable streaming and better reliability.
+* **Player**: General playback improvements and smoother performance.
+
+### Fixes
+
+* Fixed theming issues.
+* Fixed incorrect track duration.
+* Fixed player-related bugs.
+* Fixed artist songs not loading completely (pagination improved).
+
+### Changes
+
+* Removed repeat option from queue.
+
+<br/>
+<br/>
+<br/>
+
+---
+
+## OpenSpot v2.0.5 
 
 ### New Features
 
