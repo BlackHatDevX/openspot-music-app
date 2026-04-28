@@ -91,7 +91,7 @@ Stay updated with **version releases**, and **important announcements** on offic
 
 ### Download Links
 
-- **Android APK**: [OpenSpot-2.0.5-release.apk](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v2.0.5/OpenSpot-2.0.5-release.apk)
+- **Android APK**: [OpenSpot-3.0.0-release.apk](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.0.0/OpenSpot-3.0.0-release.apk)
 - **iOS**: [Maintainer Needed](https://github.com/BlackHatDevX/openspot-music-app/issues/15)
 
 ### Development Setup
