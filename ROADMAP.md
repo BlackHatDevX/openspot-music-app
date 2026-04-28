@@ -3,14 +3,18 @@
 This document outlines planned features and upcoming improvements for OpenSpot. Contributions are welcome!
 
 
-## Upcoming Features (ANDRIOD APP)
-Fix music switch logic (add a pause until new streaming starts instead of playing the previous one)
+## Todo Fixes and features (ANDRIOD APP v3.0.1)
+- fix [issue #50](https://github.com/BlackHatDevX/openspot-music-app/issues/50)
+- add [Türkiye language support](https://x.com/TraderEXP_/status/2049183639615811804?s=20)
+- fix downloads issue
 
-- Add Spotify import playlist option
 
-- Fix music screen responsiveness (especially for tablets)
+## Release new builds for
+``macOS``
 
-- If you have any suggestions too, feel free to share!
+``windows``
+
+``linux``
 
 ---
 
