@@ -47,7 +47,8 @@ export class MusicAPI {
 
   static async getStreamUrl(trackId: string, trackOrProvider?: Track | 'saavn' | 'ytmusic'): Promise<string> {
     const hintedProvider = this.resolveProviderHint(trackOrProvider);
-    const provider = hintedProvider || await this.getProvider();
+    const provider = hintedProvider || 'saavn';
+    console.log('[MusicAPI] getStreamUrl:', { trackId, provider, hintedProvider });
     if (provider === 'ytmusic') {
       return YTMusicAPI.getStreamUrl(trackId);
     }
@@ -66,11 +67,11 @@ export class MusicAPI {
     return MusicApi.getAlbumSongs(albumId);
   }
 
-  static async getArtistSongs(artistId: string): Promise<Track[]> {
+  static async getArtistSongs(artistId: string, page: number = 0): Promise<{ tracks: Track[]; total: number }> {
     const provider = await this.getProvider();
     // Enforce Saavn because YT no-login source lacks reliable artist entity metadata.
-    if (provider === 'ytmusic') return MusicApi.getArtistSongs(artistId);
-    return MusicApi.getArtistSongs(artistId);
+    if (provider === 'ytmusic') return MusicApi.getArtistSongs(artistId, page);
+    return MusicApi.getArtistSongs(artistId, page);
   }
 
   static async getPlaylistSongs(playlistId: string): Promise<Track[]> {
@@ -138,9 +139,14 @@ export class MusicAPI {
   }
 
   static formatDuration(duration: number): string {
-    const seconds = duration >= 1000 ? Math.floor(duration / 1000) : duration;
+    const seconds = Math.floor(duration);
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (hours > 0) {
+      return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 

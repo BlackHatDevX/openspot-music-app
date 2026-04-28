@@ -63,13 +63,17 @@ export class MusicApi {
     }
   }
 
-  static async getArtistSongs(artistId: string): Promise<Track[]> {
+  static async getArtistSongs(artistId: string, page: number = 0): Promise<{ tracks: Track[]; total: number }> {
     try {
-      const response = await MusicApiClient.get('/api/artists', {
-        params: { id: artistId, limit: 1000 },
+      const response = await MusicApiClient.get(`/api/artists/${encodeURIComponent(artistId)}/songs`, {
+        params: { sortBy: 'popularity', page },
       });
       const songs = this.extractSongsFromEntityResponse(response.data);
-      return songs.map((item: any) => this.transformSongToTrack(item));
+      const total = response.data?.data?.total || 0;
+      return {
+        tracks: songs.map((item: any) => this.transformSongToTrack(item)),
+        total,
+      };
     } catch (error) {
       console.error('Api artist songs error:', error);
       if (axios.isAxiosError(error)) {
@@ -529,6 +533,7 @@ export class MusicApi {
   }
 
   static async getStreamUrl(trackId: string): Promise<string> {
+    console.log('[MusicApi/Saavn] getStreamUrl:', { trackId, provider: 'saavn' });
     const cacheKey = `saavn_stream_${trackId}`;
 
     if (this.streamCache.has(cacheKey)) {

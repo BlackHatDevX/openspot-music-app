@@ -62,7 +62,7 @@ export class NotificationService {
             isPlaying,
           },
           categoryIdentifier: MEDIA_CATEGORY_ID,
-          sound: null,
+          sound: false,
           sticky: true,
           priority: Notifications.AndroidNotificationPriority.HIGH,
           ...(process.env.EXPO_OS === "android" ? { channelId: MEDIA_CHANNEL_ID } : {}),
@@ -93,17 +93,17 @@ export class NotificationService {
         {
           identifier: "previous",
           buttonTitle: "Prev",
-          options: { opensAppToForeground: false },
+          options: { opensAppToForeground: true },
         },
         {
           identifier: "play_pause",
           buttonTitle: "Play/Pause",
-          options: { opensAppToForeground: false },
+          options: { opensAppToForeground: true },
         },
         {
           identifier: "next",
           buttonTitle: "Next",
-          options: { opensAppToForeground: false },
+          options: { opensAppToForeground: true },
         },
         {
           identifier: "close",

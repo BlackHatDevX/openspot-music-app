@@ -2,13 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Track } from '../types/music';
 
-export type RepeatMode = 'off' | 'one' | 'all';
-
 interface QueueState {
   tracks: Track[];
   currentIndex: number;
   isShuffled: boolean;
-  repeatMode: RepeatMode;
   originalTracks: Track[]; 
 }
 
@@ -19,7 +16,6 @@ export function useMusicQueue() {
     tracks: [],
     currentIndex: -1,
     isShuffled: false,
-    repeatMode: 'off',
     originalTracks: []
   });
 
@@ -177,63 +173,46 @@ export function useMusicQueue() {
 
   
   const playNext = useCallback((): Track | null => {
-    if (queue.tracks.length === 0) return null;
-
-    let nextIndex = queue.currentIndex + 1;
-
-    
-    if (nextIndex >= queue.tracks.length) {
-      if (queue.repeatMode === 'all') {
-        nextIndex = 0; 
-      } else if (queue.repeatMode === 'one') {
-        nextIndex = queue.currentIndex; 
-      } else {
-        return null; 
+    let nextTrack: Track | null = null;
+    setQueue(prev => {
+      if (prev.tracks.length === 0) return prev;
+      const nextIndex = prev.currentIndex + 1;
+      if (nextIndex >= prev.tracks.length) {
+        return prev;
       }
-    }
-
-    setQueue(prev => ({ ...prev, currentIndex: nextIndex }));
-    return queue.tracks[nextIndex];
-  }, [queue]);
+      nextTrack = prev.tracks[nextIndex];
+      return { ...prev, currentIndex: nextIndex };
+    });
+    return nextTrack;
+  }, []);
 
   
   const playPrevious = useCallback((): Track | null => {
-    if (queue.tracks.length === 0) return null;
-
-    let prevIndex = queue.currentIndex - 1;
-
-    
-    if (prevIndex < 0) {
-      if (queue.repeatMode === 'all') {
-        prevIndex = queue.tracks.length - 1; 
-      } else {
-        prevIndex = 0; 
+    let prevTrack: Track | null = null;
+    setQueue(prev => {
+      if (prev.tracks.length === 0) return prev;
+      const prevIndex = prev.currentIndex - 1;
+      if (prevIndex < 0) {
+        return prev;
       }
-    }
-
-    setQueue(prev => ({ ...prev, currentIndex: prevIndex }));
-    return queue.tracks[prevIndex];
-  }, [queue]);
+      prevTrack = prev.tracks[prevIndex];
+      return { ...prev, currentIndex: prevIndex };
+    });
+    return prevTrack;
+  }, []);
 
   
   const setCurrentIndex = useCallback((index: number) => {
-    if (index >= 0 && index < queue.tracks.length) {
-      setQueue(prev => ({ ...prev, currentIndex: index }));
-      return queue.tracks[index];
-    }
-    return null;
-  }, [queue.tracks]);
-
-  
-  const toggleRepeat = useCallback((): RepeatMode => {
-    const modes: RepeatMode[] = ['off', 'all', 'one'];
-    const currentModeIndex = modes.indexOf(queue.repeatMode);
-    const nextMode = modes[(currentModeIndex + 1) % modes.length];
-    
-    setQueue(prev => ({ ...prev, repeatMode: nextMode }));
-    return nextMode;
-  }, [queue.repeatMode]);
-
+    let targetTrack: Track | null = null;
+    setQueue(prev => {
+      if (index >= 0 && index < prev.tracks.length) {
+        targetTrack = prev.tracks[index];
+        return { ...prev, currentIndex: index };
+      }
+      return prev;
+    });
+    return targetTrack;
+  }, []);
   
   const shuffleQueue = useCallback(() => {
     if (queue.tracks.length <= 1) return;
@@ -291,22 +270,19 @@ export function useMusicQueue() {
       tracks: [],
       currentIndex: -1,
       isShuffled: false,
-      repeatMode: 'off',
       originalTracks: []
     });
   }, []);
 
   
   const hasNext = useCallback(() => {
-    if (queue.repeatMode === 'one' || queue.repeatMode === 'all') return true;
     return queue.currentIndex < queue.tracks.length - 1;
-  }, [queue.currentIndex, queue.tracks.length, queue.repeatMode]);
+  }, [queue.currentIndex, queue.tracks.length]);
 
   
   const hasPrevious = useCallback(() => {
-    if (queue.repeatMode === 'all') return true;
     return queue.currentIndex > 0;
-  }, [queue.currentIndex, queue.repeatMode]);
+  }, [queue.currentIndex]);
 
   return {
     queue,
@@ -319,7 +295,6 @@ export function useMusicQueue() {
     playNext,
     playPrevious,
     setCurrentIndex,
-    toggleRepeat,
     toggleShuffle,
     clearQueue,
     hasNext,
@@ -329,7 +304,6 @@ export function useMusicQueue() {
     currentIndex: queue.currentIndex,
     tracks: queue.tracks,
     isShuffled: queue.isShuffled,
-    repeatMode: queue.repeatMode,
     queueLength: queue.tracks.length
   };
 } 

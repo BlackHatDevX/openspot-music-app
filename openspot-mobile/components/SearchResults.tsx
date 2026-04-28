@@ -360,9 +360,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
     borderWidth: 1,
   },
-  currentTrackItem: {
-    backgroundColor: '#1a1a1a',
-  },
+  currentTrackItem: {},
   albumCover: {
     width: 50,
     height: 50,

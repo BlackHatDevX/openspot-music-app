@@ -105,7 +105,7 @@ export function QueueDisplay({
             {item.artist}
           </Text>
           <Text style={[styles.trackDuration, { color: theme.textSecondary }]}>
-            {MusicAPI.formatDuration(item.duration)}
+            {MusicAPI.formatDuration(item.duration / 1000)}
           </Text>
         </View>
 
@@ -204,28 +204,6 @@ export function QueueDisplay({
           musicQueue.isShuffled && styles.activeControlButtonText
         ]}>
           {t('components.shuffle')}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.controlButton,
-          { backgroundColor: theme.glass },
-          musicQueue.repeatMode !== 'off' && [styles.activeControlButton, { backgroundColor: theme.accent }]
-        ]}
-        onPress={musicQueue.toggleRepeat}
-      >
-        <Ionicons
-          name={musicQueue.repeatMode === 'one' ? "repeat-outline" : "repeat"}
-          size={20}
-          color={musicQueue.repeatMode !== 'off' ? "#fff" : theme.textSecondary}
-        />
-        <Text style={[
-          styles.controlButtonText,
-          { color: theme.textSecondary },
-          musicQueue.repeatMode !== 'off' && styles.activeControlButtonText
-        ]}>
-          {musicQueue.repeatMode === 'one' ? t('components.repeat_one') : t('components.repeat')}
         </Text>
       </TouchableOpacity>
 

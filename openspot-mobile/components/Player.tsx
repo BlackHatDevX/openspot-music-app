@@ -10,8 +10,7 @@ import {
   Animated,
   ActivityIndicator,
 } from 'react-native';
-import { Audio, AVPlaybackStatus, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
-import * as Notifications from 'expo-notifications';
+import TrackPlayer, { Capability, Event, useProgress } from 'react-native-track-player';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +20,6 @@ import * as Sharing from 'expo-sharing';
 
 import { Track } from '../types/music';
 import { MusicAPI } from '../lib/music-api';
-import { NotificationService } from '../lib/notification-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FullScreenPlayer } from './FullScreenPlayer';
 import { useLikedSongs } from '../hooks/useLikedSongs';
@@ -45,7 +43,11 @@ export function Player({
   musicQueue,
   onQueueToggle,
 }: PlayerProps) {
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const playerReadyRef = useRef(false);
+  const [playerReady, setPlayerReady] = useState(false);
+  const pendingAutoPlayRef = useRef(false);
+  const lastQueueSignatureRef = useRef<string | null>(null);
+  const lastTrackIdRef = useRef<string | number | null>(null);
   const colorScheme = useColorScheme();
   const isDark = colorScheme !== 'light';
   const theme = useMemo(
@@ -62,10 +64,6 @@ export function Player({
     }),
     [isDark]
   );
-
-  if (!track) {
-    return null;
-  }
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,81 +86,86 @@ export function Player({
   const isMountedRef = useRef(true);
   const downloadTimeoutRef = useRef<number | null>(null);
   const currentTrackIdRef = useRef<string | number | null>(null);
-  const loadRequestIdRef = useRef(0);
   const lastSeekTimeRef = useRef<number>(0);
-  const isInitialLoadRef = useRef(true);
+  const { position: tpPosition, duration: tpDuration } = useProgress(250);
 
 
   useEffect(() => {
-    const configureAudioSession = async () => {
+    const setupPlayer = async () => {
       try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          interruptionModeIOS: InterruptionModeIOS.DuckOthers,
-          interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
-          shouldDuckAndroid: true,
-        });
+        if (!playerReadyRef.current) {
+          try {
+            await TrackPlayer.setupPlayer();
+          } catch (setupError: any) {
+            if (setupError?.message?.includes('already been initialized')) {
+            } else {
+              throw setupError;
+            }
+          }
+          await TrackPlayer.updateOptions({
+            capabilities: [
+              Capability.Play,
+              Capability.Pause,
+              Capability.SkipToNext,
+              Capability.SkipToPrevious,
+              Capability.SeekTo,
+              Capability.Stop,
+            ],
+            compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext],
+          });
+          playerReadyRef.current = true;
+          if (isMountedRef.current) {
+            setPlayerReady(true);
+          }
+        }
       } catch (error) {
-        console.error('Failed to configure audio session:', error);
+        console.error('Failed to setup TrackPlayer:', error);
       }
     };
 
-    configureAudioSession();
-
-    NotificationService.initialize();
+    setupPlayer();
   }, []);
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
-      loadRequestIdRef.current += 1;
       currentTrackIdRef.current = null;
       if (downloadTimeoutRef.current) {
         clearTimeout(downloadTimeoutRef.current);
       }
 
-      if (soundRef.current) {
-        try {
-          soundRef.current.unloadAsync();
-        } catch (e) {
-          console.warn('Sound unload on unmount failed:', e);
-        }
-      }
+      TrackPlayer.stop().catch(() => {});
+      TrackPlayer.reset().catch(() => {});
     };
   }, []); 
+
+  useEffect(() => {
+    if (!isSeeking) {
+      setPosition(tpPosition * 1000);
+    }
+    setDuration(tpDuration * 1000);
+  }, [tpPosition, tpDuration, isSeeking]);
 
   
   useEffect(() => {
     console.log('MusicQueue state:', {
       isShuffled: musicQueue.isShuffled,
-      repeatMode: musicQueue.repeatMode,
       currentIndex: musicQueue.currentIndex,
       queueLength: musicQueue.queueLength
     });
-  }, [musicQueue.isShuffled, musicQueue.repeatMode, musicQueue.currentIndex, musicQueue.queueLength]);
+  }, [musicQueue.isShuffled, musicQueue.currentIndex, musicQueue.queueLength]);
+
+  
+ 
 
   
   useEffect(() => {
-    if (track) {
-      loadAudio();
-
-      NotificationService.showOrUpdateMediaNotification(track, isPlaying);
-    }
-  }, [track.id]); 
-
-  
-  useEffect(() => {
-    if (soundRef.current) {
-      if (isPlaying) {
-        soundRef.current.playAsync();
-      } else {
-        soundRef.current.pauseAsync();
-      }
-    }
-
-    if (track) {
-      NotificationService.showOrUpdateMediaNotification(track, isPlaying);
+    if (!playerReady) return;
+    if (isPlaying) {
+      pendingAutoPlayRef.current = true;
+      TrackPlayer.play().catch(() => {});
+    } else {
+      TrackPlayer.pause().catch(() => {});
     }
   }, [isPlaying, track]);
 
@@ -176,31 +179,28 @@ export function Player({
   }, [isPlaying]);
 
   useEffect(() => {
-    if (!soundRef.current) return;
+    const sub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+      pendingAutoPlayRef.current = true;
+      handleNext();
+    });
+    return () => sub.remove();
+  }, [handleNext]);
 
-    const updateStatus = (status: AVPlaybackStatus) => {
-      if (status.isLoaded) {
-        const timeSinceLastSeek = Date.now() - lastSeekTimeRef.current;
-        if (!isSeeking && timeSinceLastSeek > 200) {
-          setPosition(status.positionMillis);
-        }
-        setDuration(status.durationMillis || 0);
-
-        if (status.didJustFinish) {
-          handleNext();
+  useEffect(() => {
+    const sub = TrackPlayer.addEventListener(Event.PlaybackTrackChanged, async (event) => {
+      const queue = await TrackPlayer.getQueue();
+      const currentTrack = queue[event.nextTrack];
+      if (currentTrack?.id && musicQueue?.tracks?.length) {
+        const queueIndex = musicQueue.tracks.findIndex(
+          (t: Track) => t.id.toString() === currentTrack.id
+        );
+        if (queueIndex >= 0 && musicQueue.setCurrentIndex) {
+          musicQueue.setCurrentIndex(queueIndex);
         }
       }
-    };
-
-    soundRef.current.setOnPlaybackStatusUpdate(updateStatus);
-
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.setOnPlaybackStatusUpdate(null);
-      }
-    };
-  }, [soundRef.current, isSeeking, musicQueue.repeatMode]);
-
+    });
+    return () => sub.remove();
+  }, [musicQueue]);
   const startRotation = () => {
     if (rotationAnimationRef.current) {
       rotationAnimationRef.current.stop();
@@ -225,188 +225,163 @@ export function Player({
     }
   };
 
-  const loadAudio = async () => {
+
+  const syncTrackPlayerQueue = useCallback(async () => {
+    if (!playerReady) return;
+    if (!musicQueue?.tracks?.length || musicQueue.currentIndex < 0) return;
     if (!track) return;
 
-    if (currentTrackIdRef.current === track.id && soundRef.current) return;
+    const queueTracks = musicQueue.tracks as Track[];
+    const startIndex = musicQueue.currentIndex as number;
 
-    const requestId = ++loadRequestIdRef.current;
-    setIsLoading(true);
-    currentTrackIdRef.current = track.id;
-    try {
+    const signature = `${track.id}|${queueTracks.length}|${startIndex}`;
+    const isSameSignature = lastQueueSignatureRef.current === signature;
 
-      setPosition(0);
-      setDuration(0);
-
-      let audioUrl: string | null = null;
-      try {
-        const offlineData = await AsyncStorage.getItem(`offline_${track.id}`);
-        if (offlineData) {
-          const { fileUri } = JSON.parse(offlineData);
-
-          const fileInfo = await FileSystem.getInfoAsync(fileUri);
-          if (fileInfo.exists) {
-            audioUrl = fileUri;
-          }
-        }
-      } catch (e) {
-
-      }
-
-      if (!audioUrl) {
-        audioUrl = await MusicAPI.getStreamUrl(track.id.toString(), track);
-      }
-
-      if (requestId !== loadRequestIdRef.current) {
-        return;
-      }
-
-      if (soundRef.current) {
-        try {
-          await soundRef.current.unloadAsync();
-        } catch (e) {
-          console.warn('Previous sound unload failed:', e);
-        }
-      }
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: audioUrl },
-        { shouldPlay: !isInitialLoadRef.current, volume: isMuted ? 0 : volume },
-        (status: AVPlaybackStatus) => {
-          if (status.isLoaded) {
-            const timeSinceLastSeek = Date.now() - lastSeekTimeRef.current;
-            if (!isSeeking && timeSinceLastSeek > 200) {
-              setPosition(status.positionMillis);
-            }
-            setDuration(status.durationMillis || 0);
-
-            if (status.didJustFinish) {
-              handleNext();
-            }
-          }
-        }
-      );
-
-      if (requestId !== loadRequestIdRef.current) {
-        try {
-          await sound.unloadAsync();
-        } catch (e) {
-          console.warn('Stale sound unload failed:', e);
-        }
-        return;
-      }
-
-      soundRef.current = sound;
-
-      if (!isInitialLoadRef.current && !isPlaying) {
-        onPlayingChange(true);
-      }
-
-      isInitialLoadRef.current = false;
-
-      if (isPlaying) {
-        await sound.playAsync();
-      }
-    } catch (error) {
-      console.error('Error loading audio:', error);
-
-      Alert.alert('Playback Error', 'Failed to load audio. Please try again.');
-    } finally {
-      if (requestId === loadRequestIdRef.current) {
-        setIsLoading(false);
-      }
+    // Force sync if track ID changed (manual selection from queue)
+    if (lastTrackIdRef.current !== track.id) {
+      lastTrackIdRef.current = track.id;
+      lastQueueSignatureRef.current = null; // Force rebuild
     }
-  };
+
+    // Always enforce intended play state, even if queue already built.
+    if (isSameSignature) {
+      if (pendingAutoPlayRef.current || isPlaying) {
+        pendingAutoPlayRef.current = false;
+        await TrackPlayer.play();
+      } else {
+        await TrackPlayer.pause();
+      }
+      return;
+    }
+
+    lastQueueSignatureRef.current = signature;
+    currentTrackIdRef.current = track.id;
+
+
+    const current = queueTracks[startIndex];
+    if (!current) return;
+
+    const shouldPlayNow = pendingAutoPlayRef.current || isPlaying;
+    pendingAutoPlayRef.current = false;
+
+    const currentUrl = await MusicAPI.getStreamUrl(current.id.toString(), current);
+    const currentItem = {
+      id: current.id.toString(),
+      url: currentUrl,
+      title: current.title,
+      artist: current.artist,
+      artwork: MusicAPI.getOptimalImage(current.images),
+      duration: current.duration ? Math.floor(current.duration / 1000) : undefined,
+    };
+
+    await TrackPlayer.reset();
+    await TrackPlayer.add([currentItem]);
+    if (shouldPlayNow) await TrackPlayer.play();
+    else await TrackPlayer.pause();
+
+ 
+    void (async () => {
+      for (let i = startIndex + 1; i < queueTracks.length; i++) {
+        const t = queueTracks[i];
+        try {
+          const url = await MusicAPI.getStreamUrl(t.id.toString(), t);
+          await TrackPlayer.add([
+            {
+              id: t.id.toString(),
+              url,
+              title: t.title,
+              artist: t.artist,
+              artwork: MusicAPI.getOptimalImage(t.images),
+              duration: t.duration ? Math.floor(t.duration / 1000) : undefined,
+            },
+          ]);
+        } catch (e) {
+          console.warn('Failed to append track:', t?.id, e);
+        }
+      }
+
+      for (let i = startIndex - 1; i >= 0; i--) {
+        const t = queueTracks[i];
+        try {
+          const url = await MusicAPI.getStreamUrl(t.id.toString(), t);
+          // @ts-expect-error TrackPlayer typing differs across versions
+          await TrackPlayer.add(
+            [
+              {
+                id: t.id.toString(),
+                url,
+                title: t.title,
+                artist: t.artist,
+                artwork: MusicAPI.getOptimalImage(t.images),
+                duration: t.duration ? Math.floor(t.duration / 1000) : undefined,
+              },
+            ],
+            0
+          );
+        } catch (e) {
+          console.warn('Failed to prepend track:', t?.id, e);
+        }
+      }
+    })();
+  }, [playerReady, musicQueue?.tracks, musicQueue?.currentIndex, track, isPlaying]);
+
+  useEffect(() => {
+    void syncTrackPlayerQueue();
+  }, [syncTrackPlayerQueue]);
+
+  useEffect(() => {
+    if (!playerReady) return;
+    void syncTrackPlayerQueue();
+  }, [playerReady, syncTrackPlayerQueue]);
 
   const handlePlayPause = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    if (soundRef.current) {
-      try {
-        if (isPlaying) {
-          await soundRef.current.pauseAsync();
-        } else {
-          await soundRef.current.playAsync();
-        }
-        onPlayingChange(!isPlaying);
-      } catch (error) {
-        console.error('Error in handlePlayPause:', error);
+    try {
+      if (isPlaying) {
+        await TrackPlayer.pause();
+        onPlayingChange(false);
+      } else {
+        pendingAutoPlayRef.current = true;
+        await TrackPlayer.play();
+        onPlayingChange(true);
       }
+    } catch (error) {
+      console.error('Error in handlePlayPause:', error);
     }
   }, [isPlaying, onPlayingChange]);
 
   const handleNext = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (musicQueue.repeatMode === 'one') {
-      if (soundRef.current) {
-        soundRef.current.replayAsync();
-        onPlayingChange(true);
-      }
-      return;
-    }
-
-
     const nextTrack = musicQueue.playNext();
     if (nextTrack) {
+      pendingAutoPlayRef.current = true;
       onPlayingChange(true);
+      TrackPlayer.skipToNext().then(() => TrackPlayer.play()).catch(() => {});
     } else {
       onPlayingChange(false);
     }
-  }, [musicQueue.repeatMode, onPlayingChange]);
+  }, [onPlayingChange]);
 
   const handlePrevious = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const prevTrack = musicQueue.playPrevious();
     if (prevTrack) {
+      pendingAutoPlayRef.current = true;
       onPlayingChange(true);
+      TrackPlayer.skipToPrevious().then(() => TrackPlayer.play()).catch(() => {});
     }
   }, [onPlayingChange]);
 
-  useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('Notification response received:', response);
-      console.log('Action identifier:', response.actionIdentifier);
-
-      switch (response.actionIdentifier) {
-        case 'previous':
-          console.log('Previous button pressed');
-          handlePrevious();
-          break;
-        case 'play_pause':
-          console.log('Play/Pause button pressed');
-          handlePlayPause();
-          break;
-        case 'next':
-          console.log('Next button pressed');
-          handleNext();
-          break;
-        case 'close':
-          console.log('Close button pressed');
-          NotificationService.hideMediaNotification();
-          onPlayingChange(false);
-          break;
-        default:
-          console.log('Unknown action:', response.actionIdentifier);
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, [handlePrevious, handlePlayPause, handleNext, onPlayingChange]);
+  // Media controls are provided by TrackPlayer's native notification + lockscreen handlers.
 
   const handleSeek = async (value: number) => {
-    if (soundRef.current) {
-      try {
-
-        setPosition(value);
-
-        await soundRef.current.setPositionAsync(value);
-
-        lastSeekTimeRef.current = Date.now();
-      } catch (error) {
-        console.error('Error seeking:', error);
-      }
+    try {
+      setPosition(value);
+      await TrackPlayer.seekTo(value / 1000);
+      lastSeekTimeRef.current = Date.now();
+    } catch (error) {
+      console.error('Error seeking:', error);
     }
   };
 
@@ -415,17 +390,12 @@ export function Player({
   };
 
   const handleSliderComplete = async (value: number) => {
-    if (soundRef.current) {
-      try {
-
-        setPosition(value);
-
-        await soundRef.current.setPositionAsync(value);
-
-        lastSeekTimeRef.current = Date.now();
-      } catch (error) {
-        console.error('Error seeking:', error);
-      }
+    try {
+      setPosition(value);
+      await TrackPlayer.seekTo(value / 1000);
+      lastSeekTimeRef.current = Date.now();
+    } catch (error) {
+      console.error('Error seeking:', error);
     }
     setIsSeeking(false);
   };
@@ -440,28 +410,19 @@ export function Player({
   const handleVolumeChange = async (value: number) => {
 
     setVolume(value);
-    if (soundRef.current) {
-      await soundRef.current.setVolumeAsync(isMuted ? 0 : value);
-    }
+    await TrackPlayer.setVolume(isMuted ? 0 : value).catch(() => {});
   };
 
   const handleMute = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
-    if (soundRef.current) {
-      await soundRef.current.setVolumeAsync(newMutedState ? 0 : volume);
-    }
+    await TrackPlayer.setVolume(newMutedState ? 0 : volume).catch(() => {});
   };
 
   const handleShuffle = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newShuffleState = musicQueue.toggleShuffle();
-  };
-
-  const handleRepeat = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newRepeatMode = musicQueue.toggleRepeat();
   };
 
   const handleShare= async () => {
@@ -473,8 +434,8 @@ export function Player({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
 
-    if (isPlaying && soundRef.current) {
-      soundRef.current.pauseAsync();
+    if (isPlaying) {
+      TrackPlayer.pause().catch(() => {});
       onPlayingChange(false);
     }
     
@@ -614,6 +575,10 @@ export function Player({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
   });
+
+  if (!track) {
+    return null;
+  }
 
   return (
     <>
@@ -766,7 +731,6 @@ export function Player({
         onNext={handleNext}
         onPrevious={handlePrevious}
         onShuffle={handleShuffle}
-        onRepeat={handleRepeat}
         onShare={handleShare}
         musicQueue={musicQueue}
         onQueueToggle={onQueueToggle}

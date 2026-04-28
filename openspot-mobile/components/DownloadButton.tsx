@@ -122,19 +122,17 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({ track, style, on
   return (
     <>
       {isDownloaded ? (
-        <View style={[styles.controlButton, style, { borderRadius: 50, opacity: 0.7, alignItems: 'center' }]}
-        >
-          <Ionicons name="checkmark" size={20} color={iconColor} />
+        <View style={[style, styles.downloadButton, { backgroundColor: 'transparent' }]}>
+          <Ionicons name="checkmark" size={24} color={iconColor} />
         </View>
       ) : isDownloading ? (
-        <View style={[styles.controlButton, style, { borderRadius: 50, opacity: 0.7, alignItems: 'center' }]}
-        >
+        <View style={[style, styles.downloadButton, { backgroundColor: 'transparent' }]}>
           <Animated.View style={{ transform: [{ translateY: bounceAnim }] }}>
-            <Ionicons name="cloud-download-outline" size={20} color={accentColor} style={{ marginRight: 4 }} />
+            <Ionicons name="cloud-download-outline" size={24} color={accentColor} />
           </Animated.View>
         </View>
       ) : (
-        <TouchableOpacity onPress={handleDownload} style={[styles.controlButton, style]}>
+        <TouchableOpacity onPress={handleDownload} style={[style, styles.downloadButton]}>
           <Ionicons name="download" size={24} color={iconColor} />
         </TouchableOpacity>
       )}
@@ -152,8 +150,8 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({ track, style, on
 };
 
 const styles = StyleSheet.create({
-  controlButton: {
-    padding: 12,
+  downloadButton: {
+    padding: 4,
   },
   downloadAlertBox: {
     position: 'absolute',

@@ -1,5 +1,5 @@
-import React, { useMemo, useState, createContext, useRef } from 'react';
-import { Tabs } from 'expo-router';
+import React, { useMemo, useState, createContext, useRef, useEffect } from 'react';
+import { Tabs, usePathname, useRouter } from 'expo-router';
 import { Player } from '@/components/Player';
 import { QueueDisplay } from '@/components/QueueDisplay';
 import { useMusicQueue } from '@/hooks/useMusicQueue';
@@ -13,6 +13,8 @@ import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MusicAPI } from '@/lib/music-api';
 import { useTranslation } from 'react-i18next';
+import { useConnectivity } from '@/hooks/useConnectivity';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 interface MusicPlayerContextType {
   musicQueue: ReturnType<typeof useMusicQueue>;
@@ -44,6 +46,9 @@ export default function TabLayout() {
   const pendingPlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { isOffline } = useConnectivity();
+  const router = useRouter();
+  const pathname = usePathname();
   const tabTheme = useMemo(
     () => ({
       background: isDark ? '#121212' : '#fffaf2',
@@ -65,17 +70,13 @@ export default function TabLayout() {
       setIsPlaying(!isPlaying);
       return;
     }
-    setIsPlaying(false);
     if (trackList && startIndex !== undefined) {
       musicQueue.setQueueTracks(trackList, startIndex);
     } else {
       musicQueue.setQueueTracks([track], 0);
     }
     void MusicAPI.addToRecentlyPlayed(track);
-    pendingPlayTimeoutRef.current = setTimeout(() => {
-      setIsPlaying(true);
-      pendingPlayTimeoutRef.current = null;
-    }, 100);
+    setIsPlaying(true);
   };
 
   const handleQueueTrackSelect = (track: Track, index: number) => {
@@ -95,6 +96,16 @@ export default function TabLayout() {
     setIsQueueOpen(false);
   };
 
+  useEffect(() => {
+    if (!isOffline) return;
+    // If user loses internet anywhere, force them into Downloads.
+    // Also stop autoplay to avoid endless buffering.
+    setIsPlaying(false);
+    if (!pathname?.includes('/downloads')) {
+      router.replace('/downloads');
+    }
+  }, [isOffline, pathname, router]);
+
   return (
     <MusicPlayerContext.Provider
       value={{
@@ -109,6 +120,7 @@ export default function TabLayout() {
     >
       <SafeAreaView edges={['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: tabTheme.safeArea }}>
         <View style={{ flex: 1, position: 'relative' }}>
+          {isOffline && !pathname?.includes('/downloads') && <OfflineBanner />}
           <Tabs
             screenOptions={{
               tabBarActiveTintColor: tabTheme.active,

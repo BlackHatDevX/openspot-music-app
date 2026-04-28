@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeMode, useThemeMode } from '@/hooks/theme-mode';
-const CURRENT_VERSION = 'v2.0.5';
+const CURRENT_VERSION = 'v3.0.0';
 const RELEASES_URL = 'https://github.com/BlackHatDevX/openspot-music-app/releases';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/jash-gro/';
 const DONATE_URL = 'https://telegram.dog/deveioper_x';

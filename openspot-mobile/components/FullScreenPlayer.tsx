@@ -28,6 +28,20 @@ import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const IS_TABLET = SCREEN_WIDTH >= 768;
+
+function decodeHtmlEntities(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&#x60;/g, '`')
+    .replace(/&#x3D;/g, '=');
+}
 const IS_LANDSCAPE = SCREEN_WIDTH > SCREEN_HEIGHT;
 
 interface FullScreenPlayerProps {
@@ -46,7 +60,6 @@ interface FullScreenPlayerProps {
   onNext: () => void;
   onPrevious: () => void;
   onShuffle: () => void;
-  onRepeat: () => void;
   onShare: () => void;
   musicQueue?: any;
   onQueueToggle?: () => void;
@@ -68,7 +81,6 @@ export function FullScreenPlayer({
   onNext,
   onPrevious,
   onShuffle,
-  onRepeat,
   onShare,
   musicQueue,
   onQueueToggle,
@@ -248,10 +260,10 @@ export function FullScreenPlayer({
 
                     <View style={styles.trackInfo}>
             <Text style={[styles.trackTitle, { color: theme.textPrimary }, IS_TABLET && styles.trackTitleTablet]} numberOfLines={2}>
-              {track.title}
+              {decodeHtmlEntities(track.title)}
             </Text>
             <Text style={[styles.trackArtist, { color: theme.textSecondary }, IS_TABLET && styles.trackArtistTablet]} numberOfLines={2}>
-              {track.artist}
+              {decodeHtmlEntities(track.artist)}
             </Text>
           </View>
 
@@ -276,20 +288,45 @@ export function FullScreenPlayer({
             </View>
           </View>
 
-                    <View style={styles.controls}>
-            <TouchableOpacity onPress={handleLike} style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}>
-            <Ionicons
+                     <View style={styles.controls}>
+            <TouchableOpacity
+              onPress={handleLike}
+              style={[
+                styles.controlButton,
+                { backgroundColor: theme.glass },
+                isDark && styles.controlButtonShadow,
+              ]}
+            >
+              <Ionicons
                 name={isLiked(track.id) ? "heart" : "heart-outline"}
                 size={IS_TABLET ? 28 : 24}
                 color={isLiked(track.id) ? theme.accent : theme.icon}
               />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handlePrevious} style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}>
-              <Ionicons name="play-skip-back" size={IS_TABLET ? 40 : 32} color={theme.icon} />
+            <TouchableOpacity
+              onPress={handlePrevious}
+              style={[
+                styles.controlButton,
+                { backgroundColor: theme.glass },
+                isDark && styles.controlButtonShadow,
+              ]}
+            >
+              <Ionicons
+                name="play-skip-back"
+                size={IS_TABLET ? 40 : 32}
+                color={theme.icon}
+              />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handlePlayPause} style={[styles.playButton, { backgroundColor: theme.accent }, IS_TABLET && styles.playButtonTablet]}>
+            <TouchableOpacity
+              onPress={handlePlayPause}
+              style={[
+                styles.playButton,
+                { backgroundColor: theme.accent },
+                IS_TABLET && styles.playButtonTablet,
+              ]}
+            >
               <Ionicons
                 name={isPlaying ? "pause" : "play"}
                 size={IS_TABLET ? 40 : 32}
@@ -297,32 +334,72 @@ export function FullScreenPlayer({
               />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleNext} style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}>
-              <Ionicons name="play-skip-forward" size={IS_TABLET ? 40 : 32} color={theme.icon} />
+            <TouchableOpacity
+              onPress={handleNext}
+              style={[
+                styles.controlButton,
+                { backgroundColor: theme.glass },
+                isDark && styles.controlButtonShadow,
+              ]}
+            >
+              <Ionicons
+                name="play-skip-forward"
+                size={IS_TABLET ? 40 : 32}
+                color={theme.icon}
+              />
             </TouchableOpacity>
-            <DownloadButton track={track} style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]} iconColor={theme.icon} accentColor={theme.accent} />
+
+            <DownloadButton
+              track={track}
+              style={[
+                styles.controlButton,
+                { backgroundColor: theme.glass },
+                isDark && styles.controlButtonShadow,
+              ]}
+              iconColor={theme.icon}
+              accentColor={theme.accent}
+            />
           </View>
 
-                    <View style={styles.bottomControls}>
+          <View style={styles.bottomControls}>
             <TouchableOpacity
               onPress={handleQueueToggle}
-              style={[styles.glassButton, styles.bottomButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}
+              style={[
+                styles.bottomControlButton,
+                { backgroundColor: theme.glass },
+                isDark && styles.bottomControlButtonShadow,
+              ]}
               activeOpacity={0.85}
             >
-              <Ionicons name="list" size={IS_TABLET ? 26 : 22} color={theme.icon} />
+              <Ionicons
+                name="list"
+                size={IS_TABLET ? 26 : 22}
+                color={theme.icon}
+              />
             </TouchableOpacity>
+
             <TouchableOpacity
               onPress={async () => {
                 const pls = await PlaylistStorage.getPlaylists();
                 setPlaylists(pls);
-                const preSelected = pls.filter(pl => pl.trackIds.includes(track.id.toString())).map(pl => pl.name);
+                const preSelected = pls
+                  .filter((pl) => pl.trackIds.includes(track.id.toString()))
+                  .map((pl) => pl.name);
                 setSelected(preSelected);
                 setShowAddModal(true);
               }}
-              style={[styles.glassButton, { backgroundColor: theme.glass }, isDark && styles.glassButtonShadow]}
+              style={[
+                styles.bottomControlButton,
+                { backgroundColor: theme.glass },
+                isDark && styles.bottomControlButtonShadow,
+              ]}
               activeOpacity={0.85}
             >
-              <Ionicons name="add-circle" size={IS_TABLET ? 26 : 22} color={theme.icon} />
+              <Ionicons
+                name="add-circle"
+                size={IS_TABLET ? 26 : 22}
+                color={theme.icon}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -488,14 +565,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 16,
   },
-  glassButton: {
+  controlButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  glassButtonShadow: {
+  controlButtonShadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -514,17 +591,31 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
+  downloadButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bottomControls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 40,
     paddingHorizontal: 32,
+    gap: 16,
   },
-  bottomButton: {
-    padding: 12,
-    flexDirection: 'row',
+  bottomControlButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomControlButtonShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   addModalOverlay: {
     flex: 1,

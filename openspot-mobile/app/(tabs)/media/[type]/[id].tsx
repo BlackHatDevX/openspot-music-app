@@ -40,7 +40,11 @@ export default function MediaDetailsScreen() {
 
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [artistPage, setArtistPage] = useState(0);
+  const [hasMoreSongs, setHasMoreSongs] = useState(true);
+  const [totalSongs, setTotalSongs] = useState(0);
 
   const { handleTrackSelect, musicQueue, currentTrack, isPlaying } = useContext(MusicPlayerContext);
   const { isLiked, toggleLike } = useLikedSongs();
@@ -74,14 +78,22 @@ export default function MediaDetailsScreen() {
 
       setIsLoading(true);
       setError(null);
+      setArtistPage(0);
+      setHasMoreSongs(true);
+      setTotalSongs(0);
       try {
         let fetchedTracks: Track[] = [];
         if (mediaType === 'album') {
           fetchedTracks = await MusicAPI.getAlbumSongs(mediaId);
+          setTotalSongs(fetchedTracks.length);
         } else if (mediaType === 'artist') {
-          fetchedTracks = await MusicAPI.getArtistSongs(mediaId);
+          const result = await MusicAPI.getArtistSongs(mediaId, 0);
+          fetchedTracks = result.tracks;
+          setTotalSongs(result.total);
+          setHasMoreSongs(fetchedTracks.length === 10);
         } else {
           fetchedTracks = await MusicAPI.getPlaylistSongs(mediaId);
+          setTotalSongs(fetchedTracks.length);
         }
 
         if (isMounted) {
@@ -107,6 +119,26 @@ export default function MediaDetailsScreen() {
   const handlePlayAll = () => {
     if (tracks.length > 0) {
       handleTrackSelect(tracks[0], tracks, 0);
+    }
+  };
+
+  const loadMoreArtistSongs = async () => {
+    if (mediaType !== 'artist' || isLoadingMore || !hasMoreSongs) return;
+    setIsLoadingMore(true);
+    const nextPage = artistPage + 1;
+    try {
+      const result = await MusicAPI.getArtistSongs(mediaId, nextPage);
+      if (result.tracks.length > 0) {
+        setTracks((prev) => [...prev, ...result.tracks]);
+        setArtistPage(nextPage);
+        setHasMoreSongs(result.tracks.length === 10);
+      } else {
+        setHasMoreSongs(false);
+      }
+    } catch (error) {
+      console.error('Failed to load more songs:', error);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -192,7 +224,7 @@ export default function MediaDetailsScreen() {
             {title}
           </Text>
           <Text style={[styles.heroMeta, { color: theme.textSecondary }]}>
-            {tracks.length} {tracks.length === 1 ? t('media.song') : t('media.songs')}
+            {totalSongs} {totalSongs === 1 ? t('media.song') : t('media.songs')}
           </Text>
         </View>
       </View>
@@ -215,7 +247,7 @@ export default function MediaDetailsScreen() {
       ) : (
         <FlatList
           data={tracks}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, index) => `${mediaType}-${item.id?.toString?.() ?? 'unknown'}-${index}`}
           renderItem={renderTrackItem}
           contentContainerStyle={styles.listContent}
           style={styles.flatList}
@@ -224,6 +256,15 @@ export default function MediaDetailsScreen() {
               <Text style={[styles.helperText, { color: theme.textSecondary }]}>{t('media.no_songs_found', { type: t(`media.${mediaType}`) })}</Text>
             </View>
           }
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={styles.loadMoreContainer}>
+                <ActivityIndicator size="small" color={theme.accent} />
+              </View>
+            ) : null
+          }
+          onEndReached={mediaType === 'artist' ? loadMoreArtistSongs : undefined}
+          onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -321,6 +362,10 @@ const styles = StyleSheet.create({
   },
   flatList: {
     flex: 1,
+  },
+  loadMoreContainer: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   trackItem: {
     flexDirection: 'row',

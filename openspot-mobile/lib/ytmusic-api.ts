@@ -23,11 +23,10 @@ export class YTMusicAPI {
   private static readonly ytApiInstances = this.loadInstancesFromEnv();
 
   private static loadInstancesFromEnv(): string[] {
-    const envVar = process.env.EXPO_PUBLIC_YT_API_INSTANCES;
-    if (!envVar) {
-      throw new Error('EXPO_PUBLIC_YT_API_INSTANCES environment variable is not set');
-    }
-    return envVar.split(',').map(url => url.trim()).filter(url => url.length > 0);
+    const envVar =
+      // Expo public env var (preferred)
+      process.env.EXPO_PUBLIC_YT_API_INSTANCES;
+    return envVar?.split(',').map((url) => url.trim()).filter((url) => url.length > 0) || [];
   }
 
   private static pickBestThumbnail(thumbnails?: Array<{ url: string }>): string {
@@ -298,6 +297,7 @@ export class YTMusicAPI {
   }
 
   static async getStreamUrl(trackId: string): Promise<string> {
+    console.log('[YTMusicAPI] getStreamUrl:', { trackId, provider: 'ytmusic' });
     try {
       const { data: videoData, instance } = await this.fetchWithInstance<YtApiVideoData>(
         `/api/v1/videos/${encodeURIComponent(trackId)}`

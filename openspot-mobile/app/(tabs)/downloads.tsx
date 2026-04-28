@@ -13,11 +13,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
+import { useConnectivity } from '@/hooks/useConnectivity';
 
 export default function DownloadsScreen() {
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme !== 'light';
+  const { isOffline } = useConnectivity();
   const theme = {
     background: isDark ? '#050505' : '#f5efe6',
     surface: isDark ? '#121212' : '#fffaf2',
@@ -201,6 +203,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 20,
     paddingHorizontal: 12,
+  },
+  contentOffline: {
+    paddingTop: 100,
   },
   header: {
     flexDirection: 'row',
