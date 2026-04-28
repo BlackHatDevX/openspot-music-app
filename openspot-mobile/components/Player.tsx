@@ -303,6 +303,10 @@ export function Player({
       }
 
       isInitialLoadRef.current = false;
+
+      if (isPlaying) {
+        await sound.playAsync();
+      }
     } catch (error) {
       console.error('Error loading audio:', error);
 
