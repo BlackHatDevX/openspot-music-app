@@ -57,6 +57,57 @@
 
 ---
 
+## ✨ Features
+
+<div align="center">
+
+🎧 **High‑Quality Streaming**   ·   📥 **Offline Downloads**   ·   ❤️ **Likes & Custom Playlists**  
+🔄 **Background Play**   ·   🚫 **No Login Required**   ·   🆓 **100% Free & Ad‑Free**
+
+</div>
+
+### 🌍 Languages Supported (i18n)
+| 🇩🇪 Deutsch | 🇺🇸 English | 🇪🇸 Español | 🇫🇷 Français | 🇮🇱 עברית | 🇮🇳 हिन्दी | 🇷🇺 Русский | 🇨🇳 中文 |
+|------------|------------|------------|------------|----------|------------|------------|--------|
+
+*More languages coming soon — contributions welcome!*
+
+
+---
+
+### 🎨 Look & Feel
+- **Revamped UI** – clean, modern design with smooth transitions
+- **Mini Player** – capsule‑style mini player on compatible devices (OnePlus, etc.)
+- **Theming** – Dark mode, Light mode, and Auto mode
+
+### 🎼 Music Experience
+- **Search** – find songs, public playlists, albums, and artists
+- **Offline Listening** – download tracks and play them without internet
+- **Custom Playlists** – create, manage, and organize your own collections
+- **Trending Songs** – region‑based trending tracks powered by IPinfo
+- **Artist Albums & Playlists** – full discography browsing now supported
+
+### ⚡ Performance & Stability
+- **Improved YouTube API** – more reliable streaming
+- **Playback Upgrades** – smoother performance, fixed duration and background playback bugs
+- **Headset & Lockscreen Controls** – seamless notification controls
+- **Paginated Artist Songs** – all songs load completely
+
+---
+
+### 🔧 Latest Updates (v3.0.0)
+- **Fully revamped UI** with a fresh new look
+- Headset & lockscreen notification controls
+- Capsule‑style mini player support
+- Theming issues fixed
+- Artist discography now loads fully (pagination fix)
+- Repeat option removed from queue for a cleaner experience
+
+*See the full [Changelog](https://github.com/BlackHatDevX/openspot-music-app/releases) for details.*
+---
+
+---
+
 ## 📖 Overview
 
 This monorepo delivers **two fully independent music streaming apps** built with cutting‑edge technologies:
@@ -67,19 +118,6 @@ This monorepo delivers **two fully independent music streaming apps** built with
 | 🖥️ **Desktop** | macOS, Windows/Linux *(coming)* | Electron + React | `openspot-music-electron/` |
 
 Both apps share the same powerful streaming core, giving you a seamless listening experience across all your devices.
-
----
-
-## ✨ Features
-
-- 🎧 **High‑quality streaming** – listen in crystal clear audio
-- 📥 **Offline downloads** – save music directly to your device
-- ❤️ **Likes & collections** – build your personal music library
-- 🔄 **Background playback** – keep the music going while you multitask
-- 🚫 **No login** – jump straight into your music
-- 💾 **Persistent state** – your likes and history survive app restarts
-- 🎨 **Beautiful UI** – platform‑tailored, modern design
-- 🆓 **100% free & ad‑free** – no interruptions, no hidden costs
 
 ---
 
