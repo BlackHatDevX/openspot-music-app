@@ -5,8 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
-  Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,8 +40,6 @@ interface SearchResultsProps {
   isPlaying: boolean;
   currentTrack: Track | null;
 }
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export function SearchResults({
   searchState,
@@ -314,8 +311,6 @@ export function SearchResults({
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <FlatList
         data={displayData as any[]}
-        key={`search-${searchType}`}
-        listKey={`search-${searchType}`}
         renderItem={
           searchType === 'track'
             ? (renderTrackItem as any)

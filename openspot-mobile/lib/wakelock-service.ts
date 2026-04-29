@@ -1,4 +1,4 @@
-// WakelockService.ts
+
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 
 export class WakelockService {

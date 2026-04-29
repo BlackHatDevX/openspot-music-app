@@ -2,7 +2,7 @@
   "expo": {
     "name": "OpenSpot",
     "slug": "OpenSpot",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "openspot",
@@ -28,7 +28,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.devx.openspot",
-      "versionCode": 21,
+      "versionCode": 31,
       "foregroundService": {
         "type": "mediaPlayback",
         "notification": {

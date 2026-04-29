@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Track } from '@/types/music';
@@ -7,7 +7,6 @@ import { MusicAPI } from '@/lib/music-api';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface HorizontalTrackListProps {
   title: string;
@@ -92,7 +91,7 @@ export function HorizontalTrackList({ title, tracks, onTrackSelect, onAddToQueue
       <FlatList
         data={tracks}
         renderItem={renderTrackItem}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.horizontalList}

@@ -1,5 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { TouchableOpacity, View, Text, Animated, Easing, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  TouchableOpacity,
+  Animated,
+  Easing,
+  StyleSheet,
+  StyleProp,
+  ViewStyle
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,168 +14,272 @@ import * as Haptics from 'expo-haptics';
 import { Track } from '../types/music';
 import { PlaylistStorage } from '@/lib/playlist-storage';
 import { useTranslation } from 'react-i18next';
+import { MusicAPI } from '../lib/music-api';
+
+
+const ANIMATION_DURATION = 350;
+const ANIMATION_BOUNCE_HEIGHT = -10;
+const ICON_SIZE = 24;
 
 interface DownloadButtonProps {
   track: Track;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
   onDownloaded?: (filePath: string) => void;
   iconColor?: string;
   accentColor?: string;
+  showNotification: (message: string, type: 'success' | 'error') => void;
 }
 
-export const DownloadButton: React.FC<DownloadButtonProps> = ({ track, style, onDownloaded, iconColor = '#fff', accentColor = '#1DB954' }) => {
+export const DownloadButton: React.FC<DownloadButtonProps> = ({
+  track,
+  style,
+  onDownloaded,
+  iconColor = '#fff',
+  accentColor = '#1DB954',
+  showNotification
+}) => {
   const { t } = useTranslation();
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showDownloadAlert, setShowDownloadAlert] = useState(false);
-  const [downloadedPath, setDownloadedPath] = useState<string | null>(null);
+
   const bounceAnim = useRef(new Animated.Value(0)).current;
+  const downloadRef = useRef<FileSystem.DownloadResumable | null>(null);
+
+  const getOfflineFilePath = useCallback((extension: 'mp3' | 'jpg') => {
+    if (!track || !track.id) {
+      console.error("Track or track.id is undefined in getOfflineFilePath");
+      return `${FileSystem.documentDirectory}offline_unknown.${extension}`;
+    }
+    return `${FileSystem.documentDirectory}offline_${track.id}.${extension}`;
+  }, [track]);
 
   useEffect(() => {
     let isMounted = true;
+
     const checkDownloaded = async () => {
+      if (!track || !track.id) return;
+
       try {
         const offlineData = await AsyncStorage.getItem(`offline_${track.id}`);
+        if (!isMounted) return;
+
         if (offlineData) {
           const { fileUri } = JSON.parse(offlineData);
-          const fileInfo = await FileSystem.getInfoAsync(fileUri);
-          if (isMounted) setIsDownloaded(!!fileInfo.exists);
+          if (typeof fileUri === 'string') {
+            const fileInfo = await FileSystem.getInfoAsync(fileUri);
+            if (isMounted) {
+              setIsDownloaded(fileInfo.exists);
+            }
+          } else {
+            if (isMounted) setIsDownloaded(false);
+            await AsyncStorage.removeItem(`offline_${track.id}`);
+          }
         } else {
           if (isMounted) setIsDownloaded(false);
         }
-      } catch {
+      } catch (error) {
+        console.error('Error checking download status:', error);
         if (isMounted) setIsDownloaded(false);
       }
     };
+
     checkDownloaded();
-    return () => { isMounted = false; };
-  }, [track.id]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [track]);
 
   useEffect(() => {
+    let animation: Animated.CompositeAnimation | null = null;
+
     if (isDownloading) {
-      Animated.loop(
+      animation = Animated.loop(
         Animated.sequence([
           Animated.timing(bounceAnim, {
-            toValue: -10,
-            duration: 350,
+            toValue: ANIMATION_BOUNCE_HEIGHT,
+            duration: ANIMATION_DURATION,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(bounceAnim, {
             toValue: 0,
-            duration: 350,
+            duration: ANIMATION_DURATION,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      animation.start();
     } else {
       bounceAnim.stopAnimation();
       bounceAnim.setValue(0);
     }
-  }, [isDownloading]);
+
+    return () => {
+      if (animation) {
+        animation.stop();
+      }
+    };
+  }, [isDownloading, bounceAnim]);
+
+  useEffect(() => {
+    return () => {
+      if (downloadRef.current) {
+        downloadRef.current.pauseAsync().catch(() => { });
+      }
+    };
+  }, []);
+
+  const ensureDirectoryExists = async () => {
+    try {
+      const directoryUri = FileSystem.documentDirectory!;
+      const dirInfo = await FileSystem.getInfoAsync(directoryUri);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(directoryUri, {
+          intermediates: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error ensuring directory exists:', error);
+      throw new Error('Cannot access storage directory');
+    }
+  };
+
 
   const handleDownload = async () => {
+    if (isDownloading || isDownloaded) return;
+    if (!track || !track.id) {
+      console.error("Cannot download: Track or track.id is undefined.");
+      showNotification(t('components.download_error_track_missing') || 'Could not download track. Track data is missing.', 'error');
+      return;
+    }
+
     try {
       setIsDownloading(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
+
+      await ensureDirectoryExists();
+
       let playlists = await PlaylistStorage.getPlaylists();
       let offline = playlists.find(pl => pl.name === 'offline');
+
       if (!offline) {
-        offline = { name: 'offline', cover: track.images.large, trackIds: [] };
+        offline = {
+          name: 'offline',
+          cover: track.images?.large || '',
+          trackIds: []
+        };
         playlists.push(offline);
+      }
+
+      const trackIdStr = track.id.toString();
+      if (!offline.trackIds.includes(trackIdStr)) {
+        offline.trackIds.push(trackIdStr);
         await PlaylistStorage.savePlaylists(playlists);
       }
-      
-      if (!offline.trackIds.includes(track.id.toString())) {
-        offline.trackIds.push(track.id.toString());
-        await PlaylistStorage.savePlaylists(playlists);
+
+      const audioUrl = await MusicAPI.getDownloadUrl(trackIdStr, track);
+      const fileUri = getOfflineFilePath('mp3');
+
+      downloadRef.current = FileSystem.createDownloadResumable(audioUrl, fileUri);
+      const result = await downloadRef.current.downloadAsync();
+
+      if (!result || !result.uri) {
+        throw new Error('Download failed or was cancelled');
       }
-      
-      const audioUrl = await import('../lib/music-api').then(m => m.MusicAPI.getStreamUrl(track.id.toString(), track));
-      const safeFileName = `offline_${track.id}.mp3`;
-      const fileUri = FileSystem.documentDirectory + safeFileName;
-      const downloadResumable = FileSystem.createDownloadResumable(audioUrl, fileUri);
-      await downloadResumable.downloadAsync();
-      
-      const thumbUrl = track.images.large;
-      const thumbFileName = `offline_${track.id}.jpg`;
-      const thumbUri = FileSystem.documentDirectory + thumbFileName;
+
+      const thumbUri = getOfflineFilePath('jpg');
       try {
-        await FileSystem.downloadAsync(thumbUrl, thumbUri);
+        if (track.images?.large) {
+          await FileSystem.downloadAsync(track.images.large, thumbUri);
+        } else {
+          console.warn('No thumbnail URL found for this track, skipping thumbnail download.');
+        }
       } catch (e) {
-        
+        console.warn('Thumbnail download failed, continuing without it:', e);
       }
-      
-      await AsyncStorage.setItem(`offline_${track.id}`, JSON.stringify({ 
-        fileUri, 
-        thumbUri, 
-        trackData: track 
+
+      await AsyncStorage.setItem(`offline_${track.id}`, JSON.stringify({
+        fileUri: result.uri,
+        thumbUri: track.images?.large ? thumbUri : null,
+        trackData: track,
+        downloadedAt: new Date().toISOString(),
       }));
-      
+
       setIsDownloaded(true);
-      setDownloadedPath(fileUri);
-      setShowDownloadAlert(true);
-      setTimeout(() => setShowDownloadAlert(false), 2500);
-      if (onDownloaded) onDownloaded(fileUri);
-    } catch (e) {
+      showNotification(t('components.downloaded') || 'Downloaded', 'success'); 
+
+      if (onDownloaded) {
+        onDownloaded(result.uri);
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    } catch (e: any) {
       console.error('Offline download failed:', e);
+
+      try {
+        if (downloadRef.current) {
+          await downloadRef.current.cancelAsync();
+        }
+        const fileUri = getOfflineFilePath('mp3');
+        const fileInfo = await FileSystem.getInfoAsync(fileUri);
+        if (fileInfo.exists) {
+          await FileSystem.deleteAsync(fileUri);
+        }
+        const thumbUri = getOfflineFilePath('jpg');
+        const thumbInfo = await FileSystem.getInfoAsync(thumbUri);
+        if (thumbInfo.exists) {
+          await FileSystem.deleteAsync(thumbUri);
+        }
+        await AsyncStorage.removeItem(`offline_${track?.id}`);
+      } catch (cleanupError) {
+        console.error("Error during cleanup after download failure:", cleanupError);
+      }
+
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      showNotification(t('components.download_failed') || `Download failed: ${errorMessage}`, 'error'); // Call parent notification
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
     } finally {
       setIsDownloading(false);
+      downloadRef.current = null;
+    }
+  };
+
+
+  const renderButtonContent = () => {
+    if (isDownloaded) {
+      return <Ionicons name="checkmark" size={ICON_SIZE} color={iconColor} />;
+    } else if (isDownloading) {
+      return (
+        <Animated.View style={{ transform: [{ translateY: bounceAnim }] }}>
+          <Ionicons name="cloud-download-outline" size={ICON_SIZE} color={accentColor} />
+        </Animated.View>
+      );
+    } else {
+      return <Ionicons name="download" size={ICON_SIZE} color={iconColor} />;
     }
   };
 
   return (
-    <>
-      {isDownloaded ? (
-        <View style={[style, styles.downloadButton, { backgroundColor: 'transparent' }]}>
-          <Ionicons name="checkmark" size={24} color={iconColor} />
-        </View>
-      ) : isDownloading ? (
-        <View style={[style, styles.downloadButton, { backgroundColor: 'transparent' }]}>
-          <Animated.View style={{ transform: [{ translateY: bounceAnim }] }}>
-            <Ionicons name="cloud-download-outline" size={24} color={accentColor} />
-          </Animated.View>
-        </View>
-      ) : (
-        <TouchableOpacity onPress={handleDownload} style={[style, styles.downloadButton]}>
-          <Ionicons name="download" size={24} color={iconColor} />
-        </TouchableOpacity>
-      )}
-      {showDownloadAlert && downloadedPath && (
-        <View style={[styles.downloadAlertBox, { backgroundColor: accentColor, shadowColor: accentColor }]}>
-          <Ionicons name="checkmark-circle" size={28} color="#fff" style={{ marginRight: 10 }} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{t('components.downloaded')}</Text>
-            <Text style={{ color: '#fff', fontSize: 13, marginTop: 2, flexWrap: 'wrap' }}>{downloadedPath}</Text>
-          </View>
-        </View>
-      )}
-    </>
+    <TouchableOpacity
+      onPress={handleDownload}
+      style={[style, styles.downloadButton]}
+      activeOpacity={0.7}
+      disabled={isDownloading}
+    >
+      {renderButtonContent()}
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   downloadButton: {
     padding: 4,
-  },
-  downloadAlertBox: {
-    position: 'absolute',
-    top: 60,
-    left: 24,
-    right: 24,
-    backgroundColor: '#1DB954',
-    borderRadius: 18,
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    zIndex: 999,
-    shadowColor: '#1DB954',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
   },
-}); 
+});

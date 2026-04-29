@@ -36,7 +36,7 @@ export const PlaylistStorage = {
     }
     await this.savePlaylists(playlists);
     
-    // Store track data for later retrieval
+    
     await this.saveTrackData(track);
   },
   async removeTrackFromPlaylist(trackId: string, playlistName: string) {
@@ -70,14 +70,14 @@ export const PlaylistStorage = {
   async getPlaylistTracks(playlist: Playlist) {
     const tracks: Track[] = [];
     for (const id of playlist.trackIds) {
-      // First try to get from stored track data
+      
       const storedTrack = await this.getTrackData(id);
       if (storedTrack) {
         tracks.push(storedTrack);
         continue;
       }
       
-      // Fallback to search if not stored
+      
       try {
         const track = await MusicAPI.resolveTrackById(id);
         if (track) {

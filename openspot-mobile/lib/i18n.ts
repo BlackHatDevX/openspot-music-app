@@ -8,6 +8,7 @@ import he from '../locales/he.json';
 import zh from '../locales/zh.json';
 import es from '../locales/es.json';
 import fr from '../locales/fr.json';
+import tr from '../locales/tr.json';
 
 const resources = {
   en: { translation: en },
@@ -18,8 +19,10 @@ const resources = {
   fr: { translation: fr },
   ru: { translation: ru },
   he: { translation: he },
+  tr: { translation: tr },
 };
 
+// eslint-disable-next-line import/no-named-as-default-member
 i18n
   .use(initReactI18next)
   .init({

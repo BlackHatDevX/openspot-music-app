@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -18,15 +18,23 @@ import { useTranslation } from 'react-i18next';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeMode, useThemeMode } from '@/hooks/theme-mode';
-const CURRENT_VERSION = 'v3.0.0';
-const RELEASES_URL = 'https://github.com/BlackHatDevX/openspot-music-app/releases';
+const CURRENT_VERSION = '3.1.0';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/jash-gro/';
-const DONATE_URL = 'https://telegram.dog/deveioper_x';
-const GITHUB_LATEST_RELEASE_URL = 'https://api.github.com/repos/BlackHatDevX/openspot-music-app/releases/latest';
-const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/trending-music-os/refs/heads/main/trending.json';
+const DONATE_URL = 'https://telegram.dog/deveIoper_x';
+const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/update.json';
+const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/trending.json';
 const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
 const LANGUAGE_KEY = 'openspot_language_v1';
 const PROVIDER_KEY = 'openspot_provider_v1';
+const TRENDING_ENABLED_KEY = 'openspot_trending_enabled_v1';
+
+interface UpdateConfig {
+  latest_version: string;
+  min_supported_version: string;
+  force_update: boolean;
+  changelog: Record<string, string[]>;
+  release_url: string;
+}
 
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
@@ -40,10 +48,33 @@ export default function SettingsScreen() {
   const [regionOptions, setRegionOptions] = useState<string[]>(['auto']);
   const [language, setLanguage] = useState<string>('en');
   const [provider, setProvider] = useState<string>('saavn');
+  const [trendingEnabled, setTrendingEnabled] = useState<boolean>(true);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const [updateConfig, setUpdateConfig] = useState<UpdateConfig | null>(null);
+  const [showForceUpdate, setShowForceUpdate] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
 
-  const currentVersion = Constants.expoConfig?.version ?? 'unknown';
-  const updateAvailable = !!latestVersion && latestVersion !== currentVersion;
+  const currentVersion = Constants.expoConfig?.version ?? CURRENT_VERSION;
+
+  const compareVersions = (v1: string, v2: string): number => {
+    const parts1 = v1.split('.').map(Number);
+    const parts2 = v2.split('.').map(Number);
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      const a = parts1[i] || 0;
+      const b = parts2[i] || 0;
+      if (a > b) return 1;
+      if (a < b) return -1;
+    }
+    return 0;
+  };
+
+  const isVersionSupported = updateConfig
+    ? compareVersions(currentVersion, updateConfig.min_supported_version) >= 0
+    : true;
+
+  const updateAvailable = updateConfig
+    ? compareVersions(updateConfig.latest_version, currentVersion) > 0
+    : false;
 
   const theme = useMemo(
     () => ({
@@ -58,13 +89,13 @@ export default function SettingsScreen() {
     [isDark]
   );
 
-  const modeOptions: Array<{ label: string; value: ThemeMode }> = [
+  const modeOptions: { label: string; value: ThemeMode }[] = [
     { label: 'Light', value: 'light' },
     { label: 'Night', value: 'dark' },
     { label: 'Auto', value: 'auto' },
   ];
 
-  const languageOptions: Array<{ label: string; value: string; nativeLabel: string }> = [
+  const languageOptions: { label: string; value: string; nativeLabel: string }[] = [
     { label: 'English', value: 'en', nativeLabel: 'English' },
     { label: 'Hindi', value: 'hi', nativeLabel: 'Hindi' },
     { label: 'Spanish', value: 'es', nativeLabel: 'Espanol' },
@@ -73,12 +104,48 @@ export default function SettingsScreen() {
     { label: 'French', value: 'fr', nativeLabel: 'Francais' },
     { label: 'Russian', value: 'ru', nativeLabel: 'Russkiy' },
     { label: 'Hebrew', value: 'he', nativeLabel: 'Ivrit' },
+    { label: 'Turkish', value: 'tr', nativeLabel: 'Türkçe' },
   ];
 
-  const providerOptions: Array<{ label: string; value: string }> = [
+  const providerOptions: { label: string; value: string }[] = [
     { label: 'Saavn', value: 'saavn' },
-    { label: 'YouTube Music', value: 'ytmusic' },
+    { label: 'YouTube (Beta)', value: 'ytmusic' },
   ];
+
+  const loadRegionOptions = async () => {
+    try {
+      const response = await fetch(TRENDING_URL);
+      const data = await response.json();
+      const supportedRegions = Object.keys(data || {}).filter((key) => Array.isArray(data[key]));
+      const mergedOptions = ['auto', ...supportedRegions];
+      setRegionOptions(mergedOptions);
+      setRegion((current) => (mergedOptions.includes(current) ? current : 'auto'));
+    } catch (error) {
+      console.error('Failed to load supported regions:', error);
+      setRegionOptions(['auto', 'global']);
+    }
+  };
+
+  const checkForUpdates = useCallback(async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const res = await fetch(UPDATE_CONFIG_URL);
+      const data: UpdateConfig = await res.json();
+      setUpdateConfig(data);
+      setLatestVersion(data.latest_version);
+
+      const isSupported = compareVersions(currentVersion, data.min_supported_version) >= 0;
+      const hasUpdate = compareVersions(data.latest_version, currentVersion) > 0;
+
+      if (!isSupported || (data.force_update && hasUpdate)) {
+        setShowForceUpdate(true);
+      }
+    } catch (error) {
+      console.error('Update check failed:', error);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  }, [currentVersion]);
 
   useEffect(() => {
     const loadRegion = async () => {
@@ -115,41 +182,24 @@ export default function SettingsScreen() {
       }
     };
 
+    const loadTrendingEnabled = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(TRENDING_ENABLED_KEY);
+        if (stored !== null) {
+          setTrendingEnabled(stored === 'true');
+        }
+      } catch (error) {
+        console.error('Failed to load trending setting:', error);
+      }
+    };
+
     void loadRegion();
     void loadLanguage();
     void loadProvider();
+    void loadTrendingEnabled();
     void loadRegionOptions();
     void checkForUpdates();
-  }, []);
-
-  const loadRegionOptions = async () => {
-    try {
-      const response = await fetch(TRENDING_URL);
-      const data = await response.json();
-      const supportedRegions = Object.keys(data || {}).filter((key) => Array.isArray(data[key]));
-      const mergedOptions = ['auto', ...supportedRegions];
-      setRegionOptions(mergedOptions);
-      setRegion((current) => (mergedOptions.includes(current) ? current : 'auto'));
-    } catch (error) {
-      console.error('Failed to load supported regions:', error);
-      setRegionOptions(['auto', 'global']);
-    }
-  };
-
-  const checkForUpdates = async () => {
-    setIsCheckingUpdate(true);
-    try {
-      const res = await fetch(GITHUB_LATEST_RELEASE_URL);
-      const data = await res.json();
-      if (data?.tag_name) {
-        setLatestVersion(String(data.tag_name).replace(/^v/i, ''));
-      }
-    } catch (error) {
-      console.error('Update check failed:', error);
-    } finally {
-      setIsCheckingUpdate(false);
-    }
-  };
+  }, [i18n, checkForUpdates]);
 
   const handleRegionChange = async (nextRegion: string) => {
     setRegion(nextRegion);
@@ -179,6 +229,15 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleTrendingToggle = async (enabled: boolean) => {
+    setTrendingEnabled(enabled);
+    try {
+      await AsyncStorage.setItem(TRENDING_ENABLED_KEY, String(enabled));
+    } catch (error) {
+      console.error('Failed to save trending setting:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -186,20 +245,36 @@ export default function SettingsScreen() {
 
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Version</Text>
-          <Text style={[styles.cardText, { color: theme.textSecondary }]}>Current version: {currentVersion}</Text>
-          <Text style={[styles.cardText, { color: updateAvailable ? '#ff4444' : theme.textSecondary }]}>
-            Latest version: {latestVersion ?? 'unknown'}
-          </Text>
-          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: theme.accent }]} onPress={checkForUpdates}>
-            {isCheckingUpdate ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Check for update</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>Current: v{currentVersion}</Text>
+          {latestVersion && (
+            <Text style={[styles.cardText, { color: updateAvailable ? theme.accent : theme.textSecondary }]}>
+              Latest: v{latestVersion}
+              {updateAvailable && !isVersionSupported && ' (Update Required)'}
+              {updateAvailable && isVersionSupported && ' (Update Available)'}
+            </Text>
+          )}
+          {!isVersionSupported && (
+            <Text style={[styles.cardText, { color: '#ff4444', marginTop: 4 }]}>
+              Your version is no longer supported. Please update to continue.
+            </Text>
+          )}
+          <View style={styles.versionButtonsRow}>
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: theme.accent, flex: 1 }]} onPress={checkForUpdates}>
+              {isCheckingUpdate ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Check</Text>
+              )}
+            </TouchableOpacity>
+            {updateConfig && (
+              <TouchableOpacity style={[styles.secondaryButton, { borderColor: theme.border, flex: 1, marginLeft: 8 }]} onPress={() => setShowChangelog(true)}>
+                <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>Changelog</Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </View>
           {updateAvailable && (
-            <TouchableOpacity style={[styles.secondaryButton, { borderColor: theme.border }]} onPress={() => Linking.openURL(RELEASES_URL)}>
-              <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>Open releases</Text>
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 8 }]} onPress={() => Linking.openURL(updateConfig?.release_url || '')}>
+              <Text style={styles.primaryButtonText}>Update Now</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -240,9 +315,9 @@ export default function SettingsScreen() {
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Music Provider</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.music_provider')}</Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
-            Select your preferred music streaming service.
+            {t('settings.provider_description')}
           </Text>
           <View style={styles.segmentRow}>
             {providerOptions.map((option) => {
@@ -265,16 +340,32 @@ export default function SettingsScreen() {
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Region</Text>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.cardTitle, { color: theme.textPrimary, marginBottom: 2 }]}>{t('settings.trending')}</Text>
+              <Text style={[styles.cardText, { color: theme.textSecondary }]}>{t('settings.trending_description')}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.toggleTrack, { backgroundColor: trendingEnabled ? theme.accent : theme.surfaceElevated }]}
+              onPress={() => handleTrendingToggle(!trendingEnabled)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.toggleThumb, trendingEnabled && styles.toggleThumbOn]} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }, !trendingEnabled && { opacity: 0.5 }]}>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.region')}</Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
-            Trending songs on home use this region. Default: Auto.
+            {t('settings.region_description')}
           </Text>
           <View style={styles.regionWrap}>
             {regionOptions.map((option) => {
               const active = region === option;
               const label =
                 option === 'auto'
-                  ? 'Auto'
+                  ? t('settings.auto')
                   : option
                       .split(' ')
                       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -308,8 +399,14 @@ export default function SettingsScreen() {
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Donate</Text>
           <TouchableOpacity style={styles.linkRow} onPress={() => Linking.openURL(DONATE_URL)}>
             <Ionicons name="gift-outline" size={18} color={theme.accent} />
-            <Text style={[styles.linkText, { color: theme.textPrimary }]}>telegram.dog/deveioper_x</Text>
+            <Text style={[styles.linkText, { color: theme.textPrimary }]}>telegram.dog/deveIoper_x</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+            Made with <Text style={{ color: '#ff4444' }}>❤</Text> by @jashgro
+          </Text>
         </View>
       </ScrollView>
 
@@ -350,6 +447,65 @@ export default function SettingsScreen() {
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             />
             <TouchableOpacity style={styles.cancelButtonRow} onPress={() => setIsLanguageModalOpen(false)}>
+              <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('common.close')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Force Update Modal */}
+      <Modal visible={showForceUpdate} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.updateModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="warning" size={48} color="#ff4444" style={{ alignSelf: 'center', marginBottom: 12 }} />
+            <Text style={[styles.cardTitle, { color: theme.textPrimary, textAlign: 'center', fontSize: 18 }]}>
+              {!isVersionSupported ? 'Update Required' : 'Update Available'}
+            </Text>
+            <Text style={[styles.cardText, { color: theme.textSecondary, textAlign: 'center', marginBottom: 16 }]}>
+              {!isVersionSupported
+                ? `Your version (v${currentVersion}) is no longer supported. Minimum required: v${updateConfig?.min_supported_version}`
+                : `A new version (v${updateConfig?.latest_version}) is available. Please update to continue.`}
+            </Text>
+            {updateConfig?.changelog && updateConfig.changelog[updateConfig.latest_version] && (
+              <View style={[styles.changelogBox, { backgroundColor: theme.surfaceElevated }]}>
+                <Text style={[styles.changelogTitle, { color: theme.textPrimary }]}>What&apos;s New:</Text>
+                {updateConfig.changelog[updateConfig.latest_version].map((item, idx) => (
+                  <Text key={idx} style={[styles.changelogItem, { color: theme.textSecondary }]}>
+                    • {item}
+                  </Text>
+                ))}
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 16 }]} 
+              onPress={() => Linking.openURL(updateConfig?.release_url || '')}
+            >
+              <Text style={styles.primaryButtonText}>Update Now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Changelog Modal */}
+      <Modal visible={showChangelog} transparent animationType="fade" onRequestClose={() => setShowChangelog(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.changelogModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.textPrimary, marginBottom: 12 }]}>Changelog</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {updateConfig?.changelog && Object.entries(updateConfig.changelog)
+                .sort(([a], [b]) => compareVersions(b, a))
+                .map(([version, items]) => (
+                  <View key={version} style={styles.changelogVersion}>
+                    <Text style={[styles.changelogVersionTitle, { color: theme.textPrimary }]}>v{version}</Text>
+                    {items.map((item, idx) => (
+                      <Text key={idx} style={[styles.changelogItem, { color: theme.textSecondary }]}>
+                        • {item}
+                      </Text>
+                    ))}
+                  </View>
+                ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.cancelButtonRow} onPress={() => setShowChangelog(false)}>
               <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
@@ -503,5 +659,77 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  toggleTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+  },
+  toggleThumbOn: {
+    alignSelf: 'flex-end',
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  footerText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  versionButtonsRow: {
+    flexDirection: 'row',
+    marginTop: 10,
+  },
+  updateModalCard: {
+    width: '90%',
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 20,
+  },
+  changelogModalCard: {
+    width: '90%',
+    maxHeight: '70%',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+  },
+  changelogBox: {
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+  },
+  changelogTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  changelogVersion: {
+    marginBottom: 16,
+  },
+  changelogVersionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  changelogItem: {
+    fontSize: 13,
+    marginLeft: 8,
+    marginBottom: 4,
+    lineHeight: 18,
   },
 });

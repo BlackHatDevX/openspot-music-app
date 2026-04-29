@@ -10,7 +10,7 @@ import {
   Animated,
   ActivityIndicator,
 } from 'react-native';
-import TrackPlayer, { Capability, Event, useProgress } from 'react-native-track-player';
+import TrackPlayer, { Capability, Event, State, useProgress } from 'react-native-track-player';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,8 +30,9 @@ interface PlayerProps {
   track: Track | null;
   isPlaying: boolean;
   onPlayingChange: (playing: boolean) => void;
-  musicQueue: any; 
+  musicQueue: any;
   onQueueToggle: () => void;
+  pendingAutoPlayRef?: React.MutableRefObject<boolean>;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -42,10 +43,12 @@ export function Player({
   onPlayingChange,
   musicQueue,
   onQueueToggle,
+  pendingAutoPlayRef: externalPendingAutoPlayRef,
 }: PlayerProps) {
   const playerReadyRef = useRef(false);
   const [playerReady, setPlayerReady] = useState(false);
-  const pendingAutoPlayRef = useRef(false);
+  const internalPendingAutoPlayRef = useRef(false);
+  const pendingAutoPlayRef = externalPendingAutoPlayRef || internalPendingAutoPlayRef;
   const lastQueueSignatureRef = useRef<string | null>(null);
   const lastTrackIdRef = useRef<string | number | null>(null);
   const colorScheme = useColorScheme();
@@ -66,13 +69,10 @@ export function Player({
   );
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolume] = useState(1.0);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
-  const [isSeeking, setIsSeeking] = useState(false);
-
-
+  const [isSeeking] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'success' | 'error'>('idle');
@@ -84,12 +84,16 @@ export function Player({
   const rotationValue = useRef(new Animated.Value(0)).current;
   const rotationAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isMountedRef = useRef(true);
-  const downloadTimeoutRef = useRef<number | null>(null);
+  const downloadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentTrackIdRef = useRef<string | number | null>(null);
-  const lastSeekTimeRef = useRef<number>(0);
+  const queueBuildAbortRef = useRef<AbortController | null>(null);
+  const queueBuildGenRef = useRef(0);
+  const queueBuildDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const downloadAbortRef = useRef<AbortController | null>(null);
+  const isInternalChangeRef = useRef(false);
   const { position: tpPosition, duration: tpDuration } = useProgress(250);
 
-
+  
   useEffect(() => {
     const setupPlayer = async () => {
       try {
@@ -97,11 +101,12 @@ export function Player({
           try {
             await TrackPlayer.setupPlayer();
           } catch (setupError: any) {
-            if (setupError?.message?.includes('already been initialized')) {
-            } else {
+            if (!setupError?.message?.includes('already been initialized')) {
               throw setupError;
             }
           }
+          
+          await TrackPlayer.reset();
           await TrackPlayer.updateOptions({
             capabilities: [
               Capability.Play,
@@ -113,6 +118,7 @@ export function Player({
             ],
             compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext],
           });
+          await TrackPlayer.setVolume(volume);
           playerReadyRef.current = true;
           if (isMountedRef.current) {
             setPlayerReady(true);
@@ -124,21 +130,29 @@ export function Player({
     };
 
     setupPlayer();
-  }, []);
 
-  useEffect(() => {
     return () => {
       isMountedRef.current = false;
       currentTrackIdRef.current = null;
       if (downloadTimeoutRef.current) {
         clearTimeout(downloadTimeoutRef.current);
       }
-
+      if (downloadAbortRef.current) {
+        downloadAbortRef.current.abort();
+      }
+      if (queueBuildAbortRef.current) {
+        queueBuildAbortRef.current.abort();
+      }
+      if (queueBuildDebounceRef.current) {
+        clearTimeout(queueBuildDebounceRef.current);
+      }
+      stopRotation();
       TrackPlayer.stop().catch(() => {});
       TrackPlayer.reset().catch(() => {});
     };
-  }, []); 
+  }, [volume]);
 
+  
   useEffect(() => {
     if (!isSeeking) {
       setPosition(tpPosition * 1000);
@@ -148,64 +162,23 @@ export function Player({
 
   
   useEffect(() => {
-    console.log('MusicQueue state:', {
-      isShuffled: musicQueue.isShuffled,
-      currentIndex: musicQueue.currentIndex,
-      queueLength: musicQueue.queueLength
-    });
-  }, [musicQueue.isShuffled, musicQueue.currentIndex, musicQueue.queueLength]);
-
-  
- 
-
-  
-  useEffect(() => {
     if (!playerReady) return;
+    isInternalChangeRef.current = true;
     if (isPlaying) {
       pendingAutoPlayRef.current = true;
       TrackPlayer.play().catch(() => {});
     } else {
       TrackPlayer.pause().catch(() => {});
     }
-  }, [isPlaying, track]);
+    const timer = setTimeout(() => { isInternalChangeRef.current = false; }, 800);
+    return () => clearTimeout(timer);
+  }, [isPlaying, playerReady, pendingAutoPlayRef]);
 
-
-  useEffect(() => {
-    if (isPlaying) {
-      startRotation();
-    } else {
-      stopRotation();
-    }
-  }, [isPlaying]);
-
-  useEffect(() => {
-    const sub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
-      pendingAutoPlayRef.current = true;
-      handleNext();
-    });
-    return () => sub.remove();
-  }, [handleNext]);
-
-  useEffect(() => {
-    const sub = TrackPlayer.addEventListener(Event.PlaybackTrackChanged, async (event) => {
-      const queue = await TrackPlayer.getQueue();
-      const currentTrack = queue[event.nextTrack];
-      if (currentTrack?.id && musicQueue?.tracks?.length) {
-        const queueIndex = musicQueue.tracks.findIndex(
-          (t: Track) => t.id.toString() === currentTrack.id
-        );
-        if (queueIndex >= 0 && musicQueue.setCurrentIndex) {
-          musicQueue.setCurrentIndex(queueIndex);
-        }
-      }
-    });
-    return () => sub.remove();
-  }, [musicQueue]);
-  const startRotation = () => {
+  
+  const startRotation = useCallback(() => {
     if (rotationAnimationRef.current) {
       rotationAnimationRef.current.stop();
     }
-    
     rotationAnimationRef.current = Animated.loop(
       Animated.timing(rotationValue, {
         toValue: 1,
@@ -214,130 +187,293 @@ export function Player({
       }),
       { iterations: -1 }
     );
-    
     rotationAnimationRef.current.start();
-  };
+  }, [rotationValue]);
 
-  const stopRotation = () => {
+  const stopRotation = useCallback(() => {
     if (rotationAnimationRef.current) {
       rotationAnimationRef.current.stop();
       rotationAnimationRef.current = null;
     }
+  }, []);
+
+  useEffect(() => {
+    if (isPlaying) {
+      startRotation();
+    } else {
+      stopRotation();
+    }
+    return () => stopRotation();
+  }, [isPlaying, startRotation]);
+
+  
+  const resolveTrackUrl = async (t: Track): Promise<string> => {
+    try {
+      const offlineData = await AsyncStorage.getItem(`offline_${t.id}`);
+      if (offlineData) {
+        const { fileUri } = JSON.parse(offlineData);
+        if (fileUri) {
+          const info = await FileSystem.getInfoAsync(fileUri);
+          if (info.exists) return fileUri;
+        }
+      }
+    } catch {}
+    return MusicAPI.getStreamUrl(t.id.toString(), t);
   };
 
+  
+  const musicQueueRef = useRef(musicQueue);
+  useEffect(() => {
+    musicQueueRef.current = musicQueue;
+  }, [musicQueue]);
 
+  const handleNext = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const queue = musicQueueRef.current;
+    const nextTrack = queue.playNext();
+    if (nextTrack) {
+      isInternalChangeRef.current = true;
+      onPlayingChange(true);
+      setTimeout(() => { isInternalChangeRef.current = false; }, 500);
+    } else {
+      onPlayingChange(false);
+    }
+  }, [onPlayingChange]);
+
+  const handlePrevious = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const queue = musicQueueRef.current;
+    const prevTrack = queue.playPrevious();
+    if (prevTrack) {
+      
+      isInternalChangeRef.current = true;
+      pendingAutoPlayRef.current = true;
+      onPlayingChange(true);
+      setTimeout(() => { isInternalChangeRef.current = false; }, 500);
+    }
+  }, [pendingAutoPlayRef, onPlayingChange]);
+
+  
+  useEffect(() => {
+    const sub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+      pendingAutoPlayRef.current = true;
+      handleNext();
+    });
+    return () => sub.remove();
+  }, [handleNext, pendingAutoPlayRef]);
+
+  
+  useEffect(() => {
+    const sub = TrackPlayer.addEventListener(Event.PlaybackState, (event) => {
+      
+      if (isInternalChangeRef.current) return;
+
+      
+      if (event.state === State.Playing) {
+        if (!isPlaying) onPlayingChange(true);
+      } else if (event.state === State.Paused) {
+        if (isPlaying) onPlayingChange(false);
+      }
+    });
+    return () => sub.remove();
+  }, [isPlaying, onPlayingChange]);
+  
+  useEffect(() => {
+    const sub = TrackPlayer.addEventListener(Event.PlaybackActiveTrackChanged, async (event) => {
+      if (isInternalChangeRef.current) return;
+      const activeTrack = event.track;
+      if (activeTrack?.id && musicQueueRef.current?.tracks?.length) {
+        const queueIndex = musicQueueRef.current.tracks.findIndex(
+          (t: Track) => t.id.toString() === activeTrack.id
+        );
+        if (queueIndex >= 0 && musicQueueRef.current.setCurrentIndex) {
+          musicQueueRef.current.setCurrentIndex(queueIndex);
+        }
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  
   const syncTrackPlayerQueue = useCallback(async () => {
     if (!playerReady) return;
     if (!musicQueue?.tracks?.length || musicQueue.currentIndex < 0) return;
     if (!track) return;
 
-    const queueTracks = musicQueue.tracks as Track[];
-    const startIndex = musicQueue.currentIndex as number;
-
-    const signature = `${track.id}|${queueTracks.length}|${startIndex}`;
-    const isSameSignature = lastQueueSignatureRef.current === signature;
-
-    // Force sync if track ID changed (manual selection from queue)
-    if (lastTrackIdRef.current !== track.id) {
-      lastTrackIdRef.current = track.id;
-      lastQueueSignatureRef.current = null; // Force rebuild
+    if (queueBuildDebounceRef.current) {
+      clearTimeout(queueBuildDebounceRef.current);
+    }
+    if (queueBuildAbortRef.current) {
+      queueBuildAbortRef.current.abort();
+      queueBuildAbortRef.current = null;
     }
 
-    // Always enforce intended play state, even if queue already built.
-    if (isSameSignature) {
-      if (pendingAutoPlayRef.current || isPlaying) {
-        pendingAutoPlayRef.current = false;
-        await TrackPlayer.play();
-      } else {
-        await TrackPlayer.pause();
+    queueBuildGenRef.current = -(Math.abs(queueBuildGenRef.current) + 1);
+    const myGen = Math.abs(queueBuildGenRef.current);
+
+    queueBuildDebounceRef.current = setTimeout(async () => {
+      queueBuildDebounceRef.current = null;
+      if (Math.abs(queueBuildGenRef.current) !== myGen) return;
+
+      const queueTracks = musicQueue.tracks as Track[];
+      const startIndex = musicQueue.currentIndex as number;
+      const orderHash = queueTracks.map(t => t.id).join(',');
+      const currentTrack = queueTracks[startIndex];
+      const signature = `${currentTrack?.id}|${queueTracks.length}|${startIndex}|${orderHash}`;
+      const isSameSignature = lastQueueSignatureRef.current === signature;
+
+      const currentTrackId = String(currentTrack?.id);
+      if (lastTrackIdRef.current !== currentTrackId) {
+        lastTrackIdRef.current = currentTrackId;
+        lastQueueSignatureRef.current = null;
       }
-      return;
-    }
 
-    lastQueueSignatureRef.current = signature;
-    currentTrackIdRef.current = track.id;
-
-
-    const current = queueTracks[startIndex];
-    if (!current) return;
-
-    const shouldPlayNow = pendingAutoPlayRef.current || isPlaying;
-    pendingAutoPlayRef.current = false;
-
-    const currentUrl = await MusicAPI.getStreamUrl(current.id.toString(), current);
-    const currentItem = {
-      id: current.id.toString(),
-      url: currentUrl,
-      title: current.title,
-      artist: current.artist,
-      artwork: MusicAPI.getOptimalImage(current.images),
-      duration: current.duration ? Math.floor(current.duration / 1000) : undefined,
-    };
-
-    await TrackPlayer.reset();
-    await TrackPlayer.add([currentItem]);
-    if (shouldPlayNow) await TrackPlayer.play();
-    else await TrackPlayer.pause();
-
- 
-    void (async () => {
-      for (let i = startIndex + 1; i < queueTracks.length; i++) {
-        const t = queueTracks[i];
-        try {
-          const url = await MusicAPI.getStreamUrl(t.id.toString(), t);
-          await TrackPlayer.add([
-            {
-              id: t.id.toString(),
-              url,
-              title: t.title,
-              artist: t.artist,
-              artwork: MusicAPI.getOptimalImage(t.images),
-              duration: t.duration ? Math.floor(t.duration / 1000) : undefined,
-            },
-          ]);
-        } catch (e) {
-          console.warn('Failed to append track:', t?.id, e);
+      if (isSameSignature) {
+        if (pendingAutoPlayRef.current || isPlaying) {
+          pendingAutoPlayRef.current = false;
+          await TrackPlayer.play();
+        } else {
+          await TrackPlayer.pause();
         }
+        return;
       }
 
-      for (let i = startIndex - 1; i >= 0; i--) {
-        const t = queueTracks[i];
-        try {
-          const url = await MusicAPI.getStreamUrl(t.id.toString(), t);
-          // @ts-expect-error TrackPlayer typing differs across versions
-          await TrackPlayer.add(
-            [
-              {
-                id: t.id.toString(),
-                url,
-                title: t.title,
-                artist: t.artist,
-                artwork: MusicAPI.getOptimalImage(t.images),
-                duration: t.duration ? Math.floor(t.duration / 1000) : undefined,
-              },
-            ],
-            0
-          );
-        } catch (e) {
-          console.warn('Failed to prepend track:', t?.id, e);
+      lastQueueSignatureRef.current = signature;
+      currentTrackIdRef.current = currentTrack?.id;
+
+      const current = queueTracks[startIndex];
+      if (!current) return;
+
+      const shouldPlayNow = pendingAutoPlayRef.current || isPlaying;
+      pendingAutoPlayRef.current = false;
+
+      
+      isInternalChangeRef.current = true;
+      const suppressTimer = setTimeout(() => { isInternalChangeRef.current = false; }, 1500);
+
+      const activeTrack = await TrackPlayer.getActiveTrack();
+      const isSameTrack = activeTrack?.id === current.id.toString();
+
+      try {
+        if (isSameTrack) {
+          
+          const tpQueue = await TrackPlayer.getQueue();
+          const currentIndexInTp = tpQueue.findIndex(item => item.id === current.id.toString());
+          if (currentIndexInTp !== -1) {
+            for (let i = tpQueue.length - 1; i >= 0; i--) {
+              if (i !== currentIndexInTp) {
+                try {
+                  await TrackPlayer.remove(i);
+                } catch {}
+              }
+            }
+          }
+        } else {
+          let currentUrl: string;
+          try {
+            currentUrl = await resolveTrackUrl(current);
+          } catch (streamError) {
+            console.error('[Player] Failed to resolve stream URL:', streamError);
+            await TrackPlayer.pause();
+            onPlayingChange(false);
+            Alert.alert(
+              t('player.stream_error_title'),
+              t('player.stream_error_message')
+            );
+            return;
+          }
+          const currentItem = {
+            id: current.id.toString(),
+            url: currentUrl,
+            title: current.title,
+            artist: current.artist,
+            artwork: MusicAPI.getOptimalImage(current.images),
+            duration: current.duration ? Math.floor(current.duration / 1000) : undefined,
+          };
+          await TrackPlayer.reset();
+          await TrackPlayer.add([currentItem]);
+          if (shouldPlayNow) await TrackPlayer.play();
+          else await TrackPlayer.pause();
         }
+      } finally {
+        clearTimeout(suppressTimer);
+        
+        setTimeout(() => { isInternalChangeRef.current = false; }, 800);
       }
-    })();
-  }, [playerReady, musicQueue?.tracks, musicQueue?.currentIndex, track, isPlaying]);
 
-  useEffect(() => {
-    void syncTrackPlayerQueue();
-  }, [syncTrackPlayerQueue]);
+      if (queueBuildAbortRef.current) {
+        queueBuildAbortRef.current.abort();
+      }
+      queueBuildAbortRef.current = new AbortController();
 
+      void (async () => {
+        const signal = queueBuildAbortRef.current?.signal;
+        if (!signal) return;
+        try {
+          for (let i = startIndex + 1; i < queueTracks.length; i++) {
+            if (signal.aborted) break;
+            const t = queueTracks[i];
+            try {
+              const url = await resolveTrackUrl(t);
+              await TrackPlayer.add([
+                {
+                  id: t.id.toString(),
+                  url,
+                  title: t.title,
+                  artist: t.artist,
+                  artwork: MusicAPI.getOptimalImage(t.images),
+                  duration: t.duration ? Math.floor(t.duration / 1000) : undefined,
+                },
+              ]);
+            } catch {}
+          }
+          for (let i = startIndex - 1; i >= 0; i--) {
+            if (signal.aborted) break;
+            const t = queueTracks[i];
+            try {
+              const url = await resolveTrackUrl(t);
+              await TrackPlayer.add(
+                [
+                  {
+                    id: t.id.toString(),
+                    url,
+                    title: t.title,
+                    artist: t.artist,
+                    artwork: MusicAPI.getOptimalImage(t.images),
+                    duration: t.duration ? Math.floor(t.duration / 1000) : undefined,
+                  },
+                ],
+                0
+              );
+            } catch (e) {console.error(e)}
+          }
+        } catch (error) {
+          console.error('[Player] Queue build error (gen:', myGen, '):', error);
+        } finally {
+          if (Math.abs(queueBuildGenRef.current) === myGen) {
+            queueBuildGenRef.current = myGen;
+          }
+          if (queueBuildAbortRef.current?.signal === signal) {
+            queueBuildAbortRef.current = null;
+          }
+        }
+      })();
+    }, 50);
+  }, [playerReady, musicQueue?.tracks, musicQueue?.currentIndex, track, isPlaying, onPlayingChange, pendingAutoPlayRef, t]);
+
+  
   useEffect(() => {
     if (!playerReady) return;
     void syncTrackPlayerQueue();
   }, [playerReady, syncTrackPlayerQueue]);
 
+  
   const handlePlayPause = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
     try {
+      
+      isInternalChangeRef.current = true;
+      
       if (isPlaying) {
         await TrackPlayer.pause();
         onPlayingChange(false);
@@ -346,100 +482,49 @@ export function Player({
         await TrackPlayer.play();
         onPlayingChange(true);
       }
+      
+      
+      setTimeout(() => {
+        isInternalChangeRef.current = false;
+      }, 500);
     } catch (error) {
       console.error('Error in handlePlayPause:', error);
+      isInternalChangeRef.current = false;
     }
-  }, [isPlaying, onPlayingChange]);
-
-  const handleNext = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const nextTrack = musicQueue.playNext();
-    if (nextTrack) {
-      pendingAutoPlayRef.current = true;
-      onPlayingChange(true);
-      TrackPlayer.skipToNext().then(() => TrackPlayer.play()).catch(() => {});
-    } else {
-      onPlayingChange(false);
-    }
-  }, [onPlayingChange]);
-
-  const handlePrevious = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const prevTrack = musicQueue.playPrevious();
-    if (prevTrack) {
-      pendingAutoPlayRef.current = true;
-      onPlayingChange(true);
-      TrackPlayer.skipToPrevious().then(() => TrackPlayer.play()).catch(() => {});
-    }
-  }, [onPlayingChange]);
-
-  // Media controls are provided by TrackPlayer's native notification + lockscreen handlers.
+  }, [isPlaying, onPlayingChange, pendingAutoPlayRef]);
 
   const handleSeek = async (value: number) => {
     try {
       setPosition(value);
       await TrackPlayer.seekTo(value / 1000);
-      lastSeekTimeRef.current = Date.now();
     } catch (error) {
       console.error('Error seeking:', error);
-    }
-  };
-
-  const handleSliderStart = () => {
-    setIsSeeking(true);
-  };
-
-  const handleSliderComplete = async (value: number) => {
-    try {
-      setPosition(value);
-      await TrackPlayer.seekTo(value / 1000);
-      lastSeekTimeRef.current = Date.now();
-    } catch (error) {
-      console.error('Error seeking:', error);
-    }
-    setIsSeeking(false);
-  };
-
-  const handleSliderChange = (value: number) => {
-    
-    if (isSeeking) {
-      setPosition(value);
     }
   };
 
   const handleVolumeChange = async (value: number) => {
-
     setVolume(value);
     await TrackPlayer.setVolume(isMuted ? 0 : value).catch(() => {});
   };
-
   const handleMute = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
     await TrackPlayer.setVolume(newMutedState ? 0 : volume).catch(() => {});
   };
+  const handleShuffle = () => musicQueue.toggleShuffle();
 
-  const handleShuffle = () => {
+  
+  const handleShare = async () => {
+    if (!track) return;
+    if (downloadStatus === 'downloading') return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newShuffleState = musicQueue.toggleShuffle();
-  };
-
-  const handleShare= async () => {
-    
-    if (downloadStatus === 'downloading') {
-      return;
-    }
-    
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
 
     if (isPlaying) {
       TrackPlayer.pause().catch(() => {});
       onPlayingChange(false);
     }
-    
-    
+
     if (isMountedRef.current) {
       setShareMode(true);
       setDownloadProgress(0);
@@ -447,11 +532,15 @@ export function Player({
       setDownloadError('');
       setIsDownloadModalOpen(true);
     }
-    
+
+    if (downloadAbortRef.current) {
+      downloadAbortRef.current.abort();
+    }
+    downloadAbortRef.current = new AbortController();
+
     try {
-      
+      const signal = downloadAbortRef.current.signal;
       const isAvailable = await Sharing.isAvailableAsync();
-      
       if (!isAvailable) {
         if (isMountedRef.current) {
           setDownloadError('Sharing is not available on this device');
@@ -459,198 +548,152 @@ export function Player({
         }
         return;
       }
-      
-      if (isMountedRef.current) {
-        setDownloadStatus('downloading');
-      }
-      const audioUrl = await MusicAPI.getStreamUrl(track.id.toString(), track);
-      
-      
-      const safeFileName = `${track.title.replace(/[^a-zA-Z0-9\s]/g, '')}_${track.artist.replace(/[^a-zA-Z0-9\s]/g, '')}.mp3`;
+
+      if (isMountedRef.current) setDownloadStatus('downloading');
+      const audioUrl = await MusicAPI.getDownloadUrl(track.id.toString(), track);
+
+      const sanitizeFileName = (name: string): string => {
+        if (!name) return 'unknown';
+        const sanitized = name.replace(/[<>:"/\\|?*]/g, '').trim();
+        return sanitized.length > 0 ? sanitized.substring(0, 50) : 'unknown';
+      };
+      const safeTitle = sanitizeFileName(track.title);
+      const safeArtist = sanitizeFileName(track.artist);
+      const safeFileName = `${safeTitle}_${safeArtist}_${Date.now()}.mp3`;
       const fileUri = FileSystem.documentDirectory + safeFileName;
-      
-      
+
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (fileInfo.exists) {
+        if (isMountedRef.current) {
+          setDownloadError('File already exists. Please try again for a unique filename.');
+          setDownloadStatus('error');
+        }
+        return;
+      }
+
       const downloadResumable = FileSystem.createDownloadResumable(
         audioUrl,
         fileUri,
         {},
         (downloadProgress) => {
-          if (isMountedRef.current) {
+          if (isMountedRef.current && !signal.aborted) {
             const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
             setDownloadProgress(Math.round(progress * 100));
           }
         }
       );
-      
+
       const downloadResult = await downloadResumable.downloadAsync();
-      
+      if (signal.aborted) return;
+
       if (downloadResult) {
-        try {
-          await Sharing.shareAsync(downloadResult.uri, {
-            mimeType: 'audio/mpeg',
-            dialogTitle: `Share ${track.title} by ${track.artist}`,
-            UTI: 'public.audio'
-          });
-        } catch (shareError) {
-        }
-        
-        try {
-          if (isMountedRef.current) {
-            setDownloadStatus('success');
-            
-            
-            if (downloadTimeoutRef.current) {
-              clearTimeout(downloadTimeoutRef.current);
-            }
-            
-            
-            downloadTimeoutRef.current = setTimeout(() => {
-              if (isMountedRef.current) {
-                try {
-                  setIsDownloadModalOpen(false);
-                  downloadTimeoutRef.current = null;
-                } catch (error) {
-                  console.error('Error closing download modal:', error);
-                }
-              }
-            }, 3000);
-          }
-        } catch (stateError) {
-          console.error('Error updating download state:', stateError);
-          
-          if (isMountedRef.current) {
-            try {
+        await Sharing.shareAsync(downloadResult.uri, {
+          mimeType: 'audio/mpeg',
+          dialogTitle: `Share ${track.title} by ${track.artist}`,
+          UTI: 'public.audio',
+        });
+
+        if (isMountedRef.current) {
+          setDownloadStatus('success');
+          if (downloadTimeoutRef.current) clearTimeout(downloadTimeoutRef.current);
+          downloadTimeoutRef.current = setTimeout(() => {
+            if (isMountedRef.current) {
               setIsDownloadModalOpen(false);
-            } catch (closeError) {
-              console.error('Error closing modal on fallback:', closeError);
+              downloadTimeoutRef.current = null;
             }
-          }
+          }, 3000);
         }
       }
-      
     } catch (error) {
       console.error('Download failed:', error);
       if (isMountedRef.current) {
-        try {
-          setDownloadError('Download failed. Please check your internet connection and try again.');
-          setDownloadStatus('error');
-        } catch (stateError) {
-          console.error('Error updating error state:', stateError);
-        }
+        setDownloadError('Download failed. Please check your internet connection and try again.');
+        setDownloadStatus('error');
       }
     }
   };
 
   const handleCloseDownloadModal = () => {
-    try {
-      
-      if (downloadTimeoutRef.current) {
-        clearTimeout(downloadTimeoutRef.current);
-        downloadTimeoutRef.current = null;
-      }
-      
-      if (isMountedRef.current) {
-        setIsDownloadModalOpen(false);
-        setShareMode(false);
-      }
-    } catch (error) {
-      console.error('Error closing download modal:', error);
+    if (downloadAbortRef.current) {
+      downloadAbortRef.current.abort();
+    }
+    if (downloadTimeoutRef.current) {
+      clearTimeout(downloadTimeoutRef.current);
+      downloadTimeoutRef.current = null;
+    }
+    if (isMountedRef.current) {
+      setIsDownloadModalOpen(false);
+      setShareMode(false);
     }
   };
 
-  const handlePlayerClick = () => {
-    setIsFullScreenOpen(true);
-  };
+  if (!track) return null;
 
-  const formatTime = (millis: number) => {
-    const totalSeconds = Math.floor(millis / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const progressPercentage = duration > 0 ? (position / duration) * 100 : 0;
-
-  const spin = rotationValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg']
-  });
-
-  if (!track) {
-    return null;
-  }
-
+  
   return (
     <>
-    <View style={styles.cardroot}>
-      <View style={[styles.cardContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <TouchableOpacity
-          style={styles.cardTouchable}
-          activeOpacity={0.85}
-          onPress={() => setIsFullScreenOpen(true)}
-        >
-          <Image
-            source={{ uri: MusicAPI.getOptimalImage(track.images) }}
-            style={styles.cardAlbumArt}
-            contentFit="cover"
-          />
-          <View style={styles.cardInfoArea}>
-            <Text style={[styles.cardTitle, { color: theme.textPrimary }]} numberOfLines={1}>{track.title}</Text>
-            <Text style={[styles.cardArtist, { color: theme.textSecondary }]} numberOfLines={1}>{track.artist}</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.cardIconButton}
-          onPress={() => toggleLike(track)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name={isLiked(track.id) ? 'heart' : 'heart-outline'} size={24} color={isLiked(track.id) ? theme.accent : theme.icon} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.cardIconButton}
-          onPress={onQueueToggle}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="list" size={24} color={theme.icon} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.cardIconButton}
-          onPress={handlePlayPause}
-          activeOpacity={0.7}
-        >
-          <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color={theme.icon} />
-        </TouchableOpacity>
+      <View style={styles.cardroot}>
+        <View style={[styles.cardContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <TouchableOpacity
+            style={styles.cardTouchable}
+            activeOpacity={0.85}
+            onPress={() => setIsFullScreenOpen(true)}
+          >
+            <Image
+              source={{ uri: MusicAPI.getOptimalImage(track.images) }}
+              style={styles.cardAlbumArt}
+              contentFit="cover"
+            />
+            <View style={styles.cardInfoArea}>
+              <Text style={[styles.cardTitle, { color: theme.textPrimary }]} numberOfLines={1}>
+                {track.title}
+              </Text>
+              <Text style={[styles.cardArtist, { color: theme.textSecondary }]} numberOfLines={1}>
+                {track.artist}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cardIconButton} onPress={() => toggleLike(track)} activeOpacity={0.7}>
+            <Ionicons
+              name={isLiked(track.id) ? 'heart' : 'heart-outline'}
+              size={24}
+              color={isLiked(track.id) ? theme.accent : theme.icon}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cardIconButton} onPress={onQueueToggle} activeOpacity={0.7}>
+            <Ionicons name="list" size={24} color={theme.icon} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cardIconButton} onPress={handlePlayPause} activeOpacity={0.7}>
+            <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color={theme.icon} />
+          </TouchableOpacity>
         </View>
         <View style={[styles.whiteProgressBarBg, { backgroundColor: theme.progressBg }]}>
-        <View style={[styles.whiteProgressBarFill, { backgroundColor: theme.progressFill, width: duration > 0 ? `${(position / duration) * 100}%` : '0%' }]} />
+          <View
+            style={[
+              styles.whiteProgressBarFill,
+              {
+                backgroundColor: theme.progressFill,
+                width: duration > 0 ? `${(position / duration) * 100}%` : '0%',
+              },
+            ]}
+          />
+        </View>
       </View>
-      </View>
-      
 
-            <Modal
-        visible={isDownloadModalOpen}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleCloseDownloadModal}
-      >
+      {/* Download Modal */}
+      <Modal visible={isDownloadModalOpen} transparent animationType="fade" onRequestClose={handleCloseDownloadModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.downloadModal}>
-            <LinearGradient
-              colors={['#1a1a1a', '#2a2a2a']}
-              style={styles.modalGradient}
-            >
-                            <View style={styles.modalHeader}>
+            <LinearGradient colors={['#1a1a1a', '#2a2a2a']} style={styles.modalGradient}>
+              <View style={styles.modalHeader}>
                 <Ionicons name="download" size={24} color="#1DB954" />
                 <Text style={styles.modalTitle}>{shareMode ? t('player.share') : t('components.download')}</Text>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={handleCloseDownloadModal}
-                >
+                <TouchableOpacity style={styles.closeButton} onPress={handleCloseDownloadModal}>
                   <Ionicons name="close" size={20} color="#888" />
                 </TouchableOpacity>
               </View>
-                            <View style={styles.modalContent}>
-                                <View style={styles.trackInfo}>
+              <View style={styles.modalContent}>
+                <View style={styles.trackInfo}>
                   <Image
                     source={{ uri: MusicAPI.getOptimalImage(track.images) }}
                     style={styles.modalAlbumArt}
@@ -665,12 +708,10 @@ export function Player({
                     </Text>
                   </View>
                 </View>
-
-                                <View style={styles.statusContainer}>
+                <View style={styles.statusContainer}>
                   {downloadStatus === 'idle' && (
                     <Text style={styles.statusText}>{t('components.preparing_download')}</Text>
                   )}
-                  
                   {downloadStatus === 'downloading' && (
                     <>
                       <ActivityIndicator size="large" color="#1DB954" style={styles.spinner} />
@@ -684,14 +725,12 @@ export function Player({
                       </View>
                     </>
                   )}
-                  
                   {downloadStatus === 'success' && (
                     <>
                       <Ionicons name="checkmark-circle" size={48} color="#1DB954" style={styles.successIcon} />
                       <Text style={styles.successText}>{t('components.download_complete')}</Text>
                     </>
                   )}
-                  
                   {downloadStatus === 'error' && (
                     <>
                       <Ionicons name="alert-circle" size={48} color="#ff4444" style={styles.errorIcon} />
@@ -715,7 +754,7 @@ export function Player({
         </View>
       </Modal>
 
-            <FullScreenPlayer
+      <FullScreenPlayer
         isOpen={isFullScreenOpen}
         onClose={() => setIsFullScreenOpen(false)}
         track={track}
@@ -738,6 +777,7 @@ export function Player({
     </>
   );
 }
+
 
 const styles = StyleSheet.create({
   cardContainer: {
@@ -927,7 +967,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  
   visualProgressBarContainer: {
     width: '100%',
     height: 5,
@@ -971,8 +1010,6 @@ const styles = StyleSheet.create({
     width: '100%',
     letterSpacing: 0.2,
   },
-
-
   whiteProgressBarBg: {
     marginHorizontal: 8,
     height: 4,
@@ -997,5 +1034,4 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: 'column',
   },
-}); 
- 
+});

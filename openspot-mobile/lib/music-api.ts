@@ -30,9 +30,9 @@ export class MusicAPI {
 
   static async search(params: SearchParams): Promise<SearchResponse> {
     const provider = await this.getProvider();
-    // YT provider currently supports tracks reliably; enforce Saavn for richer media entities.
+    
     if (provider === 'ytmusic' && (!params.type || params.type === 'track')) {
-      return YTMusicAPI.search(params);
+      return YTMusicAPI.search({ q: params.q, type: params.type });
     }
     return MusicApi.search(params);
   }
@@ -48,35 +48,44 @@ export class MusicAPI {
   static async getStreamUrl(trackId: string, trackOrProvider?: Track | 'saavn' | 'ytmusic'): Promise<string> {
     const hintedProvider = this.resolveProviderHint(trackOrProvider);
     const provider = hintedProvider || 'saavn';
-    console.log('[MusicAPI] getStreamUrl:', { trackId, provider, hintedProvider });
     if (provider === 'ytmusic') {
       return YTMusicAPI.getStreamUrl(trackId);
     }
     return MusicApi.getStreamUrl(trackId);
   }
 
+  static async getDownloadUrl(trackId: string, trackOrProvider?: Track | 'saavn' | 'ytmusic'): Promise<string> {
+    const hintedProvider = this.resolveProviderHint(trackOrProvider);
+    const provider = hintedProvider || 'saavn';
+    if (provider === 'ytmusic') {
+      return YTMusicAPI.getDownloadUrl(trackId);
+    }
+    
+    return MusicApi.getStreamUrl(trackId);
+  }
+
   static async getPopularTracks(): Promise<Track[]> {
-    // Trending/popular lists are intentionally forced to Saavn for stability.
+    
     return MusicApi.getPopularTracks();
   }
 
   static async getAlbumSongs(albumId: string): Promise<Track[]> {
     const provider = await this.getProvider();
-    // Enforce Saavn because YT no-login source lacks reliable album entity metadata.
+    
     if (provider === 'ytmusic') return MusicApi.getAlbumSongs(albumId);
     return MusicApi.getAlbumSongs(albumId);
   }
 
   static async getArtistSongs(artistId: string, page: number = 0): Promise<{ tracks: Track[]; total: number }> {
     const provider = await this.getProvider();
-    // Enforce Saavn because YT no-login source lacks reliable artist entity metadata.
+    
     if (provider === 'ytmusic') return MusicApi.getArtistSongs(artistId, page);
     return MusicApi.getArtistSongs(artistId, page);
   }
 
   static async getPlaylistSongs(playlistId: string): Promise<Track[]> {
     const provider = await this.getProvider();
-    // Enforce Saavn because YT no-login source lacks reliable playlist entity metadata.
+    
     if (provider === 'ytmusic') return MusicApi.getPlaylistSongs(playlistId);
     return MusicApi.getPlaylistSongs(playlistId);
   }
@@ -113,12 +122,12 @@ export class MusicAPI {
   }
 
   static async getMadeForYou(): Promise<Track[]> {
-    // Trending-like personalized lists are intentionally forced to Saavn for stability.
+    
     return MusicApi.getMadeForYou();
   }
 
   static async resolveTrackById(trackId: string, preferredProvider?: 'saavn' | 'ytmusic'): Promise<Track | null> {
-    const providers: Array<'saavn' | 'ytmusic'> = preferredProvider
+    const providers: ('saavn' | 'ytmusic')[] = preferredProvider
       ? [preferredProvider, preferredProvider === 'saavn' ? 'ytmusic' : 'saavn']
       : ['saavn', 'ytmusic'];
 
@@ -131,7 +140,7 @@ export class MusicAPI {
           return response.tracks[0];
         }
       } catch {
-        // try next provider
+        
       }
     }
 

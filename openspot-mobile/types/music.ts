@@ -49,34 +49,34 @@ export interface Album {
   language: string;
   explicitContent: boolean;
   artists: {
-    primary: Array<{
+    primary: {
       id: string;
       name: string;
       role: string;
       type: string;
-      image: Array<{ quality: string; url: string }>;
+      image: { quality: string; url: string }[];
       url: string;
-    }>;
-    featured: Array<{
+    }[];
+    featured: {
       id: string;
       name: string;
       role: string;
       type: string;
-      image: Array<{ quality: string; url: string }>;
+      image: { quality: string; url: string }[];
       url: string;
-    }>;
-    all: Array<{
+    }[];
+    all: {
       id: string;
       name: string;
       role: string;
       type: string;
-      image: Array<{ quality: string; url: string }>;
+      image: { quality: string; url: string }[];
       url: string;
-    }>;
+    }[];
   };
   songCount: number | null;
   url: string;
-  image: Array<{ quality: string; url: string }>;
+  image: { quality: string; url: string }[];
   images: {
     small: string;
     thumbnail: string;
@@ -93,7 +93,7 @@ export interface Artist {
   dominantLanguage: string;
   dominantType: string;
   role: string;
-  image: Array<{ quality: string; url: string }>;
+  image: { quality: string; url: string }[];
   images: {
     small: string;
     thumbnail: string;
@@ -111,7 +111,7 @@ export interface PlaylistSearchItem {
   explicitContent: boolean;
   language: string;
   url: string;
-  image: Array<{ quality: string; url: string }>;
+  image: { quality: string; url: string }[];
   images: {
     small: string;
     thumbnail: string;

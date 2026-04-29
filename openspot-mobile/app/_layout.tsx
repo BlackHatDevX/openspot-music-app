@@ -5,16 +5,14 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeMode, ThemeModeProvider } from '@/hooks/theme-mode';
 import { LikedSongsProvider } from '@/hooks/useLikedSongs';
-import { ThemeModeProvider } from '@/hooks/theme-mode';
 import '@/lib/i18n';
-
 
 SplashScreen.preventAutoHideAsync();
 
 function AppNavigation() {
-  const colorScheme = useColorScheme();
+  const { resolvedScheme } = useThemeMode(); 
 
   return (
     <LikedSongsProvider>
@@ -22,7 +20,7 @@ function AppNavigation() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style={colorScheme === 'light' ? 'dark' : 'light'} />
+      <StatusBar style={resolvedScheme === 'dark' ? 'light' : 'dark'} />
     </LikedSongsProvider>
   );
 }

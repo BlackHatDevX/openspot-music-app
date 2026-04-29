@@ -1,4 +1,4 @@
-import React, { useState, useContext, useMemo, useEffect } from 'react';
+import React, { useState, useContext, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -32,11 +32,14 @@ export default function MediaDetailsScreen() {
     image?: string;
     from?: string;
   }>();
-  const mediaType = useMemo(() => (params.type || 'album') as MediaType, [params.type]);
-  const mediaId = params.id || '';
-  const title = params.title || 'Details';
-  const coverImage = params.image || '';
-  const fromPath = Array.isArray(params.from) ? params.from[0] : params.from;
+  const normalizeParam = (val: string | string[] | undefined): string | undefined =>
+    Array.isArray(val) ? val[0] : val;
+
+  const mediaType = useMemo(() => (normalizeParam(params.type) || 'album') as MediaType, [params.type]);
+  const mediaId = normalizeParam(params.id) || '';
+  const title = normalizeParam(params.title) || 'Details';
+  const coverImage = normalizeParam(params.image) || '';
+  const fromPath = normalizeParam(params.from);
 
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -142,13 +145,13 @@ export default function MediaDetailsScreen() {
     }
   };
 
-  const handleBackPress = () => {
+  const handleBackPress = useCallback(() => {
     if (fromPath) {
       router.replace(fromPath as any);
       return;
     }
     router.back();
-  };
+  }, [fromPath, router]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -157,7 +160,7 @@ export default function MediaDetailsScreen() {
         return true;
       });
       return () => subscription.remove();
-    }, [fromPath])
+    }, [handleBackPress])
   );
 
   const renderTrackItem = ({ item, index }: { item: Track; index: number }) => {

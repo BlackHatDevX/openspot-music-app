@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Linking,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -42,8 +41,6 @@ interface TopBarProps {
   autoFocus?: boolean;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 export function TopBar({
   currentView,
   onViewChange,
@@ -58,7 +55,6 @@ export function TopBar({
   const accent = isDark ? '#1DB954' : '#167c3a';
   const { mode, setMode } = useThemeMode();
   const { t } = useTranslation();
-  const [searchFocused, setSearchFocused] = useState(false);
   const { query, setQuery, searchTracks, clearResults, searchType, setSearchType } = searchState;
   const router = useRouter();
 
@@ -93,12 +89,10 @@ export function TopBar({
   };
 
   const handleSearchFocus = () => {
-    setSearchFocused(true);
     onSearchClick();
   };
 
   const handleSearchBlur = () => {
-    setSearchFocused(false);
   };
 
   const handleTitlePress = () => {

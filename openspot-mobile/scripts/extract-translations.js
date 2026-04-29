@@ -1,6 +1,5 @@
 const scanner = require('i18next-scanner');
 const fs = require('fs');
-const path = require('path');
 
 const config = {
   input: [

@@ -1,4 +1,4 @@
-import { Track, Album, Artist, PlaylistSearchItem, SearchResponse } from '@/types/music';
+import { Track, SearchResponse } from '@/types/music';
 
 type YtApiSearchItem = {
   type?: string;
@@ -7,114 +7,80 @@ type YtApiSearchItem = {
   author?: string;
   authorId?: string;
   lengthSeconds?: number;
-  videoThumbnails?: Array<{ url: string; quality?: string; width?: number; height?: number }>;
+  videoThumbnails?: { url: string; quality?: string; width?: number; height?: number }[];
 };
 
 type YtApiVideoData = {
-  adaptiveFormats?: Array<{
+  adaptiveFormats?: {
     itag?: number;
     type?: string;
     bitrate?: number;
     url?: string;
-  }>;
+  }[];
+};
+
+const getEnvInstances = (): string[] => {
+  const raw = process.env.EXPO_PUBLIC_YT_API_INSTANCES || '';
+  return raw.split(',').map(s => s.trim()).filter(Boolean);
+};
+
+const getDiscoveryUrl = (): string | null => {
+  return process.env.EXPO_PUBLIC_YT_API_DISCOVERY || null;
 };
 
 export class YTMusicAPI {
-  private static readonly ytApiInstances = this.loadInstancesFromEnv();
+  private static readonly STATIC_INSTANCES: string[] = getEnvInstances();
 
-  private static loadInstancesFromEnv(): string[] {
-    const envVar =
-      // Expo public env var (preferred)
-      process.env.EXPO_PUBLIC_YT_API_INSTANCES;
-    return envVar?.split(',').map((url) => url.trim()).filter((url) => url.length > 0) || [];
-  }
+  private static dynamicInstances: string[] | null = null;
+  private static lastWorkingInstance: string | null = null;
+  private static instancesFetchedAt = 0;
+  private static readonly INSTANCES_TTL_MS = 30 * 60 * 1000;
 
-  private static pickBestThumbnail(thumbnails?: Array<{ url: string }>): string {
-    if (!thumbnails?.length) return '';
-    const ranked = [...thumbnails].sort((a, b) => {
-      const aw = this.extractSizeFromUrl(a.url);
-      const bw = this.extractSizeFromUrl(b.url);
-      return bw - aw;
-    });
-    return ranked[0]?.url || thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url || '';
-  }
+  private static async getInstances(): Promise<string[]> {
+    const now = Date.now();
+    const stale = now - this.instancesFetchedAt > this.INSTANCES_TTL_MS;
 
-  private static extractSizeFromUrl(url: string): number {
-    const match = url.match(/(?:w|width)=([0-9]{2,4})/i) || url.match(/\/([0-9]{2,4})x([0-9]{2,4})\//i);
-    if (!match) return 0;
-    const value = Number(match[1]);
-    return Number.isFinite(value) ? value : 0;
-  }
-
-  private static buildHighResThumbnail(videoId?: string, fallback?: string): string {
-    if (!videoId) return fallback || '';
-    // Prefer maxres, with hq as fallback to avoid very blurry default/thumb variants.
-    return `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
-  }
-
-  private static getBestThumbnail(item: YtApiSearchItem): string {
-    const bestFromSource = this.pickBestThumbnail(item.videoThumbnails);
-    if (item.videoId) {
-      return this.buildHighResThumbnail(item.videoId, bestFromSource);
-    }
-    return bestFromSource;
-  }
-
-  private static toImageSet(url: string) {
-    return {
-      small: url,
-      thumbnail: url,
-      large: url,
-    };
-  }
-
-  private static mapSearchType(type?: string): 'track' | 'album' | 'artist' | 'playlist' {
-    const normalized = (type || '').toLowerCase();
-    if (normalized.includes('playlist')) return 'playlist';
-    if (normalized.includes('channel') || normalized.includes('artist')) return 'artist';
-    if (normalized.includes('album')) return 'album';
-    return 'track';
-  }
-
-  private static async fetchFromAnyInstance<T>(path: string): Promise<T> {
-    let lastError: unknown = null;
-    for (const instance of this.ytApiInstances) {
-      try {
-        const response = await this.fetchWithTimeout(`${instance}${path}`);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status} from ${instance}`);
+    if (!this.dynamicInstances || stale) {
+      const discoveryUrl = getDiscoveryUrl();
+      if (discoveryUrl) {
+        try {
+          const res = await this.fetchWithTimeout(discoveryUrl, 5000);
+          if (res.ok) {
+            const json: [string, { api: boolean; uri: string; type: string }][] = await res.json();
+            const fresh = json
+              .filter(([, info]) => info.api && info.type === 'https' && !info.uri.includes('.onion'))
+              .map(([, info]) => info.uri.replace(/\/$/, ''))
+              .slice(0, 12);
+            if (fresh.length > 0) {
+              this.dynamicInstances = fresh;
+              this.instancesFetchedAt = now;
+            }
+          }
+        } catch (e) {
+          console.warn('[YT API] Discovery fetch failed', e);
         }
-        return (await response.json()) as T;
-      } catch (error) {
-        lastError = error;
       }
     }
 
-    throw new Error(
-      `All no-login YouTube providers failed${lastError ? `: ${String(lastError)}` : ''}`
-    );
+    const base = this.dynamicInstances ?? this.STATIC_INSTANCES;
+    const seen = new Set(base);
+    const extra = this.STATIC_INSTANCES.filter(i => !seen.has(i));
+    return [...base, ...extra];
   }
 
-  private static async fetchWithInstance<T>(path: string): Promise<{ data: T; instance: string }> {
-    let lastError: unknown = null;
-    for (const instance of this.ytApiInstances) {
-      try {
-        const response = await this.fetchWithTimeout(`${instance}${path}`);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status} from ${instance}`);
-        }
-        return { data: (await response.json()) as T, instance };
-      } catch (error) {
-        lastError = error;
-      }
+  private static async getOrderedInstances(): Promise<string[]> {
+    const all = await this.getInstances();
+    if (this.lastWorkingInstance && all.includes(this.lastWorkingInstance)) {
+      return [
+        this.lastWorkingInstance,
+        ...all.filter(i => i !== this.lastWorkingInstance),
+      ];
     }
-
-    throw new Error(
-      `All no-login YouTube providers failed${lastError ? `: ${String(lastError)}` : ''}`
-    );
+    return all;
   }
 
-  private static async fetchWithTimeout(url: string, timeoutMs: number = 8000): Promise<Response> {
+
+  private static async fetchWithTimeout(url: string, timeoutMs = 8000): Promise<Response> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -124,15 +90,66 @@ export class YTMusicAPI {
     }
   }
 
+  private static async fetchFromAnyInstance<T>(path: string): Promise<T> {
+    const instances = await this.getOrderedInstances();
+    let lastError: unknown = null;
+    for (const instance of instances) {
+      const start = Date.now();
+      try {
+        const res = await this.fetchWithTimeout(`${instance}${path}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        this.lastWorkingInstance = instance; // cache winner
+        console.log(`[YT API] ${instance} OK in ${Date.now() - start}ms`);
+        return (await res.json()) as T;
+      } catch (err) {
+        console.warn(`[YT API] ${instance} failed (${Date.now() - start}ms):`, err);
+        // If this was our cached winner and it just failed, clear the cache
+        if (instance === this.lastWorkingInstance) {
+          this.lastWorkingInstance = null;
+        }
+        lastError = err;
+      }
+    }
+    throw new Error(`All instances failed: ${String(lastError)}`);
+  }
+
+  private static async fetchWithInstance<T>(path: string): Promise<{ data: T; instance: string }> {
+    const instances = await this.getOrderedInstances();
+    let lastError: unknown = null;
+    for (const instance of instances) {
+      const start = Date.now();
+      try {
+        const res = await this.fetchWithTimeout(`${instance}${path}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        this.lastWorkingInstance = instance;
+        console.log(`[YT API] ${instance} OK in ${Date.now() - start}ms`);
+        return { data: (await res.json()) as T, instance };
+      } catch (err) {
+        console.warn(`[YT API] ${instance} failed (${Date.now() - start}ms):`, err);
+        if (instance === this.lastWorkingInstance) this.lastWorkingInstance = null;
+        lastError = err;
+      }
+    }
+    throw new Error(`All instances failed: ${String(lastError)}`);
+  }
+
+
+  private static getBestThumbnail(item: YtApiSearchItem): string {
+    if (item.videoId) return `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`;
+    return item.videoThumbnails?.[0]?.url || '';
+  }
+
+  private static toImageSet(url: string) {
+    return { small: url, thumbnail: url, large: url, back: null };
+  }
+
   private static normalizeTrack(item: YtApiSearchItem): Track {
     const thumb = this.getBestThumbnail(item);
-    const artistName = item.author || 'Unknown Artist';
-
     return {
       id: item.videoId || '',
       provider: 'ytmusic',
       title: item.title || 'Unknown title',
-      artist: artistName,
+      artist: item.author || 'Unknown Artist',
       artistId: 0,
       albumTitle: '',
       albumCover: thumb,
@@ -140,11 +157,7 @@ export class YTMusicAPI {
       releaseDate: '',
       genre: '',
       duration: (item.lengthSeconds || 0) * 1000,
-      audioQuality: {
-        maximumBitDepth: 16,
-        maximumSamplingRate: 44100,
-        isHiRes: false,
-      },
+      audioQuality: { maximumBitDepth: 16, maximumSamplingRate: 44100, isHiRes: false },
       version: null,
       label: '',
       labelId: 0,
@@ -160,226 +173,85 @@ export class YTMusicAPI {
       releaseDateStream: '',
       releaseDateDownload: '',
       maximumChannelCount: 2,
-      images: {
-        small: thumb,
-        thumbnail: thumb,
-        large: thumb,
-        back: null,
-      },
+      images: this.toImageSet(thumb),
       isrc: '',
     };
   }
 
-  private static normalizeAlbum(item: YtApiSearchItem): Album {
-    const thumb = this.getBestThumbnail(item);
-    const artist = item.author || 'Unknown Artist';
+  private static pickBestAudioFormat(
+    adaptiveFormats: YtApiVideoData['adaptiveFormats'] = [],
+    instance: string,
+    trackId: string
+  ): string {
+    const audioFormats = adaptiveFormats
+      .filter(f => (f.type || '').startsWith('audio/'))
+      .sort((a, b) => {
+        const aIsMp4 = (a.type || '').includes('audio/mp4') ? 1 : 0;
+        const bIsMp4 = (b.type || '').includes('audio/mp4') ? 1 : 0;
+        if (aIsMp4 !== bIsMp4) return bIsMp4 - aIsMp4;
+        return (b.bitrate || 0) - (a.bitrate || 0);
+      });
 
-    return {
-      id: item.videoId || '',
-      name: item.title || 'Unknown Album',
-      description: '',
-      year: null,
-      type: 'album',
-      playCount: null,
-      language: '',
-      explicitContent: false,
-      artists: {
-        primary: [{
-          id: item.authorId || '',
-          name: artist,
-          role: 'primary',
-          type: 'artist',
-          image: thumb ? [{ quality: 'default', url: thumb }] : [],
-          url: item.authorId ? `https://www.youtube.com/channel/${item.authorId}` : '',
-        }],
-        featured: [],
-        all: [{
-          id: item.authorId || '',
-          name: artist,
-          role: 'primary',
-          type: 'artist',
-          image: thumb ? [{ quality: 'default', url: thumb }] : [],
-          url: item.authorId ? `https://www.youtube.com/channel/${item.authorId}` : '',
-        }],
-      },
-      songCount: null,
-      url: item.videoId ? `https://www.youtube.com/watch?v=${item.videoId}` : '',
-      image: thumb ? [{ quality: 'default', url: thumb }] : [],
-      images: this.toImageSet(thumb),
-    };
+    if (!audioFormats.length) throw new Error('No audio formats found');
+    const best = audioFormats[0];
+
+    if (best.itag) {
+      const url = `${instance}/latest_version?id=${encodeURIComponent(trackId)}&itag=${best.itag}&local=true`;
+      console.log(`[YT API] Using local redirect (itag=${best.itag}) via ${instance}`);
+      return url;
+    }
+    if (best.url) return best.url;
+    throw new Error('No usable audio URL');
   }
 
-  private static normalizeArtist(item: YtApiSearchItem): Artist {
-    const thumb = this.getBestThumbnail(item);
 
-    return {
-      id: item.authorId || '',
-      name: item.author || item.title || 'Unknown Artist',
-      url: item.authorId ? `https://www.youtube.com/channel/${item.authorId}` : '',
-      followerCount: null,
-      isVerified: false,
-      dominantLanguage: '',
-      dominantType: 'artist',
-      role: 'artist',
-      image: thumb ? [{ quality: 'default', url: thumb }] : [],
-      images: {
-        small: thumb,
-        thumbnail: thumb,
-        large: thumb,
-      },
-    };
-  }
-
-  private static normalizePlaylist(item: YtApiSearchItem): PlaylistSearchItem {
-    const thumb = this.getBestThumbnail(item);
-
-    return {
-      id: item.videoId || '',
-      name: item.title || 'Unknown Playlist',
-      description: '',
-      type: 'playlist',
-      songCount: null,
-      followerCount: null,
-      explicitContent: false,
-      language: '',
-      url: item.videoId ? `https://www.youtube.com/watch?v=${item.videoId}` : '',
-      image: thumb ? [{ quality: 'default', url: thumb }] : [],
-      images: {
-        small: thumb,
-        thumbnail: thumb,
-        large: thumb,
-      },
-    };
-  }
-
-  static async search(params: { q: string; type?: 'track' | 'album' | 'artist' | 'playlist' }): Promise<SearchResponse> {
+  static async search(params: { q: string; type?: 'track' }): Promise<SearchResponse> {
     try {
       const results = await this.fetchFromAnyInstance<YtApiSearchItem[]>(
-        `/api/v1/search?q=${encodeURIComponent(params.q)}&type=video`
+        `/api/v1/search?q=${encodeURIComponent(params.q)}&type=video&fields=videoId,title,author,lengthSeconds,videoThumbnails`
       );
 
-      const response: SearchResponse = {
-        tracks: [],
-        albums: [],
-        artists: [],
-        playlists: [],
-        pagination: {
-          offset: 0,
-          total: results.length || 0,
-          hasMore: false,
-        },
-      };
-
+      const seen = new Set<string>();
+      const tracks: Track[] = [];
       for (const item of results) {
-        const mappedType = this.mapSearchType(item.type);
-        if (mappedType === 'track' && (!params.type || params.type === 'track')) {
-          response.tracks.push(this.normalizeTrack(item));
-        } else if (mappedType === 'album' && (!params.type || params.type === 'album')) {
-          response.albums.push(this.normalizeAlbum(item));
-        } else if (mappedType === 'artist' && (!params.type || params.type === 'artist')) {
-          response.artists.push(this.normalizeArtist(item));
-        } else if (mappedType === 'playlist' && (!params.type || params.type === 'playlist')) {
-          response.playlists.push(this.normalizePlaylist(item));
-        }
+        if (!item.videoId || seen.has(item.videoId)) continue;
+        seen.add(item.videoId);
+        tracks.push(this.normalizeTrack(item));
       }
 
-      return response;
-    } catch (error) {
-      console.error('YTMusic search error:', error);
       return {
-        tracks: [],
+        tracks,
         albums: [],
         artists: [],
         playlists: [],
-        pagination: { offset: 0, total: 0, hasMore: false },
+        pagination: { offset: 0, total: tracks.length, hasMore: false },
       };
+    } catch (error) {
+      console.error('[YTMusicAPI] search error:', error);
+      return { tracks: [], albums: [], artists: [], playlists: [], pagination: { offset: 0, total: 0, hasMore: false } };
     }
   }
 
   static async getStreamUrl(trackId: string): Promise<string> {
-    console.log('[YTMusicAPI] getStreamUrl:', { trackId, provider: 'ytmusic' });
+    console.log('[YTMusicAPI] getStreamUrl:', { trackId });
     try {
-      const { data: videoData, instance } = await this.fetchWithInstance<YtApiVideoData>(
-        `/api/v1/videos/${encodeURIComponent(trackId)}`
+      const { data, instance } = await this.fetchWithInstance<YtApiVideoData>(
+        `/api/v1/videos/${encodeURIComponent(trackId)}?fields=adaptiveFormats`
       );
-
-      const audioFormats = (videoData.adaptiveFormats || [])
-        .filter((format) => (format.type || '').startsWith('audio/'))
-        .sort((a, b) => {
-          const aIsMp4 = (a.type || '').includes('audio/mp4') ? 1 : 0;
-          const bIsMp4 = (b.type || '').includes('audio/mp4') ? 1 : 0;
-          if (aIsMp4 !== bIsMp4) return bIsMp4 - aIsMp4;
-          return (b.bitrate || 0) - (a.bitrate || 0);
-        });
-
-      const bestAudio = audioFormats[0];
-      if (!bestAudio) {
-        throw new Error('No audio stream found');
-      }
-
-      // Use instance-local redirect endpoint to avoid IP-bound Google URLs causing random 403 on device.
-      if (bestAudio.itag) {
-        return `${instance}/latest_version?id=${encodeURIComponent(trackId)}&itag=${bestAudio.itag}&local=true`;
-      }
-
-      if (bestAudio.url) {
-        return bestAudio.url;
-      }
-
-      throw new Error('No usable audio stream URL found');
+      return this.pickBestAudioFormat(data.adaptiveFormats, instance, trackId);
     } catch (error) {
-      console.error('YTMusic stream error:', error);
+      console.error('[YTMusicAPI] getStreamUrl error:', error);
       throw new Error('Failed to get stream URL');
     }
   }
 
-  static async getAlbumSongs(albumId: string): Promise<Track[]> {
-    try {
-      const results = await this.search({ q: albumId, type: 'track' });
-      return results.tracks;
-    } catch (error) {
-      console.error('YTMusic album songs error:', error);
-      return [];
-    }
+  static async getDownloadUrl(trackId: string): Promise<string> {
+    return this.getStreamUrl(trackId);
   }
 
-  static async getArtistSongs(artistId: string): Promise<Track[]> {
-    try {
-      const results = await this.search({ q: artistId, type: 'track' });
-      return results.tracks;
-    } catch (error) {
-      console.error('YTMusic artist songs error:', error);
-      return [];
-    }
-  }
-
-  static async getPlaylistSongs(playlistId: string): Promise<Track[]> {
-    try {
-      const results = await this.search({ q: playlistId, type: 'track' });
-      return results.tracks;
-    } catch (error) {
-      console.error('YTMusic playlist songs error:', error);
-      return [];
-    }
-  }
-
-  static async getPopularTracks(): Promise<Track[]> {
-    try {
-      const results = await this.search({ q: 'popular music', type: 'track' });
-      return results.tracks.slice(0, 20);
-    } catch (error) {
-      console.error('YTMusic popular tracks error:', error);
-      return [];
-    }
-  }
-
-  static async getMadeForYou(): Promise<Track[]> {
-    try {
-      const results = await this.search({ q: 'trending music', type: 'track' });
-      return results.tracks.slice(0, 20);
-    } catch (error) {
-      console.error('YTMusic made for you error:', error);
-      return [];
-    }
-  }
+  static async getAlbumSongs(_albumId: string): Promise<Track[]> { return []; }
+  static async getArtistSongs(_artistId: string): Promise<Track[]> { return []; }
+  static async getPlaylistSongs(_playlistId: string): Promise<Track[]> { return []; }
+  static async getPopularTracks(): Promise<Track[]> { return []; }
+  static async getMadeForYou(): Promise<Track[]> { return []; }
 }

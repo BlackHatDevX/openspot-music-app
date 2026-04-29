@@ -30,6 +30,7 @@
     "liked_songs": "Liked Songs",
     "recently_played": "Recently Played",
     "empty_recent": "Play any track and it will appear here.",
+    "empty_liked": "Your liked songs will appear here",
     "your_country": "your country"
   },
   "player": {
@@ -48,7 +49,9 @@
     "download": "Download",
     "share": "Share",
     "speed": "Speed",
-    "lyrics": "Lyrics"
+    "lyrics": "Lyrics",
+    "stream_error_title": "Playback Error",
+    "stream_error_message": "Sorry, the selected song could not be loaded from the backend. Please try another song."
   },
   "components": {
     "queue": "Queue",
@@ -144,6 +147,13 @@
     "dark_mode": "Dark Mode",
     "light_mode": "Light Mode",
     "about": "About",
-    "version": "Version"
+    "version": "Version",
+    "music_provider": "Music Provider",
+    "provider_description": "Select your preferred music streaming service.",
+    "trending": "Trending",
+    "trending_description": "Show trending section on home",
+    "region": "Region",
+    "region_description": "Trending songs on home use this region. Default: Auto.",
+    "auto": "Auto"
   }
 }

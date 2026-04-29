@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Track } from '../types/music';
 
@@ -6,7 +6,7 @@ interface QueueState {
   tracks: Track[];
   currentIndex: number;
   isShuffled: boolean;
-  originalTracks: Track[]; 
+  originalTracks: Track[];
 }
 
 const QUEUE_STORAGE_KEY = 'openspot_music_queue';
@@ -16,64 +16,63 @@ export function useMusicQueue() {
     tracks: [],
     currentIndex: -1,
     isShuffled: false,
-    originalTracks: []
+    originalTracks: [],
   });
+
+  
+  const queueRef = useRef(queue);
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
 
   
   useEffect(() => {
     const loadQueue = async () => {
       try {
-        const storedQueue = await AsyncStorage.getItem(QUEUE_STORAGE_KEY);
-        if (storedQueue) {
-          const parsedQueue = JSON.parse(storedQueue);
-          
-          if (parsedQueue.tracks && typeof parsedQueue.currentIndex === 'number') {
-            setQueue(parsedQueue);
+        const stored = await AsyncStorage.getItem(QUEUE_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.tracks && typeof parsed.currentIndex === 'number') {
+            setQueue(parsed);
           }
         }
       } catch (error) {
-        console.error('Failed to restore queue from AsyncStorage:', error);
+        console.error('Failed to restore queue:', error);
       }
     };
-
     loadQueue();
   }, []);
 
-  
   useEffect(() => {
     const saveQueue = async () => {
       try {
-        
         if (queue.tracks.length > 0) {
           await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
         } else {
-          
           await AsyncStorage.removeItem(QUEUE_STORAGE_KEY);
         }
       } catch (error) {
-        console.error('Failed to save queue to AsyncStorage:', error);
+        console.error('Failed to save queue:', error);
       }
     };
-
     saveQueue();
   }, [queue]);
 
   
   const setQueueTracks = useCallback((tracks: Track[], startIndex: number = 0) => {
-    setQueue(prev => ({
-      ...prev,
+    setQueue({
       tracks,
       currentIndex: startIndex,
-      originalTracks: tracks
-    }));
+      isShuffled: false,
+      originalTracks: tracks,
+    });
   }, []);
 
-  
   const addToQueue = useCallback((track: Track) => {
     setQueue(prev => ({
       ...prev,
       tracks: [...prev.tracks, track],
-      originalTracks: [...prev.originalTracks, track]
+      originalTracks: [...prev.originalTracks, track],
     }));
   }, []);
 
@@ -82,34 +81,28 @@ export function useMusicQueue() {
       const insertIndex = prev.currentIndex >= 0 ? prev.currentIndex + 1 : prev.tracks.length;
       const nextTracks = [...prev.tracks];
       nextTracks.splice(insertIndex, 0, track);
-
+      const currentTrack = prev.tracks[prev.currentIndex];
+      const originalInsertIndex = currentTrack
+        ? prev.originalTracks.findIndex(t => t.id === currentTrack.id) + 1
+        : prev.originalTracks.length;
       const nextOriginalTracks = [...prev.originalTracks];
-      const originalInsertIndex = prev.isShuffled
-        ? nextOriginalTracks.length
-        : insertIndex;
       nextOriginalTracks.splice(originalInsertIndex, 0, track);
 
-      return {
-        ...prev,
-        tracks: nextTracks,
-        originalTracks: nextOriginalTracks,
-      };
+      return { ...prev, tracks: nextTracks, originalTracks: nextOriginalTracks };
     });
   }, []);
 
   const removeFromQueue = useCallback((index: number) => {
     setQueue(prev => {
-      if (index < 0 || index >= prev.tracks.length) {
-        return prev;
-      }
+      if (index < 0 || index >= prev.tracks.length) return prev;
 
       const removedTrack = prev.tracks[index];
       const nextTracks = prev.tracks.filter((_, i) => i !== index);
-      const originalIndex = prev.originalTracks.findIndex((item) => item.id === removedTrack.id);
-      const nextOriginalTracks =
-        originalIndex >= 0
-          ? prev.originalTracks.filter((_, i) => i !== originalIndex)
-          : prev.originalTracks;
+
+      const originalIndex = prev.originalTracks.findIndex(t => t.id === removedTrack.id);
+      const nextOriginalTracks = originalIndex >= 0
+        ? prev.originalTracks.filter((_, i) => i !== originalIndex)
+        : prev.originalTracks;
 
       let nextCurrentIndex = prev.currentIndex;
       if (nextTracks.length === 0) {
@@ -132,27 +125,19 @@ export function useMusicQueue() {
   const moveQueueItem = useCallback((fromIndex: number, toIndex: number) => {
     setQueue(prev => {
       if (
-        fromIndex < 0 ||
-        toIndex < 0 ||
-        fromIndex >= prev.tracks.length ||
-        toIndex >= prev.tracks.length ||
+        fromIndex < 0 || toIndex < 0 ||
+        fromIndex >= prev.tracks.length || toIndex >= prev.tracks.length ||
         fromIndex === toIndex
-      ) {
-        return prev;
-      }
+      ) return prev;
 
       const nextTracks = [...prev.tracks];
-      const [movedTrack] = nextTracks.splice(fromIndex, 1);
-      nextTracks.splice(toIndex, 0, movedTrack);
+      const [moved] = nextTracks.splice(fromIndex, 1);
+      nextTracks.splice(toIndex, 0, moved);
 
       let nextCurrentIndex = prev.currentIndex;
-      if (prev.currentIndex === fromIndex) {
-        nextCurrentIndex = toIndex;
-      } else if (fromIndex < prev.currentIndex && toIndex >= prev.currentIndex) {
-        nextCurrentIndex = prev.currentIndex - 1;
-      } else if (fromIndex > prev.currentIndex && toIndex <= prev.currentIndex) {
-        nextCurrentIndex = prev.currentIndex + 1;
-      }
+      if (prev.currentIndex === fromIndex) nextCurrentIndex = toIndex;
+      else if (fromIndex < prev.currentIndex && toIndex >= prev.currentIndex) nextCurrentIndex--;
+      else if (fromIndex > prev.currentIndex && toIndex <= prev.currentIndex) nextCurrentIndex++;
 
       return {
         ...prev,
@@ -163,126 +148,94 @@ export function useMusicQueue() {
     });
   }, []);
 
-  
   const getCurrentTrack = useCallback((): Track | null => {
-    if (queue.currentIndex >= 0 && queue.currentIndex < queue.tracks.length) {
-      return queue.tracks[queue.currentIndex];
-    }
-    return null;
-  }, [queue.currentIndex, queue.tracks]);
+    const q = queueRef.current;
+    return q.currentIndex >= 0 && q.currentIndex < q.tracks.length
+      ? q.tracks[q.currentIndex]
+      : null;
+  }, []);
 
-  
   const playNext = useCallback((): Track | null => {
-    let nextTrack: Track | null = null;
-    setQueue(prev => {
-      if (prev.tracks.length === 0) return prev;
-      const nextIndex = prev.currentIndex + 1;
-      if (nextIndex >= prev.tracks.length) {
-        return prev;
-      }
-      nextTrack = prev.tracks[nextIndex];
-      return { ...prev, currentIndex: nextIndex };
-    });
+    const q = queueRef.current;
+    const nextIndex = q.currentIndex + 1;
+    if (nextIndex >= q.tracks.length) return null;
+
+    const nextTrack = q.tracks[nextIndex];
+    setQueue(prev => ({ ...prev, currentIndex: nextIndex }));
     return nextTrack;
   }, []);
 
-  
   const playPrevious = useCallback((): Track | null => {
-    let prevTrack: Track | null = null;
-    setQueue(prev => {
-      if (prev.tracks.length === 0) return prev;
-      const prevIndex = prev.currentIndex - 1;
-      if (prevIndex < 0) {
-        return prev;
-      }
-      prevTrack = prev.tracks[prevIndex];
-      return { ...prev, currentIndex: prevIndex };
-    });
+    const q = queueRef.current;
+    const prevIndex = q.currentIndex - 1;
+    if (prevIndex < 0) return null;
+
+    const prevTrack = q.tracks[prevIndex];
+    setQueue(prev => ({ ...prev, currentIndex: prevIndex }));
     return prevTrack;
   }, []);
 
-  
-  const setCurrentIndex = useCallback((index: number) => {
-    let targetTrack: Track | null = null;
-    setQueue(prev => {
-      if (index >= 0 && index < prev.tracks.length) {
-        targetTrack = prev.tracks[index];
-        return { ...prev, currentIndex: index };
-      }
-      return prev;
-    });
-    return targetTrack;
+  const setCurrentIndex = useCallback((index: number): Track | null => {
+    const q = queueRef.current;
+    if (index < 0 || index >= q.tracks.length) return null;
+    const track = q.tracks[index];
+    setQueue(prev => ({ ...prev, currentIndex: index }));
+    return track;
   }, []);
-  
+
   const shuffleQueue = useCallback(() => {
-    if (queue.tracks.length <= 1) return;
+    setQueue(prev => {
+      if (prev.tracks.length <= 1) return prev;
 
-    const currentTrack = getCurrentTrack();
-    const shuffledTracks = [...queue.tracks];
-    
-    
-    for (let i = shuffledTracks.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffledTracks[i], shuffledTracks[j]] = [shuffledTracks[j], shuffledTracks[i]];
-    }
+      const currentTrack = prev.tracks[prev.currentIndex];
+      const shuffled = [...prev.tracks];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const newIndex = currentTrack ? shuffled.findIndex(t => t.id === currentTrack.id) : 0;
 
-    
-    const newCurrentIndex = currentTrack 
-      ? shuffledTracks.findIndex(track => track.id === currentTrack.id)
-      : 0;
+      return {
+        ...prev,
+        tracks: shuffled,
+        currentIndex: newIndex,
+        isShuffled: true,
+      };
+    });
+  }, []);
 
-    setQueue(prev => ({
-      ...prev,
-      tracks: shuffledTracks,
-      currentIndex: newCurrentIndex,
-      isShuffled: true
-    }));
-  }, [queue.tracks, getCurrentTrack]);
-
-  
   const unshuffleQueue = useCallback(() => {
-    const currentTrack = getCurrentTrack();
-    const newCurrentIndex = currentTrack 
-      ? queue.originalTracks.findIndex(track => track.id === currentTrack.id)
-      : 0;
+    setQueue(prev => {
+      const currentTrack = prev.tracks[prev.currentIndex];
+      const newIndex = currentTrack ? prev.originalTracks.findIndex(t => t.id === currentTrack.id) : 0;
+      return {
+        ...prev,
+        tracks: [...prev.originalTracks],
+        currentIndex: newIndex,
+        isShuffled: false,
+      };
+    });
+  }, []);
 
-    setQueue(prev => ({
-      ...prev,
-      tracks: prev.originalTracks,
-      currentIndex: newCurrentIndex,
-      isShuffled: false
-    }));
-  }, [queue.originalTracks, getCurrentTrack]);
-
-  
   const toggleShuffle = useCallback(() => {
-    if (queue.isShuffled) {
-      unshuffleQueue();
-    } else {
-      shuffleQueue();
-    }
-    return !queue.isShuffled;
-  }, [queue.isShuffled, shuffleQueue, unshuffleQueue]);
+    if (queueRef.current.isShuffled) unshuffleQueue();
+    else shuffleQueue();
+    return !queueRef.current.isShuffled;
+  }, [shuffleQueue, unshuffleQueue]);
 
-  
   const clearQueue = useCallback(() => {
     setQueue({
       tracks: [],
       currentIndex: -1,
       isShuffled: false,
-      originalTracks: []
+      originalTracks: [],
     });
   }, []);
 
-  
-  const hasNext = useCallback(() => {
-    return queue.currentIndex < queue.tracks.length - 1;
-  }, [queue.currentIndex, queue.tracks.length]);
+  const hasNext = useCallback(() => queueRef.current.currentIndex < queueRef.current.tracks.length - 1, []);
+  const hasPrevious = useCallback(() => queueRef.current.currentIndex > 0, []);
 
-  
-  const hasPrevious = useCallback(() => {
-    return queue.currentIndex > 0;
-  }, [queue.currentIndex]);
+  const currentTrack = useMemo(() => getCurrentTrack(), [getCurrentTrack]);
 
   return {
     queue,
@@ -299,11 +252,10 @@ export function useMusicQueue() {
     clearQueue,
     hasNext,
     hasPrevious,
-    
-    currentTrack: getCurrentTrack(),
+    currentTrack,
     currentIndex: queue.currentIndex,
     tracks: queue.tracks,
     isShuffled: queue.isShuffled,
-    queueLength: queue.tracks.length
+    queueLength: queue.tracks.length,
   };
-} 
+}

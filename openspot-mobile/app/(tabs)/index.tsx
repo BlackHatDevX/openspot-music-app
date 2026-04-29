@@ -10,19 +10,20 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useLikedSongs } from '@/hooks/useLikedSongs';
 import { HorizontalTrackList } from '@/components/HorizontalTrackList';
-import { useRouter } from 'expo-router';
+import { useRouter , useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { COUNTRY_NAMES } from '@/constants/countryNames';
 import { useTranslation } from 'react-i18next';
 import { useThemeMode, ThemeMode } from '@/hooks/theme-mode';
+import { useConnectivity } from '@/hooks/useConnectivity';
 
-const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/trending-music-os/refs/heads/main/trending.json';
+const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/trending.json';
 const TRENDING_TRACKS_CACHE_KEY = 'TRENDING_TRACKS_CACHE_V1';
 const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
 const LANGUAGE_KEY = 'openspot_language_v1';
 const FIRST_RUN_SETUP_KEY = 'openspot_first_run_setup_done_v1';
+const TRENDING_ENABLED_KEY = 'openspot_trending_enabled_v1';
 
 type TrendingDataType = Record<string, string[]>;
 
@@ -64,6 +65,9 @@ export default function HomeScreen() {
   const [setupLanguage, setSetupLanguage] = useState<string>('en');
   const [setupTheme, setSetupTheme] = useState<ThemeMode>(mode);
   const [isSavingSetup, setIsSavingSetup] = useState(false);
+  const { isOffline } = useConnectivity();
+  const wasOfflineRef = React.useRef(false);
+  const [trendingEnabled, setTrendingEnabled] = useState<boolean>(true);
 
   
   useEffect(() => {
@@ -95,6 +99,19 @@ export default function HomeScreen() {
   useEffect(() => {
     (async () => {
       try {
+        const stored = await AsyncStorage.getItem(TRENDING_ENABLED_KEY);
+        if (stored !== null) {
+          setTrendingEnabled(stored === 'true');
+        }
+      } catch (e) {
+        console.error('Failed to load trending setting:', e);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
         const storedRegion = await AsyncStorage.getItem(REGION_OVERRIDE_KEY);
         if (storedRegion && storedRegion.trim()) {
           setRegionOverride(storedRegion);
@@ -108,6 +125,42 @@ export default function HomeScreen() {
   useEffect(() => {
     setSetupTheme(mode);
   }, [mode]);
+
+  useEffect(() => {
+    if (!isOffline && wasOfflineRef.current) {
+      void (async () => {
+        try {
+          setTrendingDataLoading(true);
+          const res = await fetch(TRENDING_URL);
+          const data = await res.json();
+          setTrendingData(data);
+        } catch (e) {
+          console.error('Trending data re-fetch error:', e);
+        } finally {
+          setTrendingDataLoading(false);
+        }
+      })();
+      if (regionOverride === 'auto') {
+        void (async () => {
+          try {
+            setCountryLoading(true);
+            const res = await fetch('https://ipinfo.io/json');
+            const data = await res.json();
+            if (data && data.country && COUNTRY_NAMES[data.country]) {
+              setDetectedCountry(COUNTRY_NAMES[data.country]);
+            } else {
+              setDetectedCountry('your country');
+            }
+          } catch (e) {
+            console.error('Country re-fetch error:', e);
+          } finally {
+            setCountryLoading(false);
+          }
+        })();
+      }
+    }
+    wasOfflineRef.current = isOffline;
+  }, [isOffline, regionOverride]);
 
   const loadRecentlyPlayed = React.useCallback(async () => {
     try {
@@ -132,6 +185,14 @@ export default function HomeScreen() {
           setRegionOverride(storedRegion && storedRegion.trim() ? storedRegion : 'auto');
         } catch (e) {
           console.error('Failed to refresh region override:', e);
+        }
+      })();
+      void (async () => {
+        try {
+          const stored = await AsyncStorage.getItem(TRENDING_ENABLED_KEY);
+          if (stored !== null) setTrendingEnabled(stored === 'true');
+        } catch (e) {
+          console.error('Failed to refresh trending setting:', e);
         }
       })();
     }, [loadRecentlyPlayed])
@@ -296,6 +357,7 @@ export default function HomeScreen() {
     [handleTrackSelect]
   );
 
+  // eslint-disable-next-line react/display-name
   const renderRecentTrackItem = (tracks: Track[]) => ({ item, index }: { item: Track; index: number }) => {
     const isCurrentTrack = currentTrack?.id === item.id;
     return (
@@ -344,6 +406,7 @@ export default function HomeScreen() {
       </TouchableOpacity>
     );
   };
+  renderRecentTrackItem.displayName = 'renderRecentTrackItem';
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -365,25 +428,39 @@ export default function HomeScreen() {
                 {t('home.daily_mix_subtitle')}
               </Text>
             </View>
-            <HorizontalTrackList
-              title={t('home.trending_in', { region: countryLoading ? '...' : (formattedActiveRegion || t('home.your_country')) })}
-              tracks={trendingTracks}
-              onTrackSelect={handleHomeTrackSelect}
-              isPlaying={isPlaying}
-              currentTrack={currentTrack}
-            />
-            {trendingTracks.length === 0 && !trendingDataLoading && (
+            {trendingEnabled && (
+              <HorizontalTrackList
+                title={t('home.trending_in', { region: countryLoading ? '...' : (formattedActiveRegion || t('home.your_country')) })}
+                tracks={trendingTracks}
+                onTrackSelect={handleHomeTrackSelect}
+                isPlaying={isPlaying}
+                currentTrack={currentTrack}
+              />
+            )}
+            {trendingEnabled && trendingTracks.length === 0 && !trendingDataLoading && (
               <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 24 }}>
                 {t('home.loading_trending')}
               </Text>
             )}
-            <HorizontalTrackList
-              title={t('home.liked_songs')}
-              tracks={likedTracks}
-              onTrackSelect={handleHomeTrackSelect}
-              isPlaying={isPlaying}
-              currentTrack={currentTrack}
-            />
+            {likedTracks.length > 0 ? (
+              <HorizontalTrackList
+                title={t('home.liked_songs')}
+                tracks={likedTracks}
+                onTrackSelect={handleHomeTrackSelect}
+                isPlaying={isPlaying}
+                currentTrack={currentTrack}
+              />
+            ) : (
+              <View style={styles.emptyLikedSection}>
+                <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('home.liked_songs')}</Text>
+                <View style={[styles.emptyLikedBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <Ionicons name="heart-outline" size={24} color={theme.textSecondary} />
+                  <Text style={[styles.emptyLikedText, { color: theme.textSecondary }]}>
+                    {t('home.empty_liked')}
+                  </Text>
+                </View>
+              </View>
+            )}
             <View style={styles.recentSection}>
               <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('home.recently_played')}</Text>
               {recentlyPlayedTracks.length === 0 ? (
@@ -466,9 +543,9 @@ export default function HomeScreen() {
             <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>Theme</Text>
             <View style={styles.setupRow}>
               {[
-                { label: 'Light', value: 'light' as ThemeMode },
-                { label: 'Dark', value: 'dark' as ThemeMode },
-                { label: 'Auto', value: 'auto' as ThemeMode },
+                { label: 'components.theme_light', value: 'light' as ThemeMode },
+                { label: 'components.theme_dark', value: 'dark' as ThemeMode },
+                { label: 'components.theme_auto', value: 'auto' as ThemeMode },
               ].map((themeOption) => {
                 const active = setupTheme === themeOption.value;
                 return (
@@ -659,6 +736,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyRecentText: {
+    marginTop: 8,
+    fontSize: 13,
+  },
+  emptyLikedSection: {
+    marginTop: 6,
+  },
+  emptyLikedBox: {
+    marginHorizontal: 16,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  emptyLikedText: {
     marginTop: 8,
     fontSize: 13,
   },

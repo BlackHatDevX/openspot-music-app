@@ -51,21 +51,6 @@ export function useSearch(): UseSearchReturn {
     return { merged, addedCount };
   }, []);
 
-  const handleSetSearchType = useCallback((type: 'track' | 'album' | 'artist' | 'playlist') => {
-    if (type !== searchType) {
-      setSearchType(type);
-      setResults([]);
-      setAlbums([]);
-      setArtists([]);
-      setPlaylists([]);
-      setOffset(0);
-      setHasMore(false);
-      if (query.trim()) {
-        searchTracks(query, type);
-      }
-    }
-  }, [searchType, query]);
-
   const searchTracks = useCallback(async (searchQuery: string, type?: 'track' | 'album' | 'artist' | 'playlist') => {
     if (!searchQuery.trim()) {
       setResults([]);
@@ -144,6 +129,21 @@ export function useSearch(): UseSearchReturn {
       }
     }
   }, [searchType]);
+
+  const handleSetSearchType = useCallback((type: 'track' | 'album' | 'artist' | 'playlist') => {
+    if (type !== searchType) {
+      setSearchType(type);
+      setResults([]);
+      setAlbums([]);
+      setArtists([]);
+      setPlaylists([]);
+      setOffset(0);
+      setHasMore(false);
+      if (query.trim()) {
+        searchTracks(query, type);
+      }
+    }
+  }, [searchType, query, searchTracks]);
 
   const loadMore = useCallback(async () => {
     if (!query.trim() || !hasMore || isLoadingMoreRef.current) return;

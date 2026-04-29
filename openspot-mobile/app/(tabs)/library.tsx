@@ -25,7 +25,7 @@ export default function LibraryScreen() {
     border: isDark ? '#272727' : '#e4d5c5',
     accent: isDark ? '#1DB954' : '#167c3a',
   };
-  const { handleTrackSelect, isPlaying, currentTrack } = useContext(MusicPlayerContext);
+  const { handleTrackSelect } = useContext(MusicPlayerContext);
   const { getLikedSongsAsTrack, isLiked, toggleLike } = useLikedSongs();
   const likedTracks = getLikedSongsAsTrack();
 
@@ -92,13 +92,6 @@ export default function LibraryScreen() {
     setPlaylistTracks([]);
   };
 
-  const handlePlaylistsUpdated = async () => {
-    await fetchPlaylists();
-    if (selectedPlaylist) {
-      await refreshSelectedPlaylistTracks(selectedPlaylist.name);
-    }
-  };
-
   const handleRemoveTrackFromPlaylist = async (trackId: string, playlistName: string) => {
     await PlaylistStorage.removeTrackFromPlaylist(trackId, playlistName);
     await fetchPlaylists();
@@ -155,7 +148,7 @@ export default function LibraryScreen() {
           </TouchableOpacity>
           <PlaylistCard
             playlist={{
-              name: 'Liked Songs',
+              name: t('library.liked_songs'),
               cover: likedTracks[0]?.images?.large || 'https://misc.scdn.co/liked-songs/liked-songs-640.png',
               trackCount: likedTracks.length,
             }}
@@ -203,7 +196,7 @@ export default function LibraryScreen() {
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('components.your_library')}</Text>
           <PlaylistCard
             playlist={{
-              name: 'Liked Songs',
+              name: t('library.liked_songs'),
               cover: likedTracks[0]?.images?.large || 'https://misc.scdn.co/liked-songs/liked-songs-640.png',
               trackCount: likedTracks.length,
             }}

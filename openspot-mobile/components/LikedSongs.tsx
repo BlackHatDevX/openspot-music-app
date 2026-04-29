@@ -2,10 +2,8 @@ import React, { useRef } from 'react';
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -23,7 +21,6 @@ interface LikedSongsProps {
   currentTrack: Track | null;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export function LikedSongs({
   onTrackSelect,

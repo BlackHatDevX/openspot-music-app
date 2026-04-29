@@ -48,7 +48,7 @@
 ### 📦 Downloads
 
 **📱 Mobile**  
-      *Android:* [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.0.0/OpenSpot-3.0.0-release.apk)  
+      *Android:* [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.0/OpenSpot-3.1.0-release.apk)  
       *iOS: [contributors needed](https://github.com/BlackHatDevX/openspot-music-app/issues/15)*
 
 
@@ -95,13 +95,16 @@
 
 ---
 
-### 🔧 Latest Updates (v3.0.0)
-- **Fully revamped UI** with a fresh new look
-- Headset & lockscreen notification controls
-- Capsule‑style mini player support
-- Theming issues fixed
-- Artist discography now loads fully (pagination fix)
-- Repeat option removed from queue for a cleaner experience
+### 🔧 Latest Updates (v3.1.0)
+- Offline mode is now supported, including search and filter functionality
+- Player has been optimized for smoother performance and better responsiveness
+- Added Turkish translations
+- Region-based trending toggle (on/off) added
+- Notification control issues have been fixed
+- Player layout improved for tablets and Android car systems
+- Introduced an advanced update system with in-app changelogs
+- Added repeat-one option for better playback control
+- YouTube API integration is now in beta phase
 
 *See the full [Changelog](https://github.com/BlackHatDevX/openspot-music-app/releases) for details.*
 ---
