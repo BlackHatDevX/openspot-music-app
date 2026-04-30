@@ -48,7 +48,7 @@
 ### 📦 Downloads
 
 **📱 Mobile**  
-      *Android:* [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.0/OpenSpot-3.1.0-release.apk)  
+      *Android:* [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.2/OpenSpot-3.1.2-release.apk)  
       *iOS: [contributors needed](https://github.com/BlackHatDevX/openspot-music-app/issues/15)*
 
 
