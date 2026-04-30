@@ -122,6 +122,7 @@
   },
   "search": {
     "search_placeholder": "搜索歌曲、艺人、专辑...",
+    "search_start_typing": "输入内容以开始搜索",
     "results": "结果",
     "no_results": "未找到“{{query}}”的结果",
     "tracks": "曲目",

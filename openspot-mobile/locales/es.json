@@ -122,6 +122,7 @@
   },
   "search": {
     "search_placeholder": "Buscar canciones, artistas, álbumes...",
+    "search_start_typing": "Escribe algo para comenzar a buscar",
     "results": "Resultados",
     "no_results": "No hay resultados para \"{{query}}\"",
     "tracks": "Pistas",

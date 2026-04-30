@@ -122,6 +122,7 @@
   },
   "search": {
     "search_placeholder": "Şarkı, sanatçı, albüm ara...",
+    "search_start_typing": "Aramaya başlamak için bir şey yazın",
     "results": "Sonuçlar",
     "no_results": "\"{{query}}\" için sonuç bulunamadı",
     "tracks": "Parçalar",

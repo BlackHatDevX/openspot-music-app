@@ -122,6 +122,7 @@
   },
   "search": {
     "search_placeholder": "חפש שירים, אמנים, אלבומים...",
+    "search_start_typing": "הקלד משהו כדי להתחיל בחיפוש",
     "results": "תוצאות",
     "no_results": "לא נמצאו תוצאות עבור \"{{query}}\"",
     "tracks": "רצועות",

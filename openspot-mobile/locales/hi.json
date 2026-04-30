@@ -122,6 +122,7 @@
   },
   "search": {
     "search_placeholder": "गाने, कलाकार, एल्बम खोजें...",
+    "search_start_typing": "खोज शुरू करने के लिए कुछ टाइप करें",
     "results": "परिणाम",
     "no_results": "\"{{query}}\" के लिए कोई परिणाम नहीं",
     "tracks": "ट्रैक",

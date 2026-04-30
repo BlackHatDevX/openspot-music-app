@@ -122,6 +122,7 @@
   },
   "search": {
     "search_placeholder": "Search for songs, artists, albums...",
+    "search_start_typing": "Type something to start searching",
     "results": "Results",
     "no_results": "No results found for \"{{query}}\"",
     "tracks": "Tracks",

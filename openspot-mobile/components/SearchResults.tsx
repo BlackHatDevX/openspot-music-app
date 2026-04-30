@@ -297,7 +297,17 @@ export function SearchResults({
     );
   }
 
-  if (displayData.length === 0 && query.trim()) {
+  if (!query.trim()) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="search" size={48} color={theme.textSecondary} />
+        <Text style={[styles.emptyText, { color: theme.textPrimary }]}>{t('common.search')}</Text>
+        <Text style={[styles.emptySubtext, { color: theme.textSecondary }]}>{t('search.search_start_typing')}</Text>
+      </View>
+    );
+  }
+
+  if (displayData.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="search" size={48} color={theme.textSecondary} />
