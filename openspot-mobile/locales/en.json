@@ -106,7 +106,9 @@
     "theme_light": "Light",
     "theme_dark": "Dark",
     "theme_auto": "Auto",
-    "playlist_name": "Playlist Name"
+    "playlist_name": "Playlist Name",
+    "add": "Add",
+    "download": "Download"
   },
   "media": {
     "album": "Album",
@@ -138,7 +140,10 @@
     "no_downloads": "No downloads yet",
     "downloading": "Downloading...",
     "download_complete": "Download Complete",
-    "download_failed": "Download Failed"
+    "download_failed": "Download Failed",
+    "date_added": "Date Added",
+    "title": "Title",
+    "artist": "Artist"
   },
   "settings": {
     "settings": "Settings",
@@ -154,6 +159,21 @@
     "trending_description": "Show trending section on home",
     "region": "Region",
     "region_description": "Trending songs on home use this region. Default: Auto.",
-    "auto": "Auto"
+    "auto": "Auto",
+    "connect": "Connect",
+    "connect_description": "If you have suggestions, want to contribute or donate, contact me",
+    "stay_updated": "Stay Updated",
+    "stay_updated_description": "Join our channels for updates and news",
+    "telegram": "Telegram",
+    "youtube": "YouTube",
+    "beta_warning_title": "YouTube Music API is in Beta",
+    "beta_warning_description": "This feature is still under development and may have issues.",
+    "beta_warning_link": "Check why - click here",
+    "back": "Back",
+    "proceed": "Proceed",
+    "share_with_friends": "Share with Friends",
+    "share_description": "Want your friends to enjoy ad-free music with unlimited streaming and offline downloads? Share OpenSpot and spread the vibe!",
+    "share_app": "Share App",
+    "share_message": "Hey! Check out OpenSpot — ad-free music streaming with unlimited skips and offline downloads. Your personal music companion! 🎵"
   }
 }

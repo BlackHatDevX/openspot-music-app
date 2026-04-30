@@ -362,9 +362,9 @@ export default function DownloadsScreen() {
   const keyExtractor = useCallback((item: Track) => item.id.toString(), []);
 
   const SORT_LABELS: Record<SortKey, string> = {
-    dateAdded: 'Date Added',
-    title: 'Title',
-    artist: 'Artist',
+    dateAdded: t('downloads.date_added'),
+    title: t('downloads.title'),
+    artist: t('downloads.artist'),
   };
 
   return (

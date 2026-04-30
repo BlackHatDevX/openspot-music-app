@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, StatusBar, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, StatusBar, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSearch } from '@/hooks/useSearch';
 import { TopBar } from '@/components/TopBar';
@@ -65,9 +65,22 @@ export default function HomeScreen() {
   const [setupLanguage, setSetupLanguage] = useState<string>('en');
   const [setupTheme, setSetupTheme] = useState<ThemeMode>(mode);
   const [isSavingSetup, setIsSavingSetup] = useState(false);
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const { isOffline } = useConnectivity();
   const wasOfflineRef = React.useRef(false);
   const [trendingEnabled, setTrendingEnabled] = useState<boolean>(true);
+
+  const languageOptions: { label: string; value: string; nativeLabel: string }[] = [
+    { label: 'English', value: 'en', nativeLabel: 'English' },
+    { label: 'Hindi', value: 'hi', nativeLabel: 'Hindi' },
+    { label: 'Spanish', value: 'es', nativeLabel: 'Espanol' },
+    { label: 'Chinese', value: 'zh', nativeLabel: 'Zhongwen' },
+    { label: 'German', value: 'de', nativeLabel: 'Deutsch' },
+    { label: 'French', value: 'fr', nativeLabel: 'Francais' },
+    { label: 'Russian', value: 'ru', nativeLabel: 'Russkiy' },
+    { label: 'Hebrew', value: 'he', nativeLabel: 'Ivrit' },
+    { label: 'Turkish', value: 'tr', nativeLabel: 'Türkçe' },
+  ];
 
   
   useEffect(() => {
@@ -518,34 +531,22 @@ export default function HomeScreen() {
             </View>
 
             <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>Language</Text>
-            <View style={styles.setupRow}>
-              {[
-                { label: 'English', value: 'en' },
-                { label: 'Hindi', value: 'hi' },
-              ].map((lang) => {
-                const active = setupLanguage === lang.value;
-                return (
-                  <TouchableOpacity
-                    key={`setup-lang-${lang.value}`}
-                    style={[
-                      styles.setupSegment,
-                      { borderColor: theme.border, backgroundColor: theme.surfaceElevated },
-                      active && { backgroundColor: theme.accent, borderColor: theme.accent },
-                    ]}
-                    onPress={() => setSetupLanguage(lang.value)}
-                  >
-                    <Text style={[styles.setupSegmentText, { color: active ? '#fff' : theme.textSecondary }]}>{lang.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TouchableOpacity
+              style={[styles.setupDropdownButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              onPress={() => setIsLanguageModalOpen(true)}
+            >
+              <Text style={[styles.setupDropdownButtonText, { color: theme.textPrimary }]}>
+                {languageOptions.find((option) => option.value === setupLanguage)?.label || 'English'}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
+            </TouchableOpacity>
 
             <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>Theme</Text>
             <View style={styles.setupRow}>
               {[
-                { label: 'components.theme_light', value: 'light' as ThemeMode },
-                { label: 'components.theme_dark', value: 'dark' as ThemeMode },
-                { label: 'components.theme_auto', value: 'auto' as ThemeMode },
+                { label: t('components.theme_light'), value: 'light' as ThemeMode },
+                { label: t('components.theme_dark'), value: 'dark' as ThemeMode },
+                { label: t('components.theme_auto'), value: 'auto' as ThemeMode },
               ].map((themeOption) => {
                 const active = setupTheme === themeOption.value;
                 return (
@@ -570,6 +571,49 @@ export default function HomeScreen() {
               disabled={isSavingSetup}
             >
               {isSavingSetup ? <ActivityIndicator color="#fff" /> : <Text style={styles.setupContinueText}>Continue</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isLanguageModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLanguageModalOpen(false)}
+      >
+        <View style={styles.setupModalOverlay}>
+          <View style={[styles.setupLanguageModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary, marginBottom: 12 }]}>Language</Text>
+            <FlatList
+              data={languageOptions}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => {
+                const active = setupLanguage === item.value;
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.setupLanguageOptionRow,
+                      { borderColor: theme.border, backgroundColor: theme.surfaceElevated },
+                      active && { borderColor: theme.accent },
+                    ]}
+                    onPress={() => {
+                      setSetupLanguage(item.value);
+                      setIsLanguageModalOpen(false);
+                    }}
+                  >
+                    <View>
+                      <Text style={[styles.setupLanguageOptionTitle, { color: theme.textPrimary }]}>{item.label}</Text>
+                      <Text style={[styles.setupLanguageOptionSubtitle, { color: theme.textSecondary }]}>{item.nativeLabel}</Text>
+                    </View>
+                    {active && <Ionicons name="checkmark-circle" size={18} color={theme.accent} />}
+                  </TouchableOpacity>
+                );
+              }}
+              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            />
+            <TouchableOpacity style={styles.setupCancelButtonRow} onPress={() => setIsLanguageModalOpen(false)}>
+              <Text style={{ color: theme.textPrimary, fontSize: 15 }}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -642,6 +686,55 @@ const styles = StyleSheet.create({
   setupSegmentText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  setupDropdownButton: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  setupDropdownButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  setupModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  setupLanguageModalCard: {
+    width: '88%',
+    maxHeight: '70%',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+  },
+  setupLanguageOptionRow: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  setupLanguageOptionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  setupLanguageOptionSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  setupCancelButtonRow: {
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
   },
   setupContinueButton: {
     marginTop: 18,

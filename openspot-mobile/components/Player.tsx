@@ -4,11 +4,11 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Modal,
   Alert,
   Animated,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import TrackPlayer, { Capability, Event, State, useProgress } from 'react-native-track-player';
 import { Image } from 'expo-image';
@@ -33,9 +33,8 @@ interface PlayerProps {
   musicQueue: any;
   onQueueToggle: () => void;
   pendingAutoPlayRef?: React.MutableRefObject<boolean>;
+  showToast?: (message: string, type: 'success' | 'error') => void;
 }
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export function Player({
   track,
@@ -44,7 +43,9 @@ export function Player({
   musicQueue,
   onQueueToggle,
   pendingAutoPlayRef: externalPendingAutoPlayRef,
+  showToast,
 }: PlayerProps) {
+  const { width: windowWidth } = useWindowDimensions();
   const playerReadyRef = useRef(false);
   const [playerReady, setPlayerReady] = useState(false);
   const internalPendingAutoPlayRef = useRef(false);
@@ -376,10 +377,14 @@ export function Player({
             console.error('[Player] Failed to resolve stream URL:', streamError);
             await TrackPlayer.pause();
             onPlayingChange(false);
-            Alert.alert(
-              t('player.stream_error_title'),
-              t('player.stream_error_message')
-            );
+            if (showToast) {
+              showToast(t('player.stream_error_message'), 'error');
+            } else {
+              Alert.alert(
+                t('player.stream_error_title'),
+                t('player.stream_error_message')
+              );
+            }
             return;
           }
           const currentItem = {
@@ -839,7 +844,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.7)',
   },
   downloadModal: {
-    width: SCREEN_WIDTH * 0.85,
+    width: '85%',
+    maxWidth: 360,
     borderRadius: 10,
     overflow: 'hidden',
     elevation: 10,

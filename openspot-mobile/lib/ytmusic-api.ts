@@ -28,17 +28,55 @@ const getDiscoveryUrl = (): string | null => {
   return process.env.EXPO_PUBLIC_YT_API_DISCOVERY || null;
 };
 
+const YTMUSIC_EXTRA_API_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/ytmusicextraapi.json';
+
+interface YtMusicExtraApiConfig {
+  ytmusic_extra_apis: { name: string; url: string }[];
+}
+
 export class YTMusicAPI {
   private static readonly STATIC_INSTANCES: string[] = getEnvInstances();
 
   private static dynamicInstances: string[] | null = null;
+  private static extraConfigInstances: string[] | null = null;
+  private static extraConfigFetchedAt = 0;
   private static lastWorkingInstance: string | null = null;
   private static instancesFetchedAt = 0;
   private static readonly INSTANCES_TTL_MS = 30 * 60 * 1000;
+  private static readonly EXTRA_CONFIG_TTL_MS = 10 * 60 * 1000;
+
+  private static async fetchExtraConfigInstances(): Promise<void> {
+    const now = Date.now();
+    const stale = now - this.extraConfigFetchedAt > this.EXTRA_CONFIG_TTL_MS;
+
+    if (!this.extraConfigInstances || stale) {
+      try {
+        const res = await this.fetchWithTimeout(YTMUSIC_EXTRA_API_URL, 5000);
+        if (res.ok) {
+          const config: YtMusicExtraApiConfig = await res.json();
+          const extraUrls = config.ytmusic_extra_apis
+            ?.map(api => api.url?.replace(/\/$/, ''))
+            .filter(Boolean) || [];
+          if (extraUrls.length > 0) {
+            this.extraConfigInstances = extraUrls;
+            this.extraConfigFetchedAt = now;
+            console.log('[YT API] Loaded extra config instances:', extraUrls);
+          } else {
+            this.extraConfigInstances = null;
+          }
+        }
+      } catch (e) {
+        console.warn('[YT API] Extra config fetch failed', e);
+        this.extraConfigInstances = null;
+      }
+    }
+  }
 
   private static async getInstances(): Promise<string[]> {
     const now = Date.now();
     const stale = now - this.instancesFetchedAt > this.INSTANCES_TTL_MS;
+
+    await this.fetchExtraConfigInstances();
 
     if (!this.dynamicInstances || stale) {
       const discoveryUrl = getDiscoveryUrl();
@@ -62,10 +100,21 @@ export class YTMusicAPI {
       }
     }
 
-    const base = this.dynamicInstances ?? this.STATIC_INSTANCES;
-    const seen = new Set(base);
-    const extra = this.STATIC_INSTANCES.filter(i => !seen.has(i));
-    return [...base, ...extra];
+    const extraConfig = this.extraConfigInstances || [];
+    const dynamic = this.dynamicInstances || [];
+    const staticInstances = this.STATIC_INSTANCES;
+    
+    const seen = new Set<string>();
+    const result: string[] = [];
+    
+    for (const instance of [...extraConfig, ...dynamic, ...staticInstances]) {
+      if (!seen.has(instance)) {
+        seen.add(instance);
+        result.push(instance);
+      }
+    }
+    
+    return result;
   }
 
   private static async getOrderedInstances(): Promise<string[]> {

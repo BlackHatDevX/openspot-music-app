@@ -96,18 +96,19 @@
 ---
 
 ### 🔧 Latest Updates (v3.1.0)
+#### This is the most stable version so far, with no known bugs and improved overall reliability.
+
 - Offline mode is now supported, including search and filter functionality
 - Player has been optimized for smoother performance and better responsiveness
-- Added Turkish translations
+- Added Turkish translations by [@bugrayurdagul](https://github.com/bugrayurdagul)
 - Region-based trending toggle (on/off) added
+- Screen rotation support added
+- Improved support for tablets and Android car systems
 - Notification control issues have been fixed
-- Player layout improved for tablets and Android car systems
 - Introduced an advanced update system with in-app changelogs
 - Added repeat-one option for better playback control
 - YouTube API integration is now in beta phase
 
-*See the full [Changelog](https://github.com/BlackHatDevX/openspot-music-app/releases) for details.*
----
 
 ---
 

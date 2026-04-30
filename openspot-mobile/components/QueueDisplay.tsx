@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  FlatList as FlatListType,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +49,10 @@ export function QueueDisplay({
   const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme !== 'light';
+  const flatListRef = useRef<FlatListType<Track>>(null);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isLandscape = windowWidth > windowHeight;
+
   const theme = useMemo(
     () => ({
       base: isDark ? '#000000' : '#f5efe6',
@@ -62,6 +68,19 @@ export function QueueDisplay({
     [isDark]
   );
 
+  useEffect(() => {
+    if (isOpen && musicQueue.tracks.length > 0) {
+      const scrollIndex = Math.max(0, musicQueue.currentIndex - 3);
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({
+          index: scrollIndex,
+          animated: true,
+          viewPosition: 0,
+        });
+      }, 100);
+    }
+  }, [isOpen, musicQueue.currentIndex, musicQueue.tracks.length]);
+
   const renderTrackItem = useCallback(
     ({ item, index }: { item: Track; index: number }) => {
       const isCurrentTrack = musicQueue.currentIndex === index;
@@ -71,6 +90,7 @@ export function QueueDisplay({
         <TouchableOpacity
           style={[
             styles.trackItem,
+            isLandscape && styles.trackItemLandscape,
             isCurrentTrack && [styles.currentTrackItem, { backgroundColor: theme.glass }],
           ]}
           onPress={() => onTrackSelect(item, index)}
@@ -164,26 +184,26 @@ export function QueueDisplay({
         </TouchableOpacity>
       );
     },
-    [theme, musicQueue, isLiked, toggleLike, onTrackSelect]
+    [theme, musicQueue, isLiked, toggleLike, onTrackSelect, isLandscape]
   );
 
   const renderHeader = () => (
-    <View style={styles.header}>
+    <View style={[styles.header, isLandscape && styles.headerLandscape]}>
       <LinearGradient
         colors={
           isDark
             ? ['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)']
             : ['rgba(245,239,230,0.8)', 'rgba(245,239,230,0.95)']
         }
-        style={styles.headerGradient}
+        style={[styles.headerGradient, isLandscape && styles.headerGradientLandscape]}
       >
         <View style={styles.headerContent}>
           <TouchableOpacity style={[styles.closeButton, { backgroundColor: theme.glass }]} onPress={onClose}>
             <Ionicons name="chevron-down" size={24} color={theme.icon} />
           </TouchableOpacity>
 
-          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>{t('components.queue')}</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+          <Text style={[styles.headerTitle, isLandscape && styles.headerTitleLandscape, { color: theme.textPrimary }]}>{t('components.queue')}</Text>
+          <Text style={[styles.headerSubtitle, isLandscape && styles.headerSubtitleLandscape, { color: theme.textSecondary }]}>
             {musicQueue.tracks.length} {musicQueue.tracks.length !== 1 ? t('components.songs') : t('components.song')}
           </Text>
         </View>
@@ -192,7 +212,7 @@ export function QueueDisplay({
   );
 
   const renderQueueControls = () => (
-    <View style={[styles.queueControls, { borderBottomColor: theme.glassBorder }]}>
+    <View style={[styles.queueControls, isLandscape && styles.queueControlsLandscape, { borderBottomColor: theme.glassBorder }]}>
       <TouchableOpacity
         style={[
           styles.controlButton,
@@ -229,12 +249,15 @@ export function QueueDisplay({
   );
 
   const getItemLayout = useCallback(
-    (_: any, index: number) => ({
-      length: 70, 
-      offset: 70 * index,
-      index,
-    }),
-    []
+    (_: any, index: number) => {
+      const itemHeight = isLandscape ? 54 : 70;
+      return {
+        length: itemHeight,
+        offset: itemHeight * index,
+        index,
+      };
+    },
+    [isLandscape]
   );
 
   return (
@@ -248,12 +271,12 @@ export function QueueDisplay({
             renderEmptyState()
           ) : (
             <FlatList
+              ref={flatListRef}
               data={musicQueue.tracks}
               renderItem={renderTrackItem}
               keyExtractor={(item, index) => `${item.id}-${index}`}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContainer}
-              initialScrollIndex={Math.max(0, musicQueue.currentIndex - 3)}
+              contentContainerStyle={[styles.listContainer, isLandscape && styles.listContainerLandscape]}
               getItemLayout={getItemLayout}
               removeClippedSubviews={true}
               maxToRenderPerBatch={10}
@@ -270,7 +293,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   blurContainer: { flex: 1 },
   header: { paddingTop: 20, paddingBottom: 10 },
+  headerLandscape: { paddingTop: 8, paddingBottom: 4 },
   headerGradient: { paddingVertical: 20 },
+  headerGradientLandscape: { paddingVertical: 12 },
   headerContent: { alignItems: 'center' },
   closeButton: {
     position: 'absolute',
@@ -283,7 +308,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 8 },
+  headerTitleLandscape: { fontSize: 18, marginBottom: 4 },
   headerSubtitle: { fontSize: 16 },
+  headerSubtitleLandscape: { fontSize: 14 },
   queueControls: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -291,11 +318,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
   },
+  queueControlsLandscape: {
+    paddingVertical: 8,
+  },
   controlButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20 },
   activeControlButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20 },
   controlButtonText: { fontSize: 12, marginLeft: 6 },
   activeControlButtonText: { fontSize: 12, marginLeft: 6 },
   listContainer: { paddingVertical: 8 },
+  listContainerLandscape: { paddingVertical: 4 },
   trackItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -304,6 +335,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginVertical: 2,
     marginHorizontal: 4,
+  },
+  trackItemLandscape: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   currentTrackItem: {},
   trackNumber: { width: 24, alignItems: 'center', marginRight: 12 },

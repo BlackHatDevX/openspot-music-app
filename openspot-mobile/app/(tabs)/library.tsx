@@ -313,11 +313,10 @@ export default function LibraryScreen() {
               onChangeText={setNewPlaylistName}
             />
             <TouchableOpacity
-              style={[styles.createButton, { marginTop: 18, backgroundColor: theme.surface, borderColor: theme.border }]}
+              style={[styles.createButtonIconOnly, { marginTop: 18, backgroundColor: theme.surface, borderColor: theme.border }]}
               onPress={handleCreatePlaylistSubmit}
             >
-              <Ionicons name="add-circle" size={24} color={theme.accent} style={{ marginRight: 8 }} />
-              <Text style={[styles.createButtonText, { color: theme.accent }]}>{t('components.create')}</Text>
+              <Ionicons name="add-circle" size={32} color={theme.accent} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelButton} onPress={() => setShowCreateModal(false)}>
               <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('components.cancel')}</Text>
@@ -366,6 +365,18 @@ const styles = StyleSheet.create({
     color: '#1DB954',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  createButtonIconOnly: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
   },
   modalOverlay: {
     flex: 1,

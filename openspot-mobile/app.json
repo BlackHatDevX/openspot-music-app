@@ -3,7 +3,7 @@
     "name": "OpenSpot",
     "slug": "OpenSpot",
     "version": "3.1.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "openspot",
     "userInterfaceStyle": "automatic",
@@ -28,7 +28,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.devx.openspot",
-      "versionCode": 31,
+      "versionCode": 35,
       "foregroundService": {
         "type": "mediaPlayback",
         "notification": {
@@ -58,6 +58,7 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
+      "expo-screen-orientation",
       [
         "expo-splash-screen",
         {

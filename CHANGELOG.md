@@ -2,16 +2,18 @@
 
 ## OpenSpot v3.1.0 (Android - React Native)
 
-* **Offline Mode**: Supports offline playback with search and filter functionality.
-* **Player Optimization**: Improved performance and responsiveness.
-* **Turkish Translations**: Added Turkish language support.
-* **Region-Based Trending**: Toggle for region-specific trending songs.
-* **Notification Controls**: Fixed notification control issues.
-* **Player Layout**: Improved layout for tablets and Android car systems.
-* **Update System**: Introduced an advanced update system with in-app changelogs.
-* **Repeat-One Option**: Added repeat-one option for better playback control.
-* **YouTube API**: Integration is now in beta phase.
+This is the most stable version so far, with no known bugs and improved overall reliability.
 
+- Offline mode is now supported, including search and filter functionality
+- Player has been optimized for smoother performance and better responsiveness
+- Added Turkish translations by [@bugrayurdagul](https://github.com/bugrayurdagul)
+- Region-based trending toggle (on/off) added
+- Screen rotation support added
+- Improved support for tablets and Android car systems
+- Notification control issues have been fixed
+- Introduced an advanced update system with in-app changelogs
+- Added repeat-one option for better playback control
+- YouTube API integration is now in beta phase
 
 ---
 

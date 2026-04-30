@@ -166,7 +166,11 @@ export function TopBar({
                   style={[styles.toggleButton, searchType === 'track' && [styles.toggleButtonActive, { backgroundColor: accent }]]}
                   onPress={() => handleSearchTypeToggle('track')}
                 >
-                  <Text style={[styles.toggleButtonText, { color: isDark ? '#888' : '#8a6e5a' }, searchType === 'track' && styles.toggleButtonTextActive]}>
+                  <Text
+                    style={[styles.toggleButtonText, { color: isDark ? '#888' : '#8a6e5a' }, searchType === 'track' && styles.toggleButtonTextActive]}
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                  >
                     {t('components.songs_tab')}
                   </Text>
                 </TouchableOpacity>
@@ -174,7 +178,11 @@ export function TopBar({
                   style={[styles.toggleButton, searchType === 'album' && [styles.toggleButtonActive, { backgroundColor: accent }]]}
                   onPress={() => handleSearchTypeToggle('album')}
                 >
-                  <Text style={[styles.toggleButtonText, { color: isDark ? '#888' : '#8a6e5a' }, searchType === 'album' && styles.toggleButtonTextActive]}>
+                  <Text
+                    style={[styles.toggleButtonText, { color: isDark ? '#888' : '#8a6e5a' }, searchType === 'album' && styles.toggleButtonTextActive]}
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                  >
                     {t('components.albums_tab')}
                   </Text>
                 </TouchableOpacity>
@@ -182,7 +190,11 @@ export function TopBar({
                   style={[styles.toggleButton, searchType === 'artist' && [styles.toggleButtonActive, { backgroundColor: accent }]]}
                   onPress={() => handleSearchTypeToggle('artist')}
                 >
-                  <Text style={[styles.toggleButtonText, { color: isDark ? '#888' : '#8a6e5a' }, searchType === 'artist' && styles.toggleButtonTextActive]}>
+                  <Text
+                    style={[styles.toggleButtonText, { color: isDark ? '#888' : '#8a6e5a' }, searchType === 'artist' && styles.toggleButtonTextActive]}
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                  >
                     {t('components.artists_tab')}
                   </Text>
                 </TouchableOpacity>
@@ -190,7 +202,11 @@ export function TopBar({
                   style={[styles.toggleButton, searchType === 'playlist' && [styles.toggleButtonActive, { backgroundColor: accent }]]}
                   onPress={() => handleSearchTypeToggle('playlist')}
                 >
-                  <Text style={[styles.toggleButtonText, { color: isDark ? '#888' : '#8a6e5a' }, searchType === 'playlist' && styles.toggleButtonTextActive]}>
+                  <Text
+                    style={[styles.toggleButtonText, { color: isDark ? '#888' : '#8a6e5a' }, searchType === 'playlist' && styles.toggleButtonTextActive]}
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                  >
                     {t('components.playlists_tab')}
                   </Text>
                 </TouchableOpacity>
@@ -334,9 +350,11 @@ const styles = StyleSheet.create({
   toggleButton: {
     flex: 1,
     paddingVertical: 6,
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
     borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
   },
   toggleButtonActive: {
     backgroundColor: '#1DB954',

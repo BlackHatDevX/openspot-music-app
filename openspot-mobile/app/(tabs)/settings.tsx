@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,9 +19,15 @@ import { useTranslation } from 'react-i18next';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeMode, useThemeMode } from '@/hooks/theme-mode';
+import { useApiStatus } from '@/hooks/useApiStatus';
+import { useToast } from '@/hooks/useToast';
 const CURRENT_VERSION = '3.1.0';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/jash-gro/';
-const DONATE_URL = 'https://telegram.dog/deveIoper_x';
+const TELEGRAM_URL = 'https://telegram.dog/deveIoper_x';
+const INSTAGRAM_URL = 'https://www.instagram.com/jash_gro/';
+const YOUTUBE_URL = 'https://www.youtube.com/@nerdsClub';
+const TWITTER_URL = 'https://twitter.com/jash_gro';
+const GITHUB_URL = 'https://github.com/BlackHatDevX';
 const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/update.json';
 const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/trending.json';
 const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
@@ -53,6 +60,10 @@ export default function SettingsScreen() {
   const [updateConfig, setUpdateConfig] = useState<UpdateConfig | null>(null);
   const [showForceUpdate, setShowForceUpdate] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showBetaWarning, setShowBetaWarning] = useState(false);
+  const [pendingProvider, setPendingProvider] = useState<string | null>(null);
+  const { isProviderDisabled } = useApiStatus();
+  const { toastMessage, toastType, showToast } = useToast();
 
   const currentVersion = Constants.expoConfig?.version ?? CURRENT_VERSION;
 
@@ -91,7 +102,7 @@ export default function SettingsScreen() {
 
   const modeOptions: { label: string; value: ThemeMode }[] = [
     { label: 'Light', value: 'light' },
-    { label: 'Night', value: 'dark' },
+    { label: 'Dark', value: 'dark' },
     { label: 'Auto', value: 'auto' },
   ];
 
@@ -221,12 +232,41 @@ export default function SettingsScreen() {
   };
 
   const handleProviderChange = async (nextProvider: string) => {
+    if (isProviderDisabled(nextProvider as 'saavn' | 'ytmusic')) {
+      showToast('Currently API is down. Please use Saavn.', 'error');
+      return;
+    }
+    
+    if (nextProvider === 'ytmusic' && provider !== 'ytmusic') {
+      setPendingProvider(nextProvider);
+      setShowBetaWarning(true);
+      return;
+    }
+    
     setProvider(nextProvider);
     try {
       await AsyncStorage.setItem(PROVIDER_KEY, nextProvider);
     } catch (error) {
       console.error('Failed to save provider setting:', error);
     }
+  };
+
+  const handleBetaWarningProceed = async () => {
+    if (pendingProvider) {
+      setProvider(pendingProvider);
+      try {
+        await AsyncStorage.setItem(PROVIDER_KEY, pendingProvider);
+      } catch (error) {
+        console.error('Failed to save provider setting:', error);
+      }
+    }
+    setShowBetaWarning(false);
+    setPendingProvider(null);
+  };
+
+  const handleBetaWarningBack = () => {
+    setShowBetaWarning(false);
+    setPendingProvider(null);
   };
 
   const handleTrendingToggle = async (enabled: boolean) => {
@@ -244,7 +284,7 @@ export default function SettingsScreen() {
         <Text style={[styles.title, { color: theme.textPrimary }]}>{t('settings.settings')}</Text>
 
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Version</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.version')}</Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>Current: v{currentVersion}</Text>
           {latestVersion && (
             <Text style={[styles.cardText, { color: updateAvailable ? theme.accent : theme.textSecondary }]}>
@@ -277,10 +317,34 @@ export default function SettingsScreen() {
               <Text style={styles.primaryButtonText}>Update Now</Text>
             </TouchableOpacity>
           )}
+
+          <View style={[styles.shareSection, { borderTopColor: theme.border }]}>
+            <Text style={[styles.shareTitle, { color: theme.textPrimary }]}>{t('settings.share_with_friends')}</Text>
+            <Text style={[styles.shareText, { color: theme.textSecondary }]}>
+              {t('settings.share_description')}
+            </Text>
+            <TouchableOpacity
+              style={[styles.shareButton, { backgroundColor: theme.accent }]}
+              onPress={async () => {
+                const version = latestVersion || currentVersion;
+                const shareUrl = `https://github.com/BlackHatDevX/openspot-music-app/releases/download/v${version}/OpenSpot-${version}-release.apk`;
+                try {
+                  await Share.share({
+                    message: `${t('settings.share_message')}\n\n${shareUrl}`,
+                  });
+                } catch {
+                  // User cancelled or failed
+                }
+              }}
+            >
+              <Ionicons name="share-social" size={18} color="#fff" style={styles.shareButtonIcon} />
+              <Text style={styles.shareButtonText}>{t('settings.share_app')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Theme</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.theme')}</Text>
           <View style={styles.segmentRow}>
             {modeOptions.map((option) => {
               const active = mode === option.value;
@@ -388,19 +452,50 @@ export default function SettingsScreen() {
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Contact developer</Text>
-          <TouchableOpacity style={styles.linkRow} onPress={() => Linking.openURL(LINKEDIN_URL)}>
-            <Ionicons name="logo-linkedin" size={18} color={theme.accent} />
-            <Text style={[styles.linkText, { color: theme.textPrimary }]}>linkedin.com/in/jash-gro</Text>
-          </TouchableOpacity>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.connect')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary, marginBottom: 12 }]}>
+            {t('settings.connect_description')}
+          </Text>
+          <View style={styles.socialButtonsRow}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(LINKEDIN_URL)}>
+              <Ionicons name="logo-linkedin" size={24} color={theme.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(TELEGRAM_URL)}>
+              <Ionicons name="send" size={24} color={theme.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(INSTAGRAM_URL)}>
+              <Ionicons name="logo-instagram" size={24} color={theme.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(GITHUB_URL)}>
+              <Ionicons name="logo-github" size={24} color={theme.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(TWITTER_URL)}>
+              <Ionicons name="logo-twitter" size={24} color={theme.accent} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Donate</Text>
-          <TouchableOpacity style={styles.linkRow} onPress={() => Linking.openURL(DONATE_URL)}>
-            <Ionicons name="gift-outline" size={18} color={theme.accent} />
-            <Text style={[styles.linkText, { color: theme.textPrimary }]}>telegram.dog/deveIoper_x</Text>
-          </TouchableOpacity>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.stay_updated')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary, marginBottom: 12 }]}>
+            {t('settings.stay_updated_description')}
+          </Text>
+          <View style={styles.updateButtonsRow}>
+            <TouchableOpacity
+              style={[styles.updateButton, { backgroundColor: theme.accent, flex: 1, marginRight: 8 }]}
+              onPress={() => Linking.openURL(TELEGRAM_URL)}
+            >
+              <Ionicons name="send" size={18} color="#fff" style={styles.updateButtonIcon} />
+              <Text style={styles.updateButtonText}>{t('settings.telegram')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.updateButton, { backgroundColor: '#ff0000', flex: 1 }]}
+              onPress={() => Linking.openURL(YOUTUBE_URL)}
+            >
+              <Ionicons name="logo-youtube" size={18} color="#fff" style={styles.updateButtonIcon} />
+              <Text style={styles.updateButtonText}>{t('settings.youtube')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -511,6 +606,46 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Beta Warning Modal */}
+      <Modal visible={showBetaWarning} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.betaWarningCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="warning" size={48} color={theme.accent} style={{ alignSelf: 'center', marginBottom: 12 }} />
+            <Text style={[styles.cardTitle, { color: theme.textPrimary, textAlign: 'center', fontSize: 18 }]}>
+              {t('settings.beta_warning_title')}
+            </Text>
+            <Text style={[styles.cardText, { color: theme.textSecondary, textAlign: 'center', marginBottom: 16 }]}>
+              {t('settings.beta_warning_description')}
+            </Text>
+            <TouchableOpacity style={styles.betaLinkRow} onPress={() => Linking.openURL('https://t.me/openspot_music/15')}>
+              <Text style={[styles.betaLinkText, { color: theme.accent }]}>{t('settings.beta_warning_link')}</Text>
+              <Ionicons name="arrow-forward" size={16} color={theme.accent} />
+            </TouchableOpacity>
+            <View style={styles.betaButtonRow}>
+              <TouchableOpacity
+                style={[styles.secondaryButton, { borderColor: theme.border, flex: 1, marginRight: 8 }]}
+                onPress={handleBetaWarningBack}
+              >
+                <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>{t('settings.back')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryButton, { backgroundColor: theme.accent, flex: 1 }]}
+                onPress={handleBetaWarningProceed}
+              >
+                <Text style={styles.primaryButtonText}>{t('settings.proceed')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {toastMessage && (
+        <View style={[styles.toastContainer, { backgroundColor: toastType === 'error' ? '#ff4444' : '#1DB954' }]}>
+          <Ionicons name={toastType === 'error' ? 'alert-circle' : 'checkmark-circle'} size={20} color="#fff" style={styles.toastIcon} />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -731,5 +866,115 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginBottom: 4,
     lineHeight: 18,
+  },
+  toastContainer: {
+    position: 'absolute',
+    top: 65,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  toastIcon: {
+    marginRight: 10,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  betaWarningCard: {
+    width: '90%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    alignItems: 'center',
+  },
+  betaLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  betaLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  betaButtonRow: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+  socialButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 8,
+  },
+  socialButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  updateButtonsRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  updateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  updateButtonIcon: {
+    marginRight: 8,
+  },
+  updateButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  shareSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+  },
+  shareTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  shareText: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  shareButtonIcon: {
+    marginRight: 8,
+  },
+  shareButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

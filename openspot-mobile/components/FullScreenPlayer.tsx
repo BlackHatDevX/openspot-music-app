@@ -10,6 +10,7 @@ import {
   StatusBar,
   Alert,
   Animated,
+  useWindowDimensions,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Image } from 'expo-image';
@@ -17,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { FlatList } from 'react-native-gesture-handler';
+import { FlatList, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Track } from '../types/music';
 import { useLikedSongs } from '../hooks/useLikedSongs';
@@ -27,11 +28,9 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
 import TrackPlayer, { RepeatMode } from 'react-native-track-player';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const IS_TABLET = SCREEN_WIDTH >= 768;
-const IS_LANDSCAPE = SCREEN_WIDTH > SCREEN_HEIGHT;
 const ANIMATION_DURATION = 300;
 const SUCCESS_TOAST_DURATION = 2000;
+const TABLET_BREAKPOINT = 768;
 
 const decodeHtmlEntities = (text: string): string => {
   if (!text) return '';
@@ -98,6 +97,10 @@ export function FullScreenPlayer({
   onPlaylistsUpdated,
 }: FullScreenPlayerProps) {
   
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isTablet = windowWidth >= TABLET_BREAKPOINT;
+  const isLandscape = windowWidth > windowHeight;
+  
   const colorScheme = useColorScheme();
   const isDark = colorScheme !== 'light';
   const { isLiked, toggleLike } = useLikedSongs();
@@ -105,11 +108,11 @@ export function FullScreenPlayer({
 
   const theme = useMemo(
     () => ({
-      base: isDark ? '#0a0a0f' : '#fdf5ed',
-      glass: isDark ? 'rgba(30,30,45,0.85)' : 'rgba(255,245,235,0.85)',
-      glassBorder: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+      base: isDark ? '#0a0a0f' : '#f0ebe3',
+      glass: isDark ? 'rgba(30,30,45,0.85)' : 'rgba(200,195,185,0.6)',
+      glassBorder: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.15)',
       textPrimary: isDark ? '#ffffff' : '#1e1e2a',
-      textSecondary: isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.55)',
+      textSecondary: isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.7)',
       accent: '#1DB954',
       accentGlow: isDark ? 'rgba(29,185,84,0.3)' : 'rgba(29,185,84,0.15)',
       track: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)',
@@ -362,6 +365,10 @@ export function FullScreenPlayer({
   
   const displayedPosition = isSeeking ? seekPosition : position;
 
+  const availablePlaylists = playlists.filter(p => p.name !== 'offline');
+  const hasPlaylists = availablePlaylists.length > 0;
+  const hasSelection = selected.length > 0;
+
   const PlaylistModal = (
     <Modal
       visible={showAddModal}
@@ -374,30 +381,43 @@ export function FullScreenPlayer({
           <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
             {t('components.add_to_playlist') || 'Add to Playlist'}
           </Text>
-          <FlatList
-            data={playlists.filter(p => p.name !== 'offline')}
-            keyExtractor={item => item.name}
-            style={{ width: '100%', maxHeight: 300 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.modalItem, { backgroundColor: theme.glass }]}
-                onPress={() => toggleSelect(item.name)}
-              >
-                <Ionicons
-                  name={selected.includes(item.name) ? 'checkbox' : 'square-outline'}
-                  size={22}
-                  color={selected.includes(item.name) ? theme.accent : theme.textSecondary}
-                />
-                <Text style={{ color: theme.textPrimary, marginLeft: 12 }}>
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
+          {hasPlaylists ? (
+            <FlatList
+              data={availablePlaylists}
+              keyExtractor={item => item.name}
+              style={{ width: '100%', maxHeight: 300 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, { backgroundColor: theme.glass }]}
+                  onPress={() => toggleSelect(item.name)}
+                >
+                  <Ionicons
+                    name={selected.includes(item.name) ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={selected.includes(item.name) ? theme.accent : theme.textSecondary}
+                  />
+                  <Text style={{ color: theme.textPrimary, marginLeft: 12 }}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          ) : (
+            <View style={styles.emptyPlaylistContainer}>
+              <Ionicons name="musical-notes" size={48} color={theme.textSecondary} />
+              <Text style={[styles.emptyPlaylistText, { color: theme.textSecondary }]}>
+                {t('components.no_playlists_yet') || 'Go to library and create your first playlist'}
+              </Text>
+            </View>
+          )}
           <TouchableOpacity
-            style={[styles.modalButton, { backgroundColor: theme.accent }]}
+            style={[
+              styles.modalButton,
+              { backgroundColor: hasSelection ? theme.accent : theme.track },
+              (!hasSelection || adding) && styles.modalButtonDisabled,
+            ]}
             onPress={handleAddToPlaylist}
-            disabled={adding}
+            disabled={!hasSelection || adding}
           >
             <Text style={{ color: '#fff', fontWeight: 'bold' }}>
               {adding ? (t('components.updating') || 'Updating...') : (t('components.update') || 'Update')}
@@ -449,12 +469,13 @@ export function FullScreenPlayer({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.base }]}>
-        <StatusBar
-          barStyle={isDark ? 'light-content' : 'dark-content'}
-          backgroundColor="transparent"
-          translucent
-        />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.base }]}>
+          <StatusBar
+            barStyle={isDark ? 'light-content' : 'dark-content'}
+            backgroundColor="transparent"
+            translucent
+          />
 
         {Toast}
 
@@ -494,35 +515,41 @@ export function FullScreenPlayer({
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.content, IS_LANDSCAPE && IS_TABLET && styles.contentLandscape]}>
-            <View style={styles.albumArtContainer}>
+          <View style={[styles.content, isLandscape && styles.contentLandscape]}>
+            <View style={[styles.albumArtContainer, isLandscape && styles.albumArtContainerLandscape]}>
               <Animated.View
                 style={[
                   styles.albumArtWrapper,
-                  IS_TABLET && styles.albumArtWrapperTablet,
+                  isTablet && styles.albumArtWrapperTablet,
+                  isLandscape && styles.albumArtWrapperLandscape,
                   { transform: [{ scale: albumScaleAnim }] },
                 ]}
               >
                 <BlurView intensity={15} tint={isDark ? 'dark' : 'light'} style={styles.albumArtGlass}>
                   <Image
                     source={{ uri: track.images.large }}
-                    style={[styles.albumArt, IS_TABLET && styles.albumArtTablet]}
+                    style={[
+                      styles.albumArt,
+                      isTablet && styles.albumArtTablet,
+                      isLandscape && styles.albumArtLandscape,
+                    ]}
                     contentFit="cover"
                   />
                 </BlurView>
               </Animated.View>
             </View>
+            <View style={[styles.rightPanel, isLandscape && styles.rightPanelLandscape]}>
 
-            <View style={styles.trackInfo}>
-              <Text style={[styles.trackTitle, { color: theme.textPrimary }]} numberOfLines={2}>
+            <View style={[styles.trackInfo, isLandscape && styles.trackInfoLandscape]}>
+              <Text style={[styles.trackTitle, isLandscape && styles.trackTitleLandscape, { color: theme.textPrimary }]} numberOfLines={2}>
                 {decodeHtmlEntities(track.title)}
               </Text>
-              <Text style={[styles.trackArtist, { color: theme.textSecondary }]} numberOfLines={2}>
+              <Text style={[styles.trackArtist, isLandscape && styles.trackArtistLandscape, { color: theme.textSecondary }]} numberOfLines={2}>
                 {decodeHtmlEntities(track.artist)}
               </Text>
             </View>
 
-            <View style={styles.progressContainer}>
+            <View style={[styles.progressContainer, isLandscape && styles.progressContainerLandscape]}>
               <View style={styles.progressBar}>
                 <Text style={[styles.timeText, { color: theme.textSecondary }]}>
                   {formatTime(displayedPosition)}
@@ -547,105 +574,105 @@ export function FullScreenPlayer({
               </View>
             </View>
 
-            <View style={styles.controls}>
-              <Animated.View style={{ transform: [{ scale: likeScaleAnim }] }}>
-                <TouchableOpacity
-                  onPress={handleLike}
-                  style={[styles.controlButton, { backgroundColor: theme.glass }]}
-                >
-                  <Ionicons
-                    name={isLiked(track.id) ? 'heart' : 'heart-outline'}
-                    size={24}
-                    color={isLiked(track.id) ? theme.accent : theme.icon}
-                  />
-                </TouchableOpacity>
-              </Animated.View>
+            <View style={[styles.controls, isLandscape && styles.controlsLandscape]}>
+              <TouchableOpacity
+                onPress={handleShufflePress}
+                style={[styles.controlButton, isLandscape && styles.controlButtonLandscape, { backgroundColor: theme.glass }]}
+              >
+                <Ionicons
+                  name="shuffle"
+                  size={isLandscape ? 24 : 22}
+                  color={musicQueue?.isShuffled ? theme.accent : theme.icon}
+                />
+              </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={handlePrevious}
-                style={[styles.controlButton, { backgroundColor: theme.glass }]}
+                style={[styles.controlButton, isLandscape && styles.controlButtonLandscape, { backgroundColor: theme.glass }]}
               >
-                <Ionicons name="play-skip-back" size={28} color={theme.icon} />
+                <Ionicons name="play-skip-back" size={isLandscape ? 30 : 28} color={theme.icon} />
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={handlePlayPause}
-                style={[styles.playButton, { backgroundColor: theme.accent }]}
+                style={[styles.playButton, isLandscape && styles.playButtonLandscape, { backgroundColor: theme.accent }]}
               >
-                <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#fff" />
+                <Ionicons name={isPlaying ? 'pause' : 'play'} size={isLandscape ? 36 : 32} color="#fff" />
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={handleNext}
-                style={[styles.controlButton, { backgroundColor: theme.glass }]}
+                style={[styles.controlButton, isLandscape && styles.controlButtonLandscape, { backgroundColor: theme.glass }]}
               >
-                <Ionicons name="play-skip-forward" size={28} color={theme.icon} />
+                <Ionicons name="play-skip-forward" size={isLandscape ? 30 : 28} color={theme.icon} />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={handleShufflePress}
-                style={[styles.controlButton, { backgroundColor: theme.glass }]}
-              >
-                <Ionicons
-                  name="shuffle"
-                  size={22}
-                  color={musicQueue?.isShuffled ? theme.accent : theme.icon}
-                />
-              </TouchableOpacity>
+              <Animated.View style={{ transform: [{ scale: likeScaleAnim }] }}>
+                <TouchableOpacity
+                  onPress={handleLike}
+                  style={[styles.controlButton, isLandscape && styles.controlButtonLandscape, { backgroundColor: theme.glass }]}
+                >
+                  <Ionicons
+                    name={isLiked(track.id) ? 'heart' : 'heart-outline'}
+                    size={isLandscape ? 26 : 24}
+                    color={isLiked(track.id) ? theme.accent : theme.icon}
+                  />
+                </TouchableOpacity>
+              </Animated.View>
             </View>
 
-            <View style={styles.secondaryControls}>
+            <View style={[styles.bottomControls, !isLandscape && styles.bottomControlsPortrait, isLandscape && styles.bottomControlsLandscape, { backgroundColor: 'transparent', borderColor: 'transparent' }]}>
               <TouchableOpacity
                 onPress={handleRepeatToggle}
-                style={[styles.secondaryButton, { backgroundColor: theme.glass }]}
+                style={styles.miniButtonWithText}
               >
                 <Ionicons
                   name={getRepeatIcon()}
-                  size={20}
-                  color={repeatMode !== RepeatMode.Off ? theme.accent : theme.icon}
+                  size={isLandscape ? 26 : 24}
+                  color={repeatMode !== RepeatMode.Off ? theme.accent : theme.textSecondary}
                 />
                 {repeatMode === RepeatMode.Track && (
-                  <View style={styles.repeatBadge}>
-                    <Text style={styles.repeatBadgeText}>1</Text>
+                  <View style={[styles.repeatBadgeMini, isLandscape && styles.repeatBadgeMiniLandscape]}>
+                    <Text style={styles.repeatBadgeMiniText}>1</Text>
                   </View>
                 )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.bottomControls}>
-              <TouchableOpacity
-                onPress={handleQueueToggle}
-                style={[styles.bottomButton, { backgroundColor: theme.glass }]}
-              >
-                <Ionicons name="list" size={22} color={theme.icon} />
-                <Text style={[styles.bottomButtonText, { color: theme.textSecondary }]}>
-                  {t('components.queue') || 'Queue'}
-                </Text>
+                <Text style={[styles.miniButtonText, { color: theme.textSecondary }]}>{t('components.repeat') || 'Repeat'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={openPlaylistModal}
-                style={[styles.bottomButton, { backgroundColor: theme.glass }]}
+                style={styles.miniButtonWithText}
               >
-                <Ionicons name="add-circle" size={22} color={theme.icon} />
-                <Text style={[styles.bottomButtonText, { color: theme.textSecondary }]}>
-                  {t('components.playlist') || 'Playlist'}
-                </Text>
+                <Ionicons name="add-circle" size={isLandscape ? 26 : 24} color={theme.textSecondary} />
+                <Text style={[styles.miniButtonText, { color: theme.textSecondary }]}>{t('components.add') || 'Add'}</Text>
               </TouchableOpacity>
 
               <DownloadButton
                 track={track}
-                style={[styles.bottomButton, { backgroundColor: theme.glass }]}
-                iconColor={theme.icon}
+                style={styles.miniButtonWithText}
+                iconColor={theme.textSecondary}
                 accentColor={theme.accent}
                 showNotification={showToast}
+                iconSize={isLandscape ? 26 : 24}
+                showText={true}
+                textColor={theme.textSecondary}
               />
+
+              <TouchableOpacity
+                onPress={handleQueueToggle}
+                style={styles.miniButtonWithText}
+              >
+                <Ionicons name="list" size={isLandscape ? 26 : 24} color={theme.textSecondary} />
+                <Text style={[styles.miniButtonText, { color: theme.textSecondary }]}>{t('components.queue') || 'Queue'}</Text>
+              </TouchableOpacity>
             </View>
+          </View>
           </View>
         </Animated.View>
 
         {PlaylistModal}
-      </SafeAreaView>
+        </SafeAreaView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -676,12 +703,26 @@ const styles = StyleSheet.create({
   },
   contentLandscape: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'space-evenly',
-    paddingHorizontal: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 24,
   },
   albumArtContainer: { alignItems: 'center', marginBottom: 24 },
+  albumArtContainerLandscape: {
+    marginBottom: 0,
+    flex: 0.5,
+    maxWidth: 400,
+  },
+  rightPanel: {
+    flex: 1,
+    maxWidth: 500,
+  },
+  rightPanelLandscape: {
+    flex: 0.55,
+    maxWidth: 360,
+    justifyContent: 'center',
+  },
   albumArtWrapper: {
     borderRadius: 24,
     padding: 4,
@@ -692,37 +733,101 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   albumArtWrapperTablet: { padding: 8 },
+  albumArtWrapperLandscape: {
+    padding: 6,
+  },
   albumArtGlass: { borderRadius: 20, overflow: 'hidden' },
-  albumArt: { width: SCREEN_WIDTH * 0.7, height: SCREEN_WIDTH * 0.7, borderRadius: 20 },
+  albumArt: { width: 280, height: 280, borderRadius: 20 },
   albumArtTablet: {
-    width: IS_LANDSCAPE ? SCREEN_HEIGHT * 0.5 : SCREEN_WIDTH * 0.45,
-    height: IS_LANDSCAPE ? SCREEN_HEIGHT * 0.5 : SCREEN_WIDTH * 0.45,
+    width: 320,
+    height: 320,
+  },
+  albumArtLandscape: {
+    width: 180,
+    height: 180,
   },
   trackInfo: { alignItems: 'center', marginBottom: 32, paddingHorizontal: 16 },
+  trackInfoLandscape: {
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
   trackTitle: { fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: -0.3, lineHeight: 34, minHeight: 68 },
+  trackTitleLandscape: {
+    fontSize: 20,
+    lineHeight: 26,
+    minHeight: 52,
+  },
   trackArtist: { fontSize: 18, textAlign: 'center', opacity: 0.8, lineHeight: 24, minHeight: 48 },
+  trackArtistLandscape: {
+    fontSize: 14,
+    lineHeight: 18,
+    minHeight: 36,
+  },
   progressContainer: { marginBottom: 32 },
+  progressContainerLandscape: { marginBottom: 16 },
   progressBar: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   timeText: { fontSize: 12, width: 40, textAlign: 'center', fontWeight: '500' },
   sliderContainer: { flex: 1 },
   slider: { width: '100%', height: 40 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20, gap: 20 },
+  controlsLandscape: {
+    marginBottom: 12,
+    gap: 12,
+  },
   controlButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  controlButtonLandscape: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
   playButton: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', shadowColor: '#1DB954', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
-  secondaryControls: { flexDirection: 'row', justifyContent: 'center', marginBottom: 20 },
-  secondaryButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  repeatBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: '#1DB954', borderRadius: 10, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  playButtonLandscape: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
   repeatBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-  bottomControls: { flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', marginBottom: 20, paddingHorizontal: 8, gap: 12 },
-  bottomButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 40, gap: 8 },
-  bottomButtonText: { fontSize: 13, fontWeight: '500' },
+  repeatBadgeSmall: { position: 'absolute', top: 4, right: 4, backgroundColor: '#1DB954', borderRadius: 8, minWidth: 14, height: 14, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  repeatBadgeSmallLandscape: { top: 2, right: 2, minWidth: 12, height: 12 },
+  bottomControls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 32 },
+  bottomControlsPortrait: {
+    marginBottom: 80,
+    marginTop: 'auto',
+    paddingBottom: 20,
+    paddingHorizontal: 16,
+    justifyContent: 'space-between',
+  },
+  bottomControlsLandscape: {
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    justifyContent: 'space-between',
+  },
+  miniButton: { padding: 8, alignItems: 'center', justifyContent: 'center' },
+  miniButtonWithText: { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 8 },
+  miniButtonText: { fontSize: 10, marginTop: 4, fontWeight: '500' },
+  repeatBadgeMini: { position: 'absolute', top: 2, right: 2, backgroundColor: '#1DB954', borderRadius: 6, minWidth: 12, height: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  repeatBadgeMiniLandscape: { top: 0, right: 0, minWidth: 10, height: 10 },
+  repeatBadgeMiniText: { color: '#fff', fontSize: 8, fontWeight: 'bold' },
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modalBox: { borderRadius: 28, padding: 24, width: '80%', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
   modalItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 16, width: '100%', marginBottom: 8 },
   modalButton: { marginTop: 18, paddingVertical: 12, paddingHorizontal: 32, borderRadius: 40, alignItems: 'center' },
+  modalButtonDisabled: { opacity: 0.5 },
   modalCancel: { marginTop: 12 },
   modalCancelText: { fontSize: 15 },
+  emptyPlaylistContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyPlaylistText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 20,
+  },
   toastContainer: {
     position: 'absolute',
     top: 10,

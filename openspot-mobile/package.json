@@ -37,6 +37,7 @@
     "expo-network": "^55.0.13",
     "expo-notifications": "^0.32.11",
     "expo-router": "^5.1.3",
+    "expo-screen-orientation": "^55.0.13",
     "expo-sharing": "~13.1.5",
     "expo-splash-screen": "~0.30.10",
     "expo-status-bar": "~2.2.3",

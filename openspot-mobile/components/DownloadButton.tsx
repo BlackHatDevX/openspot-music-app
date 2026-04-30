@@ -5,7 +5,8 @@ import {
   Easing,
   StyleSheet,
   StyleProp,
-  ViewStyle
+  ViewStyle,
+  Text
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
@@ -28,6 +29,9 @@ interface DownloadButtonProps {
   iconColor?: string;
   accentColor?: string;
   showNotification: (message: string, type: 'success' | 'error') => void;
+  iconSize?: number;
+  showText?: boolean;
+  textColor?: string;
 }
 
 export const DownloadButton: React.FC<DownloadButtonProps> = ({
@@ -36,7 +40,10 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   onDownloaded,
   iconColor = '#fff',
   accentColor = '#1DB954',
-  showNotification
+  showNotification,
+  iconSize,
+  showText = false,
+  textColor
 }) => {
   const { t } = useTranslation();
   const [isDownloaded, setIsDownloaded] = useState(false);
@@ -251,27 +258,33 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 
 
   const renderButtonContent = () => {
+    const size = iconSize || ICON_SIZE;
     if (isDownloaded) {
-      return <Ionicons name="checkmark" size={ICON_SIZE} color={iconColor} />;
+      return <Ionicons name="checkmark" size={size} color={iconColor} />;
     } else if (isDownloading) {
       return (
         <Animated.View style={{ transform: [{ translateY: bounceAnim }] }}>
-          <Ionicons name="cloud-download-outline" size={ICON_SIZE} color={accentColor} />
+          <Ionicons name="cloud-download-outline" size={size} color={accentColor} />
         </Animated.View>
       );
     } else {
-      return <Ionicons name="download" size={ICON_SIZE} color={iconColor} />;
+      return <Ionicons name="download" size={size} color={iconColor} />;
     }
   };
 
   return (
     <TouchableOpacity
       onPress={handleDownload}
-      style={[style, styles.downloadButton]}
+      style={[style, showText ? styles.downloadButtonWithText : styles.downloadButton]}
       activeOpacity={0.7}
       disabled={isDownloading}
     >
       {renderButtonContent()}
+      {showText && (
+        <Text style={[styles.downloadButtonText, { color: textColor || iconColor }]}>
+          {isDownloaded ? (t('components.downloaded') || 'Downloaded') : (t('components.download') || 'Download')}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 };
@@ -281,5 +294,16 @@ const styles = StyleSheet.create({
     padding: 4,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  downloadButtonWithText: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+  },
+  downloadButtonText: {
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: '500',
   },
 });

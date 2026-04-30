@@ -16,6 +16,8 @@ import { useConnectivity } from '@/hooks/useConnectivity';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import { useApiStatus } from '@/hooks/useApiStatus';
+import { useToast } from '@/hooks/useToast';
 
 interface UpdateConfig {
   latest_version: string;
@@ -61,6 +63,8 @@ export default function TabLayout() {
   const { isOffline } = useConnectivity();
   const router = useRouter();
   const pathname = usePathname();
+  const { isProviderDisabled } = useApiStatus();
+  const { toastMessage, toastType, showToast } = useToast();
 
   const tabTheme = useMemo(
     () => ({
@@ -121,6 +125,12 @@ export default function TabLayout() {
   );
 
   const handleTrackSelect = (track: Track, trackList?: Track[], startIndex?: number) => {
+    const trackProvider = track.provider || 'saavn';
+    if (isProviderDisabled(trackProvider as 'saavn' | 'ytmusic')) {
+      showToast('Currently API is down. Please use Saavn.', 'error');
+      return;
+    }
+
     if (pendingPlayTimeoutRef.current) {
       clearTimeout(pendingPlayTimeoutRef.current);
       pendingPlayTimeoutRef.current = null;
@@ -157,6 +167,12 @@ export default function TabLayout() {
   };
 
   const handleQueueTrackSelect = (track: Track, index: number) => {
+    const trackProvider = track.provider || 'saavn';
+    if (isProviderDisabled(trackProvider as 'saavn' | 'ytmusic')) {
+      showToast('Currently API is down. Please use Saavn.', 'error');
+      return;
+    }
+
     const isSameTrack = currentTrack?.id === track.id;
     if (isSameTrack) {
       setIsPlaying(prev => !prev);
@@ -293,6 +309,7 @@ export default function TabLayout() {
                 musicQueue={musicQueue}
                 onQueueToggle={toggleQueue}
                 pendingAutoPlayRef={pendingAutoPlayRef}
+                showToast={showToast}
               />
             </View>
           )}
@@ -332,6 +349,13 @@ export default function TabLayout() {
             </View>
           </View>
         </Modal>
+
+        {toastMessage && (
+          <View style={[styles.toastContainer, { backgroundColor: toastType === 'error' ? '#ff4444' : '#1DB954' }]}>
+            <Ionicons name={toastType === 'error' ? 'alert-circle' : 'checkmark-circle'} size={20} color="#fff" style={styles.toastIcon} />
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </View>
+        )}
       </SafeAreaView>
     </MusicPlayerContext.Provider>
   );
@@ -393,5 +417,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '700',
+  },
+  toastContainer: {
+    position: 'absolute',
+    top: 65,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 100,
+  },
+  toastIcon: {
+    marginRight: 10,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
   },
 });
