@@ -44,16 +44,33 @@
 <img width="1376" height="768" alt="IMG_20260428_163423" src="https://github.com/user-attachments/assets/0cd68ebc-d8c9-4d49-8266-7f8be9690d25" />
 
 ---
+<div align="center">
 
-### 📦 Downloads
+# 📦 Downloads
 
-**📱 Mobile**  
-      *Android:* [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.apk)  
-      *iOS: [contributors needed](https://github.com/BlackHatDevX/openspot-music-app/issues/15)*
+<br>
 
+### 📱 **Mobile**
 
-**🖥️ Desktop**  
-*Currently on hold – a completely rebuilt desktop experience is coming soon!*
+🔹 **Android**
+👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.apk)
+
+🔹 **iOS**
+🚧 Build under process *(contributors welcome)*
+
+<br>
+
+### 🖥️ **Desktop**
+
+🍎 **macOS (Apple Silicon)**
+👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.dmg)
+
+🧪 **Windows & Linux**
+💬 Testers needed — please contact me
+
+<br>
+
+</div>
 
 ---
 
