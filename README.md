@@ -43,8 +43,9 @@
 
 <img width="1376" height="768" alt="IMG_20260428_163423" src="https://github.com/user-attachments/assets/0cd68ebc-d8c9-4d49-8266-7f8be9690d25" />
 
----
 <div align="center">
+
+---
 
 # 📦 Downloads
 
@@ -56,7 +57,7 @@
 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.apk)
 
 🔹 **iOS**
-🚧 Build under process *(contributors welcome)*
+🚧 Build under process
 
 <br>
 
@@ -65,10 +66,17 @@
 🍎 **macOS (Apple Silicon)**
 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.dmg)
 
+```bash
+# If macOS blocks the app, run:
+xattr -rd com.apple.quarantine /Applications/OpenSpot.app
+```
+
 🧪 **Windows & Linux**
 💬 Testers needed — please contact me
 
 <br>
+
+> ⚡ **A completely rebuilt desktop experience is coming soon!**
 
 </div>
 
