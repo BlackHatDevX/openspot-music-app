@@ -76,7 +76,6 @@ xattr -rd com.apple.quarantine /Applications/OpenSpot.app
 
 <br>
 
-> ⚡ **A completely rebuilt desktop experience is coming soon!**
 
 </div>
 
