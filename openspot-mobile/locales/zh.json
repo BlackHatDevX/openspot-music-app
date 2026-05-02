@@ -31,7 +31,10 @@
     "recently_played": "最近播放",
     "empty_recent": "播放任意曲目后会显示在这里。",
     "empty_liked": "你喜欢的歌曲将显示在这里",
-    "your_country": "你的国家/地区"
+    "your_country": "你的国家/地区",
+    "welcome_title": "欢迎使用 OpenSpot",
+    "welcome_subtitle": "设置一次偏好即可。热门内容将在后台加载。",
+    "continue": "继续"
   },
   "player": {
     "now_playing": "正在播放",

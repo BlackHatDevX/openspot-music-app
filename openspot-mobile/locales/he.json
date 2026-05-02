@@ -31,7 +31,10 @@
     "recently_played": "הושמע לאחרונה",
     "empty_recent": "נגן כל שיר והוא יופיע כאן.",
     "empty_liked": "השירים שאהבת יופיעו כאן",
-    "your_country": "המדינה שלך"
+    "your_country": "המדינה שלך",
+    "welcome_title": "ברוך הבא ל-OpenSpot",
+    "welcome_subtitle": "הגדר את ההעדפות שלך פעם אחת. הטרנדים נטענים ברקע.",
+    "continue": "המשך"
   },
   "player": {
     "now_playing": "מתנגן עכשיו",

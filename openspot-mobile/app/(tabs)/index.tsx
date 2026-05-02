@@ -498,18 +498,18 @@ export default function HomeScreen() {
       <Modal visible={showFirstRunSetup} transparent animationType="fade">
         <View style={styles.setupOverlay}>
           <View style={[styles.setupCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.setupTitle, { color: theme.textPrimary }]}>Welcome to OpenSpot</Text>
+            <Text style={[styles.setupTitle, { color: theme.textPrimary }]}>{t('home.welcome_title')}</Text>
             <Text style={[styles.setupSubtitle, { color: theme.textSecondary }]}>
-              Set your preferences once. Trending loads in the background.
+              {t('home.welcome_subtitle')}
             </Text>
 
-            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>Region</Text>
+            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>{t('settings.region')}</Text>
             <View style={styles.setupWrap}>
               {['auto', ...Object.keys(trendingData || {})].slice(0, 12).map((option) => {
                 const active = setupRegion === option;
                 const label =
                   option === 'auto'
-                    ? 'Auto'
+                    ? t('settings.auto')
                     : option
                         .split(' ')
                         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -530,7 +530,7 @@ export default function HomeScreen() {
               })}
             </View>
 
-            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>Language</Text>
+            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>{t('settings.language')}</Text>
             <TouchableOpacity
               style={[styles.setupDropdownButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
               onPress={() => setIsLanguageModalOpen(true)}
@@ -541,7 +541,7 @@ export default function HomeScreen() {
               <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
             </TouchableOpacity>
 
-            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>Theme</Text>
+            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>{t('settings.theme')}</Text>
             <View style={styles.setupRow}>
               {[
                 { label: t('components.theme_light'), value: 'light' as ThemeMode },
@@ -570,7 +570,7 @@ export default function HomeScreen() {
               onPress={saveFirstRunSetup}
               disabled={isSavingSetup}
             >
-              {isSavingSetup ? <ActivityIndicator color="#fff" /> : <Text style={styles.setupContinueText}>Continue</Text>}
+              {isSavingSetup ? <ActivityIndicator color="#fff" /> : <Text style={styles.setupContinueText}>{t('home.continue')}</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -584,7 +584,7 @@ export default function HomeScreen() {
       >
         <View style={styles.setupModalOverlay}>
           <View style={[styles.setupLanguageModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary, marginBottom: 12 }]}>Language</Text>
+            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary, marginBottom: 12 }]}>{t('settings.language')}</Text>
             <FlatList
               data={languageOptions}
               keyExtractor={(item) => item.value}
@@ -613,7 +613,7 @@ export default function HomeScreen() {
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             />
             <TouchableOpacity style={styles.setupCancelButtonRow} onPress={() => setIsLanguageModalOpen(false)}>
-              <Text style={{ color: theme.textPrimary, fontSize: 15 }}>Close</Text>
+              <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

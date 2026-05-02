@@ -31,7 +31,10 @@
     "recently_played": "Reproducidas recientemente",
     "empty_recent": "Reproduce cualquier tema y aparecerá aquí.",
     "empty_liked": "Tus canciones favoritas aparecerán aquí",
-    "your_country": "tu país"
+    "your_country": "tu país",
+    "welcome_title": "Bienvenido a OpenSpot",
+    "welcome_subtitle": "Configura tus preferencias una vez. Las tendencias se cargan en segundo plano.",
+    "continue": "Continuar"
   },
   "player": {
     "now_playing": "Reproduciendo ahora",
