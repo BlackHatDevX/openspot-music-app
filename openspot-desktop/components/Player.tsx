@@ -7,7 +7,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import TrackPlayer, { Capability, Event, State, useProgress } from 'react-native-track-player';
+import TrackPlayer, { Capability, Event, State, useProgress, RepeatMode } from 'react-native-track-player';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
@@ -257,8 +257,11 @@ export function Player({
 
   
   useEffect(() => {
-    const sub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
-      playNextTrack(false);
+    const sub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, async () => {
+      const mode = await TrackPlayer.getRepeatMode();
+      if (mode === RepeatMode.Off) {
+        playNextTrack(false);
+      }
     });
     return () => sub.remove();
   }, [playNextTrack]);
@@ -274,7 +277,24 @@ export function Player({
 
     if (handledEndedTrackRef.current === track.id) return;
     handledEndedTrackRef.current = track.id;
-    playNextTrack(false);
+    TrackPlayer.getRepeatMode().then(async mode => {
+      if (mode === RepeatMode.Off) {
+        playNextTrack(false);
+      } else if (mode === RepeatMode.Track) {
+        await TrackPlayer.seekTo(0);
+        await TrackPlayer.play();
+      } else if (mode === RepeatMode.Queue) {
+        const queue = musicQueueRef.current;
+        if (queue?.tracks?.length && queue.setCurrentIndex) {
+          const isLastTrack = queue.currentIndex === queue.tracks.length - 1;
+          if (isLastTrack) {
+            queue.setCurrentIndex(0);
+          } else {
+            playNextTrack(false);
+          }
+        }
+      }
+    });
   }, [duration, isPlaying, playNextTrack, position, track]);
 
   
@@ -566,7 +586,7 @@ export function Player({
               color={isLiked(track.id) ? theme.accent : theme.icon}
             />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.cardIconButton} onPress={onQueueToggle} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.cardIconButton} onPress={() => { setIsFullScreenOpen(false); onQueueToggle(); }} activeOpacity={0.7}>
             <Ionicons name="list" size={24} color={theme.icon} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.cardIconButton} onPress={handlePlayPause} activeOpacity={0.7}>
@@ -603,7 +623,10 @@ export function Player({
         onPrevious={handlePrevious}
         onShuffle={handleShuffle}
         musicQueue={musicQueue}
-        onQueueToggle={onQueueToggle}
+        onQueueToggle={() => {
+          setIsFullScreenOpen(false);
+          onQueueToggle();
+        }}
       />
     </>
   );

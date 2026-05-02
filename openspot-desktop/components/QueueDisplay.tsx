@@ -261,7 +261,7 @@ export function QueueDisplay({
   );
 
   return (
-    <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal visible={isOpen} animationType="slide" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: theme.base }]}>
         <BlurView intensity={isDark ? 10 : 0} tint={isDark ? 'dark' : 'light'} style={styles.blurContainer}>
           {renderHeader()}

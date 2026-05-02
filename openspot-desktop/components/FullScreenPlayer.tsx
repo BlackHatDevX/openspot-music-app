@@ -160,6 +160,7 @@ export function FullScreenPlayer({
         duration: ANIMATION_DURATION,
         useNativeDriver: true,
       }).start();
+      TrackPlayer.getRepeatMode().then(setRepeatMode).catch(() => {});
     } else {
       fadeAnim.setValue(0);
     }
@@ -268,7 +269,12 @@ export function FullScreenPlayer({
 
   const handleRepeatToggle = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newMode = repeatMode === RepeatMode.Off ? RepeatMode.Track : RepeatMode.Off;
+    const newMode =
+      repeatMode === RepeatMode.Off
+        ? RepeatMode.Track
+        : repeatMode === RepeatMode.Track
+          ? RepeatMode.Queue
+          : RepeatMode.Off;
 
     try {
       await TrackPlayer.setRepeatMode(newMode);
@@ -623,6 +629,11 @@ export function FullScreenPlayer({
                 {repeatMode === RepeatMode.Track && (
                   <View style={[styles.repeatBadgeMini, isLandscape && styles.repeatBadgeMiniLandscape]}>
                     <Text style={styles.repeatBadgeMiniText}>1</Text>
+                  </View>
+                )}
+                {repeatMode === RepeatMode.Queue && (
+                  <View style={[styles.repeatBadgeMini, isLandscape && styles.repeatBadgeMiniLandscape]}>
+                    <Text style={styles.repeatBadgeMiniText}>All</Text>
                   </View>
                 )}
                 <Text style={[styles.miniButtonText, { color: theme.textSecondary }]}>{t('components.repeat') || 'Repeat'}</Text>
