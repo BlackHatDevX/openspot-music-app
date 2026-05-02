@@ -54,8 +54,8 @@ This is the most stable version so far, with no known bugs and improved overall 
 ### New Features
 
 * **i18n**: Supports 8 languages (de, en, es, fr, he, hi, ru, zh).
-* **API**: Supports Savan API and YouTube API.
-* **Search**: Users can now search public playlists, albums, and artists (Savan API only).
+* **API**: Supports Saavn API and YouTube API.
+* **Search**: Users can now search public playlists, albums, and artists (Saavn API only).
 * **UI**: Revamped UI with a new welcome screen and settings screen.
 * **Theme**: Dark mode, light mode, and auto mode supported.
 
