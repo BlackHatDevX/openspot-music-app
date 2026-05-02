@@ -1,0 +1,40 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Openspot",
+  "version": "3.1.3",
+  "identifier": "com.openspot.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:8081",
+    "beforeDevCommand": "npx expo start --web",
+    "beforeBuildCommand": "npx expo export --platform web"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Openspot",
+        "width": 800,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    }
+  }
+}

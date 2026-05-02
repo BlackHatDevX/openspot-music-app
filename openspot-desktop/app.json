@@ -1,0 +1,96 @@
+{
+  "expo": {
+    "name": "OpenSpot",
+    "slug": "OpenSpot",
+    "version": "3.1.3",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "openspot",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.devx.openspot",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        },
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#667eea"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.devx.openspot",
+      "versionCode": 39,
+      "foregroundService": {
+        "type": "mediaPlayback",
+        "notification": {
+          "title": "OpenSpot",
+          "body": "Playing music in background",
+          "icon": "./assets/images/icon.png",
+          "color": "#1DB954"
+        }
+      },
+      "permissions": [
+        "INTERNET",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "WAKE_LOCK",
+        "FOREGROUND_SERVICE",
+        "POST_NOTIFICATIONS",
+        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      "expo-screen-orientation",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#667eea"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "This app uses the microphone to record audio for voice features."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#1DB954",
+          "defaultChannel": "default"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "504a7da3-cce0-4ab0-a5b7-a4348ed50ce8"
+      }
+    }
+  }
+}
