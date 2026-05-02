@@ -31,7 +31,10 @@
     "recently_played": "Récemment écoutés",
     "empty_recent": "Lis un morceau et il apparaîtra ici.",
     "empty_liked": "Tes chansons aimées apparaîtront ici",
-    "your_country": "ton pays"
+    "your_country": "ton pays",
+    "welcome_title": "Bienvenue sur OpenSpot",
+    "welcome_subtitle": "Configure tes préférences une fois. Les tendances se chargent en arrière-plan.",
+    "continue": "Continuer"
   },
   "player": {
     "now_playing": "En cours de lecture",

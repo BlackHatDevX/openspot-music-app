@@ -31,7 +31,10 @@
     "recently_played": "हाल ही में चलाए गए",
     "empty_recent": "कोई गाना चलाएँ, यहाँ दिखेगा।",
     "empty_liked": "आपके पसंदीदा गाने यहाँ दिखेंगे",
-    "your_country": "आपका देश"
+    "your_country": "आपका देश",
+    "welcome_title": "OpenSpot में आपका स्वागत है",
+    "welcome_subtitle": "अपनी प्राथमिकताएँ एक बार सेट करें। ट्रेंडिंग बैकग्राउंड में लोड होता है।",
+    "continue": "जारी रखें"
   },
   "player": {
     "now_playing": "अब चल रहा है",

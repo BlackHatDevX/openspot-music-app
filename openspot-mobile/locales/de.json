@@ -31,7 +31,10 @@
     "recently_played": "Zuletzt gespielt",
     "empty_recent": "Spiele einen Titel, und er erscheint hier.",
     "empty_liked": "Hier erscheinen deine Lieblingssongs",
-    "your_country": "dein Land"
+    "your_country": "dein Land",
+    "welcome_title": "Willkommen bei OpenSpot",
+    "welcome_subtitle": "Stelle deine Einstellungen einmal ein. Trends werden im Hintergrund geladen.",
+    "continue": "Weiter"
   },
   "player": {
     "now_playing": "Jetzt läuft",

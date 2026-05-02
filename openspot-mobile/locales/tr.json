@@ -31,7 +31,10 @@
     "recently_played": "Son Dinlenenler",
     "empty_recent": "Bir şarkı çalın, burada görünecektir.",
     "empty_liked": "Beğendiğin şarkılar burada görünecek",
-    "your_country": "ülken"
+    "your_country": "ülken",
+    "welcome_title": "OpenSpot'a Hoş Geldin",
+    "welcome_subtitle": "Tercihlerini bir kez ayarla. Trendler arka planda yüklenir.",
+    "continue": "Devam Et"
   },
   "player": {
     "now_playing": "Şimdi Çalıyor",
