@@ -108,7 +108,10 @@
     "theme_auto": "Auto",
     "playlist_name": "Nom de la playlist",
     "add": "Ajouter",
-    "download": "Télécharger"
+    "download": "Télécharger",
+    "no_playlists_yet": "Va dans la bibliothèque et crée ta première playlist",
+    "delete_download": "Supprimer le téléchargement",
+    "download_error_track_missing": "Impossible de télécharger la piste. Les données de la piste sont manquantes."
   },
   "media": {
     "album": "Album",

@@ -108,7 +108,10 @@
     "theme_auto": "Auto",
     "playlist_name": "Playlist Name",
     "add": "Add",
-    "download": "Download"
+    "download": "Download",
+    "no_playlists_yet": "Go to library and create your first playlist",
+    "delete_download": "Delete Download",
+    "download_error_track_missing": "Could not download track. Track data is missing."
   },
   "media": {
     "album": "Album",

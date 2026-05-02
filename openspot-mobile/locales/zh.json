@@ -108,7 +108,10 @@
     "theme_auto": "自动",
     "playlist_name": "歌单名称",
     "add": "添加",
-    "download": "下载"
+    "download": "下载",
+    "no_playlists_yet": "前往资料库创建你的第一个歌单",
+    "delete_download": "删除下载",
+    "download_error_track_missing": "无法下载曲目。缺少曲目数据。"
   },
   "media": {
     "album": "专辑",
