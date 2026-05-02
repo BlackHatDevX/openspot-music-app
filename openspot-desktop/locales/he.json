@@ -31,7 +31,10 @@
     "recently_played": "הושמע לאחרונה",
     "empty_recent": "נגן כל שיר והוא יופיע כאן.",
     "empty_liked": "השירים שאהבת יופיעו כאן",
-    "your_country": "המדינה שלך"
+    "your_country": "המדינה שלך",
+    "welcome_title": "ברוך הבא ל-OpenSpot",
+    "welcome_subtitle": "הגדר את ההעדפות שלך פעם אחת. הטרנדים נטענים ברקע.",
+    "continue": "המשך"
   },
   "player": {
     "now_playing": "מתנגן עכשיו",
@@ -81,7 +84,6 @@
     "downloaded": "הורד!",
     "add_to_playlist": "הוסף לפלייליסט",
     "no_playlists": "לא נמצאו פלייליסטים.",
-    "no_playlists_yet": "לך לספרייה וצור את הפלייליסט הראשון שלך",
     "updating": "מעדכן...",
     "update": "עדכן",
     "cancel": "ביטול",
@@ -109,7 +111,10 @@
     "theme_auto": "אוטומטי",
     "playlist_name": "שם הפלייליסט",
     "add": "הוסף",
-    "download": "הורד"
+    "download": "הורד",
+    "no_playlists_yet": "עבור לספרייה וצור את הפלייליסט הראשון שלך",
+    "delete_download": "מחק הורדה",
+    "download_error_track_missing": "לא ניתן להוריד את הרצועה. נתוני הרצועה חסרים."
   },
   "media": {
     "album": "אלבום",

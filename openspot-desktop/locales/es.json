@@ -31,7 +31,10 @@
     "recently_played": "Reproducidas recientemente",
     "empty_recent": "Reproduce cualquier tema y aparecerá aquí.",
     "empty_liked": "Tus canciones favoritas aparecerán aquí",
-    "your_country": "tu país"
+    "your_country": "tu país",
+    "welcome_title": "Bienvenido a OpenSpot",
+    "welcome_subtitle": "Configura tus preferencias una vez. Las tendencias se cargan en segundo plano.",
+    "continue": "Continuar"
   },
   "player": {
     "now_playing": "Reproduciendo ahora",
@@ -81,7 +84,6 @@
     "downloaded": "¡Descargado!",
     "add_to_playlist": "Añadir a lista",
     "no_playlists": "No se encontraron listas.",
-    "no_playlists_yet": "Ve a la biblioteca y crea tu primera lista",
     "updating": "Actualizando...",
     "update": "Actualizar",
     "cancel": "Cancelar",
@@ -109,7 +111,10 @@
     "theme_auto": "Automático",
     "playlist_name": "Nombre de la lista",
     "add": "Añadir",
-    "download": "Descargar"
+    "download": "Descargar",
+    "no_playlists_yet": "Ve a la biblioteca y crea tu primera lista de reproducción",
+    "delete_download": "Eliminar descarga",
+    "download_error_track_missing": "No se pudo descargar la pista. Faltan datos de la pista."
   },
   "media": {
     "album": "Álbum",

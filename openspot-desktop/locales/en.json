@@ -31,7 +31,10 @@
     "recently_played": "Recently Played",
     "empty_recent": "Play any track and it will appear here.",
     "empty_liked": "Your liked songs will appear here",
-    "your_country": "your country"
+    "your_country": "your country",
+    "welcome_title": "Welcome to OpenSpot",
+    "welcome_subtitle": "Set your preferences once. Trending loads in the background.",
+    "continue": "Continue"
   },
   "player": {
     "now_playing": "Now Playing",
@@ -81,7 +84,6 @@
     "downloaded": "Downloaded!",
     "add_to_playlist": "Add to Playlist",
     "no_playlists": "No playlists found.",
-    "no_playlists_yet": "Go to library and create your first playlist",
     "updating": "Updating...",
     "update": "Update",
     "cancel": "Cancel",
@@ -109,7 +111,10 @@
     "theme_auto": "Auto",
     "playlist_name": "Playlist Name",
     "add": "Add",
-    "download": "Download"
+    "download": "Download",
+    "no_playlists_yet": "Go to library and create your first playlist",
+    "delete_download": "Delete Download",
+    "download_error_track_missing": "Could not download track. Track data is missing."
   },
   "media": {
     "album": "Album",

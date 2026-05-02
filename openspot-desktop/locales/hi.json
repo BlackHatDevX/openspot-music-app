@@ -31,7 +31,10 @@
     "recently_played": "हाल ही में चलाए गए",
     "empty_recent": "कोई गाना चलाएँ, यहाँ दिखेगा।",
     "empty_liked": "आपके पसंदीदा गाने यहाँ दिखेंगे",
-    "your_country": "आपका देश"
+    "your_country": "आपका देश",
+    "welcome_title": "OpenSpot में आपका स्वागत है",
+    "welcome_subtitle": "अपनी प्राथमिकताएँ एक बार सेट करें। ट्रेंडिंग बैकग्राउंड में लोड होता है।",
+    "continue": "जारी रखें"
   },
   "player": {
     "now_playing": "अब चल रहा है",
@@ -81,7 +84,6 @@
     "downloaded": "डाउनलोड हो गया!",
     "add_to_playlist": "प्लेलिस्ट में जोड़ें",
     "no_playlists": "कोई प्लेलिस्ट नहीं मिली।",
-    "no_playlists_yet": "लाइब्रेरी पर जाएं और अपनी पहली प्लेलिस्ट बनाएं",
     "updating": "अपडेट हो रहा...",
     "update": "अपडेट करें",
     "cancel": "रद्द करें",
@@ -109,7 +111,10 @@
     "theme_auto": "स्वतः",
     "playlist_name": "प्लेलिस्ट का नाम",
     "add": "जोड़ें",
-    "download": "डाउनलोड"
+    "download": "डाउनलोड",
+    "no_playlists_yet": "लाइब्रेरी में जाएँ और अपनी पहली प्लेलिस्ट बनाएँ",
+    "delete_download": "डाउनलोड हटाएँ",
+    "download_error_track_missing": "ट्रैक डाउनलोड नहीं हो सका। ट्रैक डेटा गायब है।"
   },
   "media": {
     "album": "एल्बम",
