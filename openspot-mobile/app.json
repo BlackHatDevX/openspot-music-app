@@ -2,7 +2,7 @@
   "expo": {
     "name": "OpenSpot",
     "slug": "OpenSpot",
-    "version": "3.1.0",
+    "version": "3.1.3",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "openspot",
@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.devx.openspot",
+      "buildNumber": "37",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
