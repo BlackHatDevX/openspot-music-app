@@ -111,7 +111,10 @@
     "theme_auto": "Automático",
     "playlist_name": "Nombre de la lista",
     "add": "Añadir",
-    "download": "Descargar"
+    "download": "Descargar",
+    "no_playlists_yet": "Ve a la biblioteca y crea tu primera lista de reproducción",
+    "delete_download": "Eliminar descarga",
+    "download_error_track_missing": "No se pudo descargar la pista. Faltan datos de la pista."
   },
   "media": {
     "album": "Álbum",

@@ -111,7 +111,10 @@
     "theme_auto": "Otomatik",
     "playlist_name": "Çalma Listesi Adı",
     "add": "Ekle",
-    "download": "İndir"
+    "download": "İndir",
+    "no_playlists_yet": "Kitaplığa git ve ilk çalma listeni oluştur",
+    "delete_download": "İndirmeyi Sil",
+    "download_error_track_missing": "Parça indirilemedi. Parça verileri eksik."
   },
   "media": {
     "album": "Albüm",

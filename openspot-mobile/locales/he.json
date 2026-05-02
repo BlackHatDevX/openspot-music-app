@@ -111,7 +111,10 @@
     "theme_auto": "אוטומטי",
     "playlist_name": "שם הפלייליסט",
     "add": "הוסף",
-    "download": "הורד"
+    "download": "הורד",
+    "no_playlists_yet": "עבור לספרייה וצור את הפלייליסט הראשון שלך",
+    "delete_download": "מחק הורדה",
+    "download_error_track_missing": "לא ניתן להוריד את הרצועה. נתוני הרצועה חסרים."
   },
   "media": {
     "album": "אלבום",

@@ -111,7 +111,10 @@
     "theme_auto": "Automatisch",
     "playlist_name": "Playlist-Name",
     "add": "Hinzufügen",
-    "download": "Herunterladen"
+    "download": "Herunterladen",
+    "no_playlists_yet": "Gehe zur Bibliothek und erstelle deine erste Playlist",
+    "delete_download": "Download löschen",
+    "download_error_track_missing": "Der Track konnte nicht heruntergeladen werden. Track-Daten fehlen."
   },
   "media": {
     "album": "Album",

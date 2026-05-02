@@ -111,7 +111,10 @@
     "theme_auto": "स्वतः",
     "playlist_name": "प्लेलिस्ट का नाम",
     "add": "जोड़ें",
-    "download": "डाउनलोड"
+    "download": "डाउनलोड",
+    "no_playlists_yet": "लाइब्रेरी में जाएँ और अपनी पहली प्लेलिस्ट बनाएँ",
+    "delete_download": "डाउनलोड हटाएँ",
+    "download_error_track_missing": "ट्रैक डाउनलोड नहीं हो सका। ट्रैक डेटा गायब है।"
   },
   "media": {
     "album": "एल्बम",
