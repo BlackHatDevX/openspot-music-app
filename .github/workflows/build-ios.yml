@@ -8,7 +8,7 @@ jobs:
     runs-on: macos-latest
     defaults:
       run:
-        working-directory: openspot-mobile
+        working-directory: openspot-desktop
 
     env:
       CI: "1"
@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: openspot-mobile/package-lock.json
+          cache-dependency-path: openspot-desktop/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -126,4 +126,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: OpenSpot-IPA
-          path: openspot-mobile/ios/build/OpenSpot.ipa
+          path: openspot-desktop/ios/build/OpenSpot.ipa
