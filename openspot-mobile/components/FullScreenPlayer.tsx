@@ -791,10 +791,10 @@ const styles = StyleSheet.create({
   repeatBadgeSmallLandscape: { top: 2, right: 2, minWidth: 12, height: 12 },
   bottomControls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 32 },
   bottomControlsPortrait: {
-    marginBottom: 80,
+    marginBottom: 20,
     marginTop: 'auto',
-    paddingBottom: 20,
-    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingHorizontal: 12,
     justifyContent: 'space-between',
   },
   bottomControlsLandscape: {

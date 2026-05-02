@@ -21,7 +21,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeMode, useThemeMode } from '@/hooks/theme-mode';
 import { useApiStatus } from '@/hooks/useApiStatus';
 import { useToast } from '@/hooks/useToast';
-const CURRENT_VERSION = '3.1.0';
+const CURRENT_VERSION = '3.1.3';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/jash-gro/';
 const TELEGRAM_URL = 'https://telegram.dog/deveIoper_x';
 const INSTAGRAM_URL = 'https://www.instagram.com/jash_gro/';

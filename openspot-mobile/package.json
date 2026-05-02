@@ -20,6 +20,7 @@
     "@react-navigation/native": "^7.1.6",
     "@tnfangel/ytmusic-api": "^5.3.0",
     "axios": "^1.10.0",
+    "crypto-js": "^4.2.0",
     "expo": "~53.0.17",
     "expo-audio": "^0.4.8",
     "expo-av": "~15.1.7",
