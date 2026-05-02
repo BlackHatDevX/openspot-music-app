@@ -15,6 +15,7 @@ jobs:
       NODE_ENV: "production"
       APP_NAME: "OpenSpot"
       SCHEME_NAME: "OpenSpot"
+      # These env vars are already set; they will also be written to .env
       EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
       EXPO_PUBLIC_YT_API_INSTANCES: ${{ secrets.EXPO_PUBLIC_YT_API_INSTANCES }}
 
@@ -53,6 +54,12 @@ jobs:
 
       - name: Reinstall dependencies
         run: npm ci
+
+      - name: Create eas.json from secret
+        run: echo '${{ secrets.EAS_JSON_CONTENT }}' > eas.json
+
+      - name: Create .env from secret
+        run: echo '${{ secrets.DOT_ENV_CONTENT }}' > .env
 
       - name: Prebuild iOS
         run: npx expo prebuild --platform ios --clean
@@ -99,24 +106,19 @@ jobs:
       - name: Verify bundle inside app
         run: |
           APP_PATH=$(find ios/build/OpenSpot.xcarchive/Products/Applications -name "*.app" | head -1)
-
           echo "App: $APP_PATH"
-
           if [ ! -f "$APP_PATH/main.jsbundle" ]; then
             echo "Copiando bundle manualmente..."
             cp ios/main.jsbundle "$APP_PATH/main.jsbundle"
           fi
-
           ls -la "$APP_PATH"
 
       - name: Package IPA
         run: |
           cd ios
           APP_PATH=$(find build/OpenSpot.xcarchive/Products/Applications -name "*.app" | head -1)
-
           mkdir -p build/Payload
           cp -r "$APP_PATH" build/Payload/
-
           cd build
           zip -r OpenSpot.ipa Payload
 
