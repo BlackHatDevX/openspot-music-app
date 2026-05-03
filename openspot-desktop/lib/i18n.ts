@@ -6,6 +6,7 @@ import de from '../locales/de.json';
 import ru from '../locales/ru.json';
 import he from '../locales/he.json';
 import zh from '../locales/zh.json';
+import zhTW from '../locales/zh-TW.json';
 import es from '../locales/es.json';
 import fr from '../locales/fr.json';
 import tr from '../locales/tr.json';
@@ -15,6 +16,7 @@ const resources = {
   hi: { translation: hi },
   es: { translation: es },
   zh: { translation: zh },
+  'zh-TW': { translation: zhTW },
   de: { translation: de },
   fr: { translation: fr },
   ru: { translation: ru },
