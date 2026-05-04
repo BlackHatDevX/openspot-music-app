@@ -58,6 +58,12 @@ jobs:
           mkdir -p src-tauri/capabilities
           cat > src-tauri/capabilities/default.json <<< "$TAURI_DEFAULT_JSON_CONTENT"
 
+      - name: Generate Windows .ico from PNG
+        shell: bash
+        run: |
+          choco install imagemagick -y
+          magick src-tauri/icons/icon.png -define icon:auto-resize=16,32,48,64,128,256 src-tauri/icons/icon.ico
+
       - name: Build Tauri app
         run: npm run tauri:build
 
