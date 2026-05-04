@@ -61,8 +61,8 @@ jobs:
       - name: Generate Windows .ico from PNG
         shell: bash
         run: |
-          choco install imagemagick -y
-          magick src-tauri/icons/icon.png -define icon:auto-resize=16,32,48,64,128,256 src-tauri/icons/icon.ico
+          choco install imagemagick -y --allow-downgrade
+          magick src-tauri/icons/icon.png -define icon:auto-resize=256,128,96,64,48,32,16 src-tauri/icons/icon.ico
 
       - name: Build Tauri app
         run: npm run tauri:build
