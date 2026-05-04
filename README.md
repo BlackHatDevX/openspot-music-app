@@ -57,7 +57,7 @@
 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.apk)
 
 🔹 **iOS**
-🚧 Build under process
+🚧 Beta[Unsigned] 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.ipa)
 
 <br>
 
