@@ -1,11 +1,11 @@
-name: Build macOS DMG
+name: Build Windows Installer
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: windows-latest
 
     defaults:
       run:
@@ -41,16 +41,19 @@ jobs:
       - name: Create .env
         env:
           DOT_ENV_CONTENT: ${{ secrets.DOT_ENV_CONTENT }}
+        shell: bash
         run: printf '%s' "$DOT_ENV_CONTENT" > .env
 
       - name: Create eas.json
         env:
           EAS_JSON_CONTENT: ${{ secrets.EAS_JSON_CONTENT }}
+        shell: bash
         run: cat > eas.json <<< "$EAS_JSON_CONTENT"
 
       - name: Create default.json
         env:
           TAURI_DEFAULT_JSON_CONTENT: ${{ secrets.TAURI_DEFAULT_JSON_CONTENT }}
+        shell: bash
         run: |
           mkdir -p src-tauri/capabilities
           cat > src-tauri/capabilities/default.json <<< "$TAURI_DEFAULT_JSON_CONTENT"
@@ -58,14 +61,14 @@ jobs:
       - name: Build Tauri app
         run: npm run tauri:build
 
-      - name: Upload DMG artifact
+      - name: Upload MSI installer
         uses: actions/upload-artifact@v4
         with:
-          name: OpenSpot-DMG
-          path: openspot-desktop/src-tauri/target/release/bundle/dmg/*.dmg
+          name: OpenSpot-MSI
+          path: openspot-desktop/src-tauri/target/release/bundle/msi/*.msi
 
-      - name: Upload APP artifact
+      - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
         with:
-          name: OpenSpot-APP
-          path: openspot-desktop/src-tauri/target/release/bundle/macos/*.app
+          name: OpenSpot-NSIS
+          path: openspot-desktop/src-tauri/target/release/bundle/nsis/*.exe
