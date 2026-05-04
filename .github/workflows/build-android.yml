@@ -1,0 +1,87 @@
+name: Build Android Production APK (signed)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: openspot-mobile
+
+    env:
+      CI: "1"
+      NODE_ENV: "production"
+      EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
+      EXPO_PUBLIC_YT_API_INSTANCES: ${{ secrets.EXPO_PUBLIC_YT_API_INSTANCES }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: openspot-mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Remove Expo Dev Tools
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            delete pkg.dependencies['expo-dev-client'];
+            delete pkg.dependencies['expo-dev-menu'];
+            delete pkg.dependencies['expo-dev-launcher'];
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+            
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            app.expo.plugins = app.expo.plugins.filter(p => {
+              const name = typeof p === 'string' ? p : p[0];
+              return !['expo-dev-client', 'expo-dev-menu', 'expo-dev-launcher'].includes(name);
+            });
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2));
+          "
+          rm -rf node_modules/expo-dev-*
+
+      - name: Reinstall dependencies
+        run: npm ci
+
+      - name: Create .env from secret
+        run: echo '${{ secrets.DOT_ENV_CONTENT }}' > .env
+
+      - name: Prebuild Android
+        run: npx expo prebuild --platform android --clean
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+
+      - name: Setup signing configs
+        run: |
+          echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/gradle.properties
+
+      - name: Build APK (Release)
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenSpot-APK
+          path: openspot-mobile/android/app/build/outputs/apk/release/app-release.apk
