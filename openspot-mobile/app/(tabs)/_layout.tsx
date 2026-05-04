@@ -8,7 +8,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Track } from '@/types/music';
-import { View, Modal, Text, TouchableOpacity, StyleSheet, Linking, ScrollView } from 'react-native';
+import { View, Modal, Text, TouchableOpacity, StyleSheet, Linking, ScrollView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MusicAPI } from '@/lib/music-api';
 import { useTranslation } from 'react-i18next';
@@ -66,15 +66,16 @@ export default function TabLayout() {
   const { isProviderDisabled } = useApiStatus();
   const { toastMessage, toastType, showToast } = useToast();
 
+  const isIOS = Platform.OS === 'ios';
   const tabTheme = useMemo(
     () => ({
       background: isDark ? '#121212' : '#fffaf2',
       border: isDark ? '#272727' : '#e4d5c5',
-      active: isDark ? '#1DB954' : '#167c3a',
-      inactive: isDark ? '#9a9a9a' : '#7a6251',
+      active: isDark ? (isIOS ? '#038434' : '#1DB954') : '#167c3a',
+      inactive: isDark ? (isIOS ? '#646464' : '#9a9a9a') : '#7a6251',
       safeArea: isDark ? '#050505' : '#f5efe6',
     }),
-    [isDark]
+    [isDark, isIOS]
   );
 
   const [updateConfig, setUpdateConfig] = useState<UpdateConfig | null>(null);
@@ -219,7 +220,7 @@ export default function TabLayout() {
         setPendingAutoPlay,
       }}
     >
-      <SafeAreaView edges={['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: tabTheme.safeArea }}>
+      <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: tabTheme.safeArea }}>
         <View style={{ flex: 1, position: 'relative' }}>
           {isOffline && !pathname?.includes('/downloads') && <OfflineBanner />}
           <Tabs
@@ -233,11 +234,10 @@ export default function TabLayout() {
                 backgroundColor: tabTheme.background,
                 borderTopWidth: 1,
                 borderTopColor: tabTheme.border,
-                height: 64 + insets.bottom,
-                paddingBottom: insets.bottom,
+                // height: 64 + insets.bottom,
               },
               tabBarLabelStyle: {
-                paddingBottom: 8,
+                paddingBottom: 0,
               },
             }}
           >
@@ -298,7 +298,7 @@ export default function TabLayout() {
                 position: 'absolute',
                 left: 0,
                 right: 0,
-                bottom: 64 + insets.bottom,
+                bottom: 50 + insets.bottom,
                 zIndex: 100,
               }}
             >
