@@ -8,14 +8,13 @@ jobs:
     runs-on: macos-latest
     defaults:
       run:
-        working-directory: openspot-desktop
+        working-directory: openspot-mobile
 
     env:
       CI: "1"
       NODE_ENV: "production"
       APP_NAME: "OpenSpot"
       SCHEME_NAME: "OpenSpot"
-      # These env vars are already set; they will also be written to .env
       EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
       EXPO_PUBLIC_YT_API_INSTANCES: ${{ secrets.EXPO_PUBLIC_YT_API_INSTANCES }}
 
@@ -28,7 +27,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: openspot-desktop/package-lock.json
+          cache-dependency-path: openspot-mobile/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -126,4 +125,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: OpenSpot-IPA
-          path: openspot-desktop/ios/build/OpenSpot.ipa
+          path: openspot-mobile/ios/build/OpenSpot.ipa
