@@ -5,14 +5,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  Dimensions,
   SafeAreaView,
   StatusBar,
   Alert,
   Animated,
   useWindowDimensions,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
+import { Slider } from '@sharcoux/slider';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -69,7 +68,6 @@ interface FullScreenPlayerProps {
   onNext: () => void;
   onPrevious: () => void;
   onShuffle: () => void;
-  onShare: () => void;
   musicQueue?: any;
   onQueueToggle?: () => void;
   onPlaylistsUpdated?: () => void;
@@ -91,7 +89,6 @@ export function FullScreenPlayer({
   onNext,
   onPrevious,
   onShuffle,
-  onShare,
   musicQueue,
   onQueueToggle,
   onPlaylistsUpdated,
@@ -163,6 +160,7 @@ export function FullScreenPlayer({
         duration: ANIMATION_DURATION,
         useNativeDriver: true,
       }).start();
+      TrackPlayer.getRepeatMode().then(setRepeatMode).catch(() => {});
     } else {
       fadeAnim.setValue(0);
     }
@@ -255,11 +253,6 @@ export function FullScreenPlayer({
     onQueueToggle?.();
   }, [onQueueToggle]);
 
-  const handleShare = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onShare();
-  }, [onShare]);
-
   const handleSliderStart = useCallback(() => {
     setIsSeeking(true);
     setSeekPosition(position);
@@ -276,7 +269,12 @@ export function FullScreenPlayer({
 
   const handleRepeatToggle = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newMode = repeatMode === RepeatMode.Off ? RepeatMode.Track : RepeatMode.Off;
+    const newMode =
+      repeatMode === RepeatMode.Off
+        ? RepeatMode.Track
+        : repeatMode === RepeatMode.Track
+          ? RepeatMode.Queue
+          : RepeatMode.Off;
 
     try {
       await TrackPlayer.setRepeatMode(newMode);
@@ -481,7 +479,7 @@ export function FullScreenPlayer({
 
         <View style={styles.backgroundContainer}>
           <Image
-            source={{ uri: track.images.large }}
+            source={{ uri: (track as any).offlineThumbUri || track.images.large }}
             style={styles.backgroundImage}
             contentFit="cover"
           />
@@ -507,12 +505,7 @@ export function FullScreenPlayer({
             <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
               {t('player.now_playing') || 'Now Playing'}
             </Text>
-            <TouchableOpacity
-              style={[styles.headerButton, { backgroundColor: theme.glass }]}
-              onPress={handleShare}
-            >
-              <Ionicons name="share-social" size={24} color={theme.icon} />
-            </TouchableOpacity>
+            <View style={styles.headerButtonSpacer} />
           </View>
 
           <View style={[styles.content, isLandscape && styles.contentLandscape]}>
@@ -527,7 +520,7 @@ export function FullScreenPlayer({
               >
                 <BlurView intensity={15} tint={isDark ? 'dark' : 'light'} style={styles.albumArtGlass}>
                   <Image
-                    source={{ uri: track.images.large }}
+                    source={{ uri: (track as any).offlineThumbUri || track.images.large }}
                     style={[
                       styles.albumArt,
                       isTablet && styles.albumArtTablet,
@@ -566,6 +559,8 @@ export function FullScreenPlayer({
                     minimumTrackTintColor={theme.accent}
                     maximumTrackTintColor={theme.track}
                     thumbTintColor={theme.accent}
+                    trackHeight={4}
+                    thumbSize={20}
                   />
                 </View>
                 <Text style={[styles.timeText, { color: theme.textSecondary }]}>
@@ -636,6 +631,11 @@ export function FullScreenPlayer({
                     <Text style={styles.repeatBadgeMiniText}>1</Text>
                   </View>
                 )}
+                {repeatMode === RepeatMode.Queue && (
+                  <View style={[styles.repeatBadgeMini, isLandscape && styles.repeatBadgeMiniLandscape]}>
+                    <Text style={styles.repeatBadgeMiniText}>All</Text>
+                  </View>
+                )}
                 <Text style={[styles.miniButtonText, { color: theme.textSecondary }]}>{t('components.repeat') || 'Repeat'}</Text>
               </TouchableOpacity>
 
@@ -694,33 +694,39 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   headerButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  headerButtonSpacer: { width: 40, height: 40 },
   headerTitle: { fontSize: 16, fontWeight: '600', letterSpacing: 0.5 },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
+    paddingHorizontal: 20,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 20,
     zIndex: 1,
   },
   contentLandscape: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 24,
+    paddingHorizontal: 40,
+    gap: 32,
+    paddingTop: 0,
   },
-  albumArtContainer: { alignItems: 'center', marginBottom: 24 },
+  albumArtContainer: { alignItems: 'center', marginBottom: 24, width: '100%' },
   albumArtContainerLandscape: {
     marginBottom: 0,
     flex: 0.5,
     maxWidth: 400,
+    justifyContent: 'center',
   },
   rightPanel: {
-    flex: 1,
+    width: '100%',
     maxWidth: 500,
+    alignSelf: 'center',
   },
   rightPanelLandscape: {
     flex: 0.55,
-    maxWidth: 360,
+    maxWidth: 380,
     justifyContent: 'center',
   },
   albumArtWrapper: {
@@ -731,48 +737,47 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 30,
     elevation: 20,
+    width: '70%',
+    maxWidth: 320,
+    aspectRatio: 1,
   },
-  albumArtWrapperTablet: { padding: 8 },
+  albumArtWrapperTablet: { padding: 8, maxWidth: 380 },
   albumArtWrapperLandscape: {
     padding: 6,
+    width: '85%',
+    maxWidth: 280,
   },
-  albumArtGlass: { borderRadius: 20, overflow: 'hidden' },
-  albumArt: { width: 280, height: 280, borderRadius: 20 },
-  albumArtTablet: {
-    width: 320,
-    height: 320,
-  },
-  albumArtLandscape: {
-    width: 180,
-    height: 180,
-  },
-  trackInfo: { alignItems: 'center', marginBottom: 32, paddingHorizontal: 16 },
+  albumArtGlass: { borderRadius: 20, overflow: 'hidden', flex: 1 },
+  albumArt: { width: '100%', height: '100%', borderRadius: 20 },
+  albumArtTablet: {},
+  albumArtLandscape: {},
+  trackInfo: { alignItems: 'center', marginBottom: 24, paddingHorizontal: 12, width: '100%' },
   trackInfoLandscape: {
     marginBottom: 12,
     paddingHorizontal: 4,
   },
-  trackTitle: { fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: -0.3, lineHeight: 34, minHeight: 68 },
+  trackTitle: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: -0.3, lineHeight: 30, minHeight: 30 },
   trackTitleLandscape: {
-    fontSize: 20,
-    lineHeight: 26,
-    minHeight: 52,
+    fontSize: 18,
+    lineHeight: 24,
+    minHeight: 24,
   },
-  trackArtist: { fontSize: 18, textAlign: 'center', opacity: 0.8, lineHeight: 24, minHeight: 48 },
+  trackArtist: { fontSize: 16, textAlign: 'center', opacity: 0.8, lineHeight: 22, minHeight: 22 },
   trackArtistLandscape: {
     fontSize: 14,
     lineHeight: 18,
-    minHeight: 36,
+    minHeight: 18,
   },
-  progressContainer: { marginBottom: 32 },
-  progressContainerLandscape: { marginBottom: 16 },
+  progressContainer: { marginBottom: 24, width: '100%', paddingHorizontal: 8 },
+  progressContainerLandscape: { marginBottom: 16, paddingHorizontal: 0 },
   progressBar: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   timeText: { fontSize: 12, width: 40, textAlign: 'center', fontWeight: '500' },
   sliderContainer: { flex: 1 },
   slider: { width: '100%', height: 40 },
-  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20, gap: 20 },
+  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 16, gap: 16 },
   controlsLandscape: {
     marginBottom: 12,
-    gap: 12,
+    gap: 14,
   },
   controlButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   controlButtonLandscape: {
@@ -791,16 +796,19 @@ const styles = StyleSheet.create({
   repeatBadgeSmallLandscape: { top: 2, right: 2, minWidth: 12, height: 12 },
   bottomControls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 32 },
   bottomControlsPortrait: {
-    marginBottom: 20,
+    marginBottom: 16,
     marginTop: 'auto',
-    paddingBottom: 16,
-    paddingHorizontal: 12,
-    justifyContent: 'space-between',
+    paddingBottom: 20,
+    paddingHorizontal: 8,
+    justifyContent: 'space-around',
+    width: '100%',
+    maxWidth: 450,
+    alignSelf: 'center',
   },
   bottomControlsLandscape: {
     marginBottom: 12,
-    paddingHorizontal: 16,
-    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    justifyContent: 'space-around',
   },
   miniButton: { padding: 8, alignItems: 'center', justifyContent: 'center' },
   miniButtonWithText: { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 8 },

@@ -18,6 +18,7 @@
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
+    "@sharcoux/slider": "^8.0.6",
     "@tnfangel/ytmusic-api": "^5.3.0",
     "axios": "^1.10.0",
     "crypto-js": "^4.2.0",
