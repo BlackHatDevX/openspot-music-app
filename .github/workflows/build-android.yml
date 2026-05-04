@@ -57,6 +57,10 @@ jobs:
 
       - name: Prebuild Android
         run: npx expo prebuild --platform android --clean
+        
+      - name: Fix Android theme
+        run: |
+          sed -i 's/Theme.EdgeToEdge/Theme.Material3.DayNight.NoActionBar/g' android/app/src/main/res/values/styles.xml
 
       - name: Setup JDK
         uses: actions/setup-java@v4
