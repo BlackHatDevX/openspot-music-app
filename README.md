@@ -54,25 +54,28 @@
 ### 📱 **Mobile**
 
 🔹 **Android**
-👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.apk)
+👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.apk)
 
 🔹 **iOS**
-🚧 Beta[Unsigned] 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.ipa)
+🚧 [Unsigned] 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.ipa)
 
 <br>
 
 ### 🖥️ **Desktop**
 
 🍎 **macOS (Apple Silicon)**
-👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.3/OpenSpot-3.1.3-release.dmg)
+👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.dmg)
 
 ```bash
-# If macOS blocks the app, run:
+# Run the below command after moving app to applications
 xattr -rd com.apple.quarantine /Applications/OpenSpot.app
 ```
 
-🧪 **Windows & Linux**
-💬 Testers needed — please contact me
+🪟 **Windows**
+👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.exe)
+
+🐧 **Linux (Debian/Ubuntu)**
+👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.deb)
 
 <br>
 
@@ -119,23 +122,6 @@ xattr -rd com.apple.quarantine /Applications/OpenSpot.app
 
 ---
 
-### 🔧 Latest Updates (v3.1.0)
-#### This is the most stable version so far, with no known bugs and improved overall reliability.
-
-- Offline mode is now supported, including search and filter functionality
-- Player has been optimized for smoother performance and better responsiveness
-- Added Turkish translations by [@bugrayurdagul](https://github.com/bugrayurdagul)
-- Region-based trending toggle (on/off) added
-- Screen rotation support added
-- Improved support for tablets and Android car systems
-- Notification control issues have been fixed
-- Introduced an advanced update system with in-app changelogs
-- Added repeat-one option for better playback control
-- YouTube API integration is now in beta phase
-
-
----
-
 ## 📖 Overview
 
 This monorepo delivers **two fully independent music streaming apps** built with cutting‑edge technologies:
@@ -143,7 +129,7 @@ This monorepo delivers **two fully independent music streaming apps** built with
 | App | Platforms | Framework | Location |
 |-----|-----------|-----------|----------|
 | 📱 **Mobile** | Android, iOS *(coming)* | React Native + Expo | `openspot-mobile/` |
-| 🖥️ **Desktop** | macOS, Windows/Linux *(coming)* | Electron + React | `openspot-desktop/` |
+| 🖥️ **Desktop** | macOS, Windows/Linux *(coming)* | Tauri + React | `openspot-desktop/` |
 
 Both apps share the same powerful streaming core, giving you a seamless listening experience across all your devices.
 
@@ -155,7 +141,7 @@ Both apps share the same powerful streaming core, giving you a seamless listenin
 `React Native` · `Expo Router` · `Expo AV` · `EAS Build` · `IPinfo API`
 
 ### 🖥️ Desktop
-`Electron` · `React` · `Material‑UI` · `React Context + useReducer` · `electron‑store` · `electron‑builder`
+`Tauri` · `React` · `Material‑UI` · `React Context + useReducer` 
 
 ### 📊 Code Composition
 ![TypeScript](https://img.shields.io/badge/TypeScript-95.7%25-3178C6?style=flat-square&logo=typescript)  
