@@ -40,7 +40,7 @@ https://raw.githubusercontent.com/BlackHatDevX/openspot-music-app/main/apps.json
 
 **Steps for AltStore:**
 
-1. Install AltStore on your device.
+1. Install [AltStore](https://altstore.io/) on your device.
 2. Download the latest IPA from the [releases page](https://github.com/BlackHatDevX/openspot-music-app/releases/latest).
 3. Open AltStore, go to **My Apps**, then tap the **+** button.
 4. Select the downloaded IPA and install.
