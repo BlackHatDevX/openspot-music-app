@@ -28,7 +28,7 @@ const INSTAGRAM_URL = 'https://www.instagram.com/jash_gro/';
 const YOUTUBE_URL = 'https://www.youtube.com/@nerdsClub';
 const TWITTER_URL = 'https://twitter.com/jash_gro';
 const GITHUB_URL = 'https://github.com/BlackHatDevX';
-const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/update.json';
+const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/update-desktop.json';
 const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/trending.json';
 const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
 const LANGUAGE_KEY = 'openspot_language_v1';
@@ -349,8 +349,7 @@ export default function SettingsScreen() {
             <TouchableOpacity
               style={[styles.shareButton, { backgroundColor: theme.accent }]}
               onPress={async () => {
-                const version = latestVersion || currentVersion;
-                const shareUrl = `https://github.com/BlackHatDevX/openspot-music-app/releases/download/v${version}/OpenSpot-${version}-release.apk`;
+                const shareUrl = `https://github.com/BlackHatDevX/openspot-music-app/releases`;
                 try {
                   await Share.share({
                     message: `${t('settings.share_message')}\n\n${shareUrl}`,

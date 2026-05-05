@@ -233,7 +233,7 @@ export default function TabLayout() {
                 backgroundColor: tabTheme.background,
                 borderTopWidth: 1,
                 borderTopColor: tabTheme.border,
-                // height: 64 + insets.bottom,
+                // height: insets.bottom,
               },
               tabBarLabelStyle: {
                 paddingBottom: 0,

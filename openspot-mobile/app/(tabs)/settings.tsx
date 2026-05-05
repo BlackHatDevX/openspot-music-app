@@ -10,6 +10,7 @@ import {
   Modal,
   FlatList,
   Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +29,7 @@ const INSTAGRAM_URL = 'https://www.instagram.com/jash_gro/';
 const YOUTUBE_URL = 'https://www.youtube.com/@nerdsClub';
 const TWITTER_URL = 'https://twitter.com/jash_gro';
 const GITHUB_URL = 'https://github.com/BlackHatDevX';
-const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/update.json';
+const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/update-mobile.json';
 const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/trending.json';
 const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
 const LANGUAGE_KEY = 'openspot_language_v1';
@@ -36,12 +37,17 @@ const PROVIDER_KEY = 'openspot_provider_v1';
 const TRENDING_ENABLED_KEY = 'openspot_trending_enabled_v1';
 const ROTATING_COVER_KEY = 'openspot_rotating_cover_v1';
 
-interface UpdateConfig {
+interface PlatformUpdateConfig {
   latest_version: string;
   min_supported_version: string;
   force_update: boolean;
   changelog: Record<string, string[]>;
   release_url: string;
+}
+
+interface UpdateConfig {
+  android: PlatformUpdateConfig;
+  ios: PlatformUpdateConfig;
 }
 
 export default function SettingsScreen() {
@@ -81,12 +87,16 @@ export default function SettingsScreen() {
     return 0;
   };
 
-  const isVersionSupported = updateConfig
-    ? compareVersions(currentVersion, updateConfig.min_supported_version) >= 0
+  const platformUpdateConfig = updateConfig
+    ? (Platform.OS === 'ios' ? updateConfig.ios : updateConfig.android)
+    : null;
+
+  const isVersionSupported = platformUpdateConfig
+    ? compareVersions(currentVersion, platformUpdateConfig.min_supported_version) >= 0
     : true;
 
-  const updateAvailable = updateConfig
-    ? compareVersions(updateConfig.latest_version, currentVersion) > 0
+  const updateAvailable = platformUpdateConfig
+    ? compareVersions(platformUpdateConfig.latest_version, currentVersion) > 0
     : false;
 
   const theme = useMemo(
@@ -145,12 +155,14 @@ export default function SettingsScreen() {
       const res = await fetch(UPDATE_CONFIG_URL);
       const data: UpdateConfig = await res.json();
       setUpdateConfig(data);
-      setLatestVersion(data.latest_version);
 
-      const isSupported = compareVersions(currentVersion, data.min_supported_version) >= 0;
-      const hasUpdate = compareVersions(data.latest_version, currentVersion) > 0;
+      const platformConfig = Platform.OS === 'ios' ? data.ios : data.android;
+      setLatestVersion(platformConfig.latest_version);
 
-      if (!isSupported || (data.force_update && hasUpdate)) {
+      const isSupported = compareVersions(currentVersion, platformConfig.min_supported_version) >= 0;
+      const hasUpdate = compareVersions(platformConfig.latest_version, currentVersion) > 0;
+
+      if (!isSupported || (platformConfig.force_update && hasUpdate)) {
         setShowForceUpdate(true);
       }
     } catch (error) {
@@ -329,14 +341,14 @@ export default function SettingsScreen() {
                 <Text style={styles.primaryButtonText}>Check</Text>
               )}
             </TouchableOpacity>
-            {updateConfig && (
+            {platformUpdateConfig && (
               <TouchableOpacity style={[styles.secondaryButton, { borderColor: theme.border, flex: 1, marginLeft: 8 }]} onPress={() => setShowChangelog(true)}>
                 <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>Changelog</Text>
               </TouchableOpacity>
             )}
           </View>
-          {updateAvailable && (
-            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 8 }]} onPress={() => Linking.openURL(updateConfig?.release_url || '')}>
+          {updateAvailable && platformUpdateConfig && (
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 8 }]} onPress={() => Linking.openURL(platformUpdateConfig.release_url)}>
               <Text style={styles.primaryButtonText}>Update Now</Text>
             </TouchableOpacity>
           )}
@@ -349,8 +361,10 @@ export default function SettingsScreen() {
             <TouchableOpacity
               style={[styles.shareButton, { backgroundColor: theme.accent }]}
               onPress={async () => {
-                const version = latestVersion || currentVersion;
-                const shareUrl = `https://github.com/BlackHatDevX/openspot-music-app/releases/download/v${version}/OpenSpot-${version}-release.apk`;
+                const shareUrl = platformUpdateConfig?.release_url
+                  || (Platform.OS === 'ios'
+                    ? `https://github.com/BlackHatDevX/openspot-music-app/releases/download/v${currentVersion}/OpenSpot-${currentVersion}-release.ipa`
+                    : `https://github.com/BlackHatDevX/openspot-music-app/releases/download/v${currentVersion}/OpenSpot-${currentVersion}-release.apk`);
                 try {
                   await Share.share({
                     message: `${t('settings.share_message')}\n\n${shareUrl}`,
@@ -597,13 +611,13 @@ export default function SettingsScreen() {
             </Text>
             <Text style={[styles.cardText, { color: theme.textSecondary, textAlign: 'center', marginBottom: 16 }]}>
               {!isVersionSupported
-                ? `Your version (v${currentVersion}) is no longer supported. Minimum required: v${updateConfig?.min_supported_version}`
-                : `A new version (v${updateConfig?.latest_version}) is available. Please update to continue.`}
+                ? `Your version (v${currentVersion}) is no longer supported. Minimum required: v${platformUpdateConfig?.min_supported_version}`
+                : `A new version (v${platformUpdateConfig?.latest_version}) is available. Please update to continue.`}
             </Text>
-            {updateConfig?.changelog && updateConfig.changelog[updateConfig.latest_version] && (
+            {platformUpdateConfig?.changelog && platformUpdateConfig.changelog[platformUpdateConfig.latest_version] && (
               <View style={[styles.changelogBox, { backgroundColor: theme.surfaceElevated }]}>
                 <Text style={[styles.changelogTitle, { color: theme.textPrimary }]}>What&apos;s New:</Text>
-                {updateConfig.changelog[updateConfig.latest_version].map((item, idx) => (
+                {platformUpdateConfig.changelog[platformUpdateConfig.latest_version].map((item, idx) => (
                   <Text key={idx} style={[styles.changelogItem, { color: theme.textSecondary }]}>
                     • {item}
                   </Text>
@@ -612,7 +626,7 @@ export default function SettingsScreen() {
             )}
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 16 }]} 
-              onPress={() => Linking.openURL(updateConfig?.release_url || '')}
+              onPress={() => Linking.openURL(platformUpdateConfig?.release_url || '')}
             >
               <Text style={styles.primaryButtonText}>Update Now</Text>
             </TouchableOpacity>
@@ -626,7 +640,7 @@ export default function SettingsScreen() {
           <View style={[styles.changelogModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.cardTitle, { color: theme.textPrimary, marginBottom: 12 }]}>Changelog</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {updateConfig?.changelog && Object.entries(updateConfig.changelog)
+              {platformUpdateConfig?.changelog && Object.entries(platformUpdateConfig.changelog)
                 .sort(([a], [b]) => compareVersions(b, a))
                 .map(([version, items]) => (
                   <View key={version} style={styles.changelogVersion}>
