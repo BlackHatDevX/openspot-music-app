@@ -95,7 +95,7 @@ Used for SideStore (recommended).
 
 LiveContainer may support importing the same URL as a Source depending on your setup.
 
-Copy and paste this URL into SideStore / LiveContainer sources: `https://raw.githubusercontent.com/CesarGarza55/openspot-music-app/main/apps.json`
+Copy and paste this URL into SideStore / LiveContainer sources: `https://raw.githubusercontent.com/BlackHatDevX/openspot-music-app/main/apps.json`
 
 
 This allows:
