@@ -113,6 +113,7 @@ export default function SettingsScreen() {
     { label: 'Hindi', value: 'hi', nativeLabel: 'Hindi' },
     { label: 'Spanish', value: 'es', nativeLabel: 'Espanol' },
     { label: 'Chinese', value: 'zh', nativeLabel: 'Zhongwen' },
+    { label: 'Chinese (Traditional)', value: 'zh-TW', nativeLabel: 'Zhongwen (Fanti)' },
     { label: 'German', value: 'de', nativeLabel: 'Deutsch' },
     { label: 'French', value: 'fr', nativeLabel: 'Francais' },
     { label: 'Russian', value: 'ru', nativeLabel: 'Russkiy' },
