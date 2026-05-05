@@ -81,6 +81,7 @@ export function Player({
   const queueBuildDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInternalChangeRef = useRef(false);
   const handledEndedTrackRef = useRef<string | number | null>(null);
+  const lastAutoAdvanceAtRef = useRef(0);
   const { position: tpPosition, duration: tpDuration } = useProgress(250);
 
   
@@ -222,6 +223,7 @@ export function Player({
 
   const playNextTrack = useCallback((withHaptics = false) => {
     if (withHaptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    lastAutoAdvanceAtRef.current = Date.now();
     const queue = musicQueueRef.current;
     if (!queue?.playNext) {
       onPlayingChange(false);
@@ -269,6 +271,9 @@ export function Player({
   useEffect(() => {
     if (!track || !isPlaying || duration <= 0) return;
 
+    const cooldownElapsed = Date.now() - lastAutoAdvanceAtRef.current;
+    if (cooldownElapsed < 1000) return;
+
     const remaining = duration - position;
     if (position < 1000 || remaining > 750) {
       if (remaining > 1500) handledEndedTrackRef.current = null;
@@ -281,6 +286,7 @@ export function Player({
       if (mode === RepeatMode.Off) {
         playNextTrack(false);
       } else if (mode === RepeatMode.Track) {
+        lastAutoAdvanceAtRef.current = Date.now();
         await TrackPlayer.seekTo(0);
         await TrackPlayer.play();
       } else if (mode === RepeatMode.Queue) {
@@ -288,6 +294,7 @@ export function Player({
         if (queue?.tracks?.length && queue.setCurrentIndex) {
           const isLastTrack = queue.currentIndex === queue.tracks.length - 1;
           if (isLastTrack) {
+            lastAutoAdvanceAtRef.current = Date.now();
             queue.setCurrentIndex(0);
           } else {
             playNextTrack(false);

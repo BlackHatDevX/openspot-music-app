@@ -19,7 +19,7 @@ import Constants from 'expo-constants';
 import { useApiStatus } from '@/hooks/useApiStatus';
 import { useToast } from '@/hooks/useToast';
 
-interface UpdateConfig {
+interface PlatformUpdateConfig {
   latest_version: string;
   min_supported_version: string;
   force_update: boolean;
@@ -27,7 +27,12 @@ interface UpdateConfig {
   release_url: string;
 }
 
-const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/main/update.json';
+interface UpdateConfig {
+  android: PlatformUpdateConfig;
+  ios: PlatformUpdateConfig;
+}
+
+const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/update-mobile.json';
 
 interface MusicPlayerContextType {
   musicQueue: ReturnType<typeof useMusicQueue>;
@@ -94,6 +99,10 @@ export default function TabLayout() {
     return 0;
   };
 
+  const platformUpdateConfig = updateConfig
+    ? (Platform.OS === 'ios' ? updateConfig.ios : updateConfig.android)
+    : null;
+
   useEffect(() => {
     const checkUpdateOnStart = async () => {
       try {
@@ -101,10 +110,12 @@ export default function TabLayout() {
         const data: UpdateConfig = await res.json();
         setUpdateConfig(data);
 
-        const isSupported = compareVersions(currentVersion, data.min_supported_version) >= 0;
-        const hasUpdate = compareVersions(data.latest_version, currentVersion) > 0;
+        const platformConfig = Platform.OS === 'ios' ? data.ios : data.android;
 
-        if (!isSupported || (data.force_update && hasUpdate)) {
+        const isSupported = compareVersions(currentVersion, platformConfig.min_supported_version) >= 0;
+        const hasUpdate = compareVersions(platformConfig.latest_version, currentVersion) > 0;
+
+        if (!isSupported || (platformConfig.force_update && hasUpdate)) {
           setShowForceUpdate(true);
         }
       } catch (error) {
@@ -320,19 +331,19 @@ export default function TabLayout() {
             <View style={[styles.forceUpdateCard, { backgroundColor: isDark ? '#121212' : '#fffaf2', borderColor: isDark ? '#272727' : '#e4d5c5' }]}>
               <Ionicons name="warning" size={48} color="#ff4444" style={{ alignSelf: 'center', marginBottom: 12 }} />
               <Text style={[styles.forceUpdateTitle, { color: isDark ? '#fff' : '#2d2219' }]}>
-                {updateConfig && compareVersions(currentVersion, updateConfig.min_supported_version) < 0
+                {platformUpdateConfig && compareVersions(currentVersion, platformUpdateConfig.min_supported_version) < 0
                   ? 'Update Required'
                   : 'Update Available'}
               </Text>
               <Text style={[styles.forceUpdateText, { color: isDark ? '#a9a9a9' : '#7a6251' }]}>
-                {updateConfig && compareVersions(currentVersion, updateConfig.min_supported_version) < 0
-                  ? `Your version (v${currentVersion}) is no longer supported. Minimum required: v${updateConfig.min_supported_version}`
-                  : `A new version (v${updateConfig?.latest_version}) is available. Please update to continue.`}
+                {platformUpdateConfig && compareVersions(currentVersion, platformUpdateConfig.min_supported_version) < 0
+                  ? `Your version (v${currentVersion}) is no longer supported. Minimum required: v${platformUpdateConfig.min_supported_version}`
+                  : `A new version (v${platformUpdateConfig?.latest_version}) is available. Please update to continue.`}
               </Text>
-              {updateConfig?.changelog && updateConfig.changelog[updateConfig.latest_version] && (
+              {platformUpdateConfig?.changelog && platformUpdateConfig.changelog[platformUpdateConfig.latest_version] && (
                 <ScrollView style={[styles.changelogBox, { backgroundColor: isDark ? '#1b1b1b' : '#efe4d6' }]}>
                   <Text style={[styles.changelogTitle, { color: isDark ? '#fff' : '#2d2219' }]}>What&apos;s New:</Text>
-                  {updateConfig.changelog[updateConfig.latest_version].map((item, idx) => (
+                  {platformUpdateConfig.changelog[platformUpdateConfig.latest_version].map((item, idx) => (
                     <Text key={idx} style={[styles.changelogItem, { color: isDark ? '#a9a9a9' : '#7a6251' }]}>
                       • {item}
                     </Text>
@@ -341,7 +352,7 @@ export default function TabLayout() {
               )}
               <TouchableOpacity
                 style={[styles.updateButton, { backgroundColor: '#ff4444' }]}
-                onPress={() => Linking.openURL(updateConfig?.release_url || 'https://github.com/BlackHatDevX/openspot-music-app/releases')}
+                onPress={() => Linking.openURL(platformUpdateConfig?.release_url || 'https://github.com/BlackHatDevX/openspot-music-app/releases')}
               >
                 <Text style={styles.updateButtonText}>Update Now</Text>
               </TouchableOpacity>
