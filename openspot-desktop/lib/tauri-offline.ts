@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { open as tauriOpen } from '@tauri-apps/plugin-shell';
 
 export const isTauriRuntime = () => {
   if (typeof window === 'undefined') return false;
@@ -96,4 +97,13 @@ export const revokeOfflineObjectUrls = () => {
 
 export const getStoredOfflineUri = (fileUri: string) => {
   return fileUri;
+};
+
+export const openExternalUrl = async (url: string) => {
+  if (isTauriRuntime()) {
+    await tauriOpen(url);
+  } else {
+    const { Linking } = await import('react-native');
+    await Linking.openURL(url);
+  }
 };

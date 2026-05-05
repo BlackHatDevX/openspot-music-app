@@ -21,6 +21,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeMode, useThemeMode } from '@/hooks/theme-mode';
 import { useApiStatus } from '@/hooks/useApiStatus';
 import { useToast } from '@/hooks/useToast';
+import { openExternalUrl } from '@/lib/tauri-offline';
 const CURRENT_VERSION = '3.1.4';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/jash-gro/';
 const TELEGRAM_URL = 'https://telegram.dog/deveIoper_x';
@@ -113,7 +114,6 @@ export default function SettingsScreen() {
     { label: 'Hindi', value: 'hi', nativeLabel: 'Hindi' },
     { label: 'Spanish', value: 'es', nativeLabel: 'Espanol' },
     { label: 'Chinese', value: 'zh', nativeLabel: 'Zhongwen' },
-    { label: 'Chinese (Traditional)', value: 'zh-TW', nativeLabel: 'Zhongwen (Fanti)' },
     { label: 'German', value: 'de', nativeLabel: 'Deutsch' },
     { label: 'French', value: 'fr', nativeLabel: 'Francais' },
     { label: 'Russian', value: 'ru', nativeLabel: 'Russkiy' },
@@ -337,7 +337,7 @@ export default function SettingsScreen() {
             )}
           </View>
           {updateAvailable && (
-            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 8 }]} onPress={() => Linking.openURL(updateConfig?.release_url || '')}>
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 8 }]} onPress={() => openExternalUrl(updateConfig?.release_url || '')}>
               <Text style={styles.primaryButtonText}>Update Now</Text>
             </TouchableOpacity>
           )}
@@ -496,19 +496,19 @@ export default function SettingsScreen() {
             {t('settings.connect_description')}
           </Text>
           <View style={styles.socialButtonsRow}>
-            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(LINKEDIN_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(LINKEDIN_URL)}>
               <Ionicons name="logo-linkedin" size={24} color={theme.accent} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(TELEGRAM_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(TELEGRAM_URL)}>
               <Ionicons name="send" size={24} color={theme.accent} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(INSTAGRAM_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(INSTAGRAM_URL)}>
               <Ionicons name="logo-instagram" size={24} color={theme.accent} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(GITHUB_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(GITHUB_URL)}>
               <Ionicons name="logo-github" size={24} color={theme.accent} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(TWITTER_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(TWITTER_URL)}>
               <Ionicons name="logo-twitter" size={24} color={theme.accent} />
             </TouchableOpacity>
           </View>
@@ -522,14 +522,14 @@ export default function SettingsScreen() {
           <View style={styles.updateButtonsRow}>
             <TouchableOpacity
               style={[styles.updateButton, { backgroundColor: theme.accent, flex: 1, marginRight: 8 }]}
-              onPress={() => Linking.openURL(TELEGRAM_URL)}
+              onPress={() => openExternalUrl(TELEGRAM_URL)}
             >
               <Ionicons name="send" size={18} color="#fff" style={styles.updateButtonIcon} />
               <Text style={styles.updateButtonText}>{t('settings.telegram')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.updateButton, { backgroundColor: '#ff0000', flex: 1 }]}
-              onPress={() => Linking.openURL(YOUTUBE_URL)}
+              onPress={() => openExternalUrl(YOUTUBE_URL)}
             >
               <Ionicons name="logo-youtube" size={18} color="#fff" style={styles.updateButtonIcon} />
               <Text style={styles.updateButtonText}>{t('settings.youtube')}</Text>
@@ -612,7 +612,7 @@ export default function SettingsScreen() {
             )}
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 16 }]} 
-              onPress={() => Linking.openURL(updateConfig?.release_url || '')}
+              onPress={() => openExternalUrl(updateConfig?.release_url || '')}
             >
               <Text style={styles.primaryButtonText}>Update Now</Text>
             </TouchableOpacity>
@@ -657,7 +657,7 @@ export default function SettingsScreen() {
             <Text style={[styles.cardText, { color: theme.textSecondary, textAlign: 'center', marginBottom: 16 }]}>
               {t('settings.beta_warning_description')}
             </Text>
-            <TouchableOpacity style={styles.betaLinkRow} onPress={() => Linking.openURL('https://t.me/openspot_music/15')}>
+            <TouchableOpacity style={styles.betaLinkRow} onPress={() => openExternalUrl('https://t.me/openspot_music/15')}>
               <Text style={[styles.betaLinkText, { color: theme.accent }]}>{t('settings.beta_warning_link')}</Text>
               <Ionicons name="arrow-forward" size={16} color={theme.accent} />
             </TouchableOpacity>
