@@ -57,7 +57,7 @@
 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.apk)
 
 🔹 **iOS**
-🚧 [Unsigned] 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.ipa) || [Installation guide](https://github.com/BlackHatDevX/openspot-music-app/blob/main/IOS_INSTALLATION.md)
+🚧 [Unsigned] 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.ipa) | [**Installation Guide**](https://github.com/BlackHatDevX/openspot-music-app/blob/main/IOS_INSTALLATION.md)
 
 <br>
 
