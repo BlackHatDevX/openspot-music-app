@@ -57,51 +57,9 @@
 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.apk)
 
 🔹 **iOS**
-🚧 [Unsigned] 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.ipa)
+🚧 [Unsigned] 👉 [**Download Now**](https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.ipa) || [Installation guide](https://github.com/BlackHatDevX/openspot-music-app/blob/main/IOS_INSTALLATION.md)
 
 <br>
-
-## 🍎 iOS Installation (SideStore / LiveContainer)
-
-The iOS build is distributed as an **unsigned IPA** and requires sideloading.
-
-</div>
-
-## 📌 SideStore
-
-- https://sidestore.io/
-- https://docs.sidestore.io/
-
-Steps:
-1. Install SideStore  
-2. Complete initial pairing (one-time computer setup)  
-3. Add OpenSpot by pasting the apps.json URL into SideStore sources
-4. Install directly from SideStore  
-
----
-
-## 📌 LiveContainer
-
-https://github.com/LiveContainer/LiveContainer
-
-Supports running sideloaded apps in isolated environments.  
-OpenSpot can be installed by importing the IPA file directly or using apps.json if your setup supports external sources.
-
----
-
-### 📦 apps.json Feed
-
-Used for SideStore (recommended).
-
-LiveContainer may support importing the same URL as a Source depending on your setup.
-
-Copy and paste this URL into SideStore / LiveContainer sources: `https://raw.githubusercontent.com/BlackHatDevX/openspot-music-app/main/apps.json`
-
-
-This allows:
-- Direct installation
-- Easy updates
-- No manual IPA downloads
 
 ---
 
