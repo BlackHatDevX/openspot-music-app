@@ -21,9 +21,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeMode, useThemeMode } from '@/hooks/theme-mode';
 import { useApiStatus } from '@/hooks/useApiStatus';
 import { useToast } from '@/hooks/useToast';
-import { isTauriRuntime } from '@/lib/tauri-offline';
-import { open } from '@tauri-apps/plugin-shell';
-const CURRENT_VERSION = '3.1.3';
+const CURRENT_VERSION = '3.1.4';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/jash-gro/';
 const TELEGRAM_URL = 'https://telegram.dog/deveIoper_x';
 const INSTAGRAM_URL = 'https://www.instagram.com/jash_gro/';
@@ -36,14 +34,7 @@ const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
 const LANGUAGE_KEY = 'openspot_language_v1';
 const PROVIDER_KEY = 'openspot_provider_v1';
 const TRENDING_ENABLED_KEY = 'openspot_trending_enabled_v1';
-
-const openExternalUrl = async (url: string) => {
-  if (isTauriRuntime()) {
-    await open(url);
-  } else {
-    await Linking.openURL(url);
-  }
-};
+const ROTATING_COVER_KEY = 'openspot_rotating_cover_v1';
 
 interface UpdateConfig {
   latest_version: string;
@@ -66,6 +57,7 @@ export default function SettingsScreen() {
   const [language, setLanguage] = useState<string>('en');
   const [provider, setProvider] = useState<string>('saavn');
   const [trendingEnabled, setTrendingEnabled] = useState<boolean>(true);
+  const [rotatingCover, setRotatingCover] = useState<boolean>(true);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [updateConfig, setUpdateConfig] = useState<UpdateConfig | null>(null);
   const [showForceUpdate, setShowForceUpdate] = useState(false);
@@ -214,10 +206,22 @@ export default function SettingsScreen() {
       }
     };
 
+    const loadRotatingCover = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(ROTATING_COVER_KEY);
+        if (stored !== null) {
+          setRotatingCover(stored === 'true');
+        }
+      } catch (error) {
+        console.error('Failed to load rotating cover setting:', error);
+      }
+    };
+
     void loadRegion();
     void loadLanguage();
     void loadProvider();
     void loadTrendingEnabled();
+    void loadRotatingCover();
     void loadRegionOptions();
     void checkForUpdates();
   }, [i18n, checkForUpdates]);
@@ -288,6 +292,15 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleRotatingCoverToggle = async (enabled: boolean) => {
+    setRotatingCover(enabled);
+    try {
+      await AsyncStorage.setItem(ROTATING_COVER_KEY, String(enabled));
+    } catch (error) {
+      console.error('Failed to save rotating cover setting:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -323,7 +336,7 @@ export default function SettingsScreen() {
             )}
           </View>
           {updateAvailable && (
-            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 8 }]} onPress={() => openExternalUrl(updateConfig?.release_url || '')}>
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 8 }]} onPress={() => Linking.openURL(updateConfig?.release_url || '')}>
               <Text style={styles.primaryButtonText}>Update Now</Text>
             </TouchableOpacity>
           )}
@@ -337,7 +350,7 @@ export default function SettingsScreen() {
               style={[styles.shareButton, { backgroundColor: theme.accent }]}
               onPress={async () => {
                 const version = latestVersion || currentVersion;
-                const shareUrl = `https://github.com/BlackHatDevX/openspot-music-app/releases/download/v${version}/OpenSpot-${version}-release.dmg`;
+                const shareUrl = `https://github.com/BlackHatDevX/openspot-music-app/releases/download/v${version}/OpenSpot-${version}-release.apk`;
                 try {
                   await Share.share({
                     message: `${t('settings.share_message')}\n\n${shareUrl}`,
@@ -429,6 +442,22 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.cardTitle, { color: theme.textPrimary, marginBottom: 2 }]}>{t('settings.rotating_cover')}</Text>
+              <Text style={[styles.cardText, { color: theme.textSecondary }]}>{t('settings.rotating_cover_description')}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.toggleTrack, { backgroundColor: rotatingCover ? theme.accent : theme.surfaceElevated }]}
+              onPress={() => handleRotatingCoverToggle(!rotatingCover)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.toggleThumb, rotatingCover && styles.toggleThumbOn]} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }, !trendingEnabled && { opacity: 0.5 }]}>
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.region')}</Text>
           <Text style={[styles.cardText, { color: theme.textSecondary }]}>
@@ -467,19 +496,19 @@ export default function SettingsScreen() {
             {t('settings.connect_description')}
           </Text>
           <View style={styles.socialButtonsRow}>
-            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(LINKEDIN_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(LINKEDIN_URL)}>
               <Ionicons name="logo-linkedin" size={24} color={theme.accent} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(TELEGRAM_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(TELEGRAM_URL)}>
               <Ionicons name="send" size={24} color={theme.accent} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(INSTAGRAM_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(INSTAGRAM_URL)}>
               <Ionicons name="logo-instagram" size={24} color={theme.accent} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(GITHUB_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(GITHUB_URL)}>
               <Ionicons name="logo-github" size={24} color={theme.accent} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton} onPress={() => openExternalUrl(TWITTER_URL)}>
+            <TouchableOpacity style={styles.socialButton} onPress={() => Linking.openURL(TWITTER_URL)}>
               <Ionicons name="logo-twitter" size={24} color={theme.accent} />
             </TouchableOpacity>
           </View>
@@ -493,14 +522,14 @@ export default function SettingsScreen() {
           <View style={styles.updateButtonsRow}>
             <TouchableOpacity
               style={[styles.updateButton, { backgroundColor: theme.accent, flex: 1, marginRight: 8 }]}
-              onPress={() => openExternalUrl(TELEGRAM_URL)}
+              onPress={() => Linking.openURL(TELEGRAM_URL)}
             >
               <Ionicons name="send" size={18} color="#fff" style={styles.updateButtonIcon} />
               <Text style={styles.updateButtonText}>{t('settings.telegram')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.updateButton, { backgroundColor: '#ff0000', flex: 1 }]}
-              onPress={() => openExternalUrl(YOUTUBE_URL)}
+              onPress={() => Linking.openURL(YOUTUBE_URL)}
             >
               <Ionicons name="logo-youtube" size={18} color="#fff" style={styles.updateButtonIcon} />
               <Text style={styles.updateButtonText}>{t('settings.youtube')}</Text>
@@ -583,7 +612,7 @@ export default function SettingsScreen() {
             )}
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 16 }]} 
-              onPress={() => openExternalUrl(updateConfig?.release_url || '')}
+              onPress={() => Linking.openURL(updateConfig?.release_url || '')}
             >
               <Text style={styles.primaryButtonText}>Update Now</Text>
             </TouchableOpacity>
@@ -628,7 +657,7 @@ export default function SettingsScreen() {
             <Text style={[styles.cardText, { color: theme.textSecondary, textAlign: 'center', marginBottom: 16 }]}>
               {t('settings.beta_warning_description')}
             </Text>
-            <TouchableOpacity style={styles.betaLinkRow} onPress={() => openExternalUrl('https://t.me/openspot_music/15')}>
+            <TouchableOpacity style={styles.betaLinkRow} onPress={() => Linking.openURL('https://t.me/openspot_music/15')}>
               <Text style={[styles.betaLinkText, { color: theme.accent }]}>{t('settings.beta_warning_link')}</Text>
               <Ionicons name="arrow-forward" size={16} color={theme.accent} />
             </TouchableOpacity>

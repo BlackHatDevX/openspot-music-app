@@ -140,7 +140,8 @@
     "liked_songs": "我喜欢的音乐",
     "downloaded": "已下载",
     "playlists": "我的歌单",
-    "recently_played": "最近播放"
+    "recently_played": "最近播放",
+    "saved": "已保存"
   },
   "downloads": {
     "downloaded_songs": "已下载的歌曲",
@@ -163,7 +164,9 @@
     "music_provider": "音乐提供商",
     "provider_description": "选择你偏好的音乐流媒体服务。",
     "trending": "热门趋势",
-    "trending_description": "在主页显示热门趋势板块",
+    "trending_description": "在首页显示热门趋势板块",
+    "rotating_cover": "旋转封面",
+    "rotating_cover_description": "播放时旋转专辑封面",
     "region": "地区",
     "region_description": "主页的热门歌曲将使用此地区。默认：自动。",
     "auto": "自动",

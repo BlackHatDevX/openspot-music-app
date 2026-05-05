@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { View, StyleSheet, StatusBar, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSearch } from '@/hooks/useSearch';
@@ -6,6 +6,7 @@ import { TopBar } from '@/components/TopBar';
 import { SearchResults } from '@/components/SearchResults';
 import { MusicPlayerContext } from './_layout';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useLocalSearchParams } from 'expo-router';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -15,6 +16,17 @@ export default function SearchScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme !== 'light';
   const background = isDark ? '#050505' : '#f5efe6';
+  const params = useLocalSearchParams();
+
+  useEffect(() => {
+    if (params.q && typeof params.q === 'string') {
+      searchState.setQuery(params.q);
+      if (params.type && typeof params.type === 'string') {
+        searchState.setSearchType(params.type as 'track' | 'album' | 'artist' | 'playlist');
+      }
+      searchState.searchTracks(params.q, params.type as 'track' | 'album' | 'artist' | 'playlist');
+    }
+  }, [params, searchState]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: background }]}>

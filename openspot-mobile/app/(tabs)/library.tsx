@@ -11,9 +11,13 @@ import { MusicAPI } from '@/lib/music-api';
 import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'expo-image';
 
 export default function LibraryScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme !== 'light';
   const theme = {
@@ -35,12 +39,34 @@ export default function LibraryScreen() {
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
   const [showLikedSongs, setShowLikedSongs] = useState(false);
+  const [savedMedia, setSavedMedia] = useState<any[]>([]);
 
   useEffect(() => {
     fetchPlaylists();
+    fetchSavedMedia();
   }, []);
 
-  
+  const fetchSavedMedia = async () => {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const savedKeys = allKeys.filter(key => key.startsWith('saved_'));
+    const savedItems = await Promise.all(
+      savedKeys.map(async (key) => {
+        const data = await AsyncStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+      })
+    );
+    setSavedMedia(savedItems.filter(Boolean));
+  };
+
+  const handleRemoveSavedMedia = async (key: string) => {
+    await AsyncStorage.removeItem(key);
+    fetchSavedMedia();
+  };
+
+  const handleSavedMediaPress = (item: any) => {
+    router.push(`/media/${item.type}/${item.id}?title=${encodeURIComponent(item.title)}&image=${encodeURIComponent(item.image)}`);
+  };
+
   const refreshSelectedPlaylistTracks = async (playlistName: string) => {
     const updated = (await PlaylistStorage.getPlaylists()).find(pl => pl.name === playlistName);
     if (!updated) {
@@ -56,6 +82,7 @@ export default function LibraryScreen() {
   useFocusEffect(
     React.useCallback(() => {
       fetchPlaylists();
+      fetchSavedMedia();
     }, [])
   );
 
@@ -205,6 +232,31 @@ export default function LibraryScreen() {
             onPlay={() => handleLikedSongsPlay(false)}
             theme={{ surface: theme.surface, border: theme.border, textPrimary: theme.textPrimary, textSecondary: theme.textSecondary, accent: theme.accent, icon: theme.textPrimary }}
           />
+          {savedMedia.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('library.saved')}</Text>
+              <View style={styles.savedMediaGrid}>
+                {savedMedia.map((item) => (
+                  <TouchableOpacity
+                    key={`saved_${item.type}_${item.id}`}
+                    style={[styles.savedMediaItem, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                    onPress={() => handleSavedMediaPress(item)}
+                    onLongPress={() => handleRemoveSavedMedia(`saved_${item.type}_${item.id}`)}
+                  >
+                    <Image source={{ uri: item.image }} style={styles.savedMediaImage} contentFit="cover" />
+                    <Text style={[styles.savedMediaTitle, { color: theme.textPrimary }]} numberOfLines={2}>{item.title}</Text>
+                    <Text style={[styles.savedMediaMeta, { color: theme.textSecondary }]}>{t(`media.${item.type}`)}</Text>
+                    <TouchableOpacity
+                      style={styles.savedMediaRemove}
+                      onPress={() => handleRemoveSavedMedia(`saved_${item.type}_${item.id}`)}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#ff4444" />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
           <PlaylistList
             playlists={playlists.map(pl => {
               let cover = 'https://misc.scdn.co/liked-songs/liked-songs-640.png';
@@ -460,5 +512,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 8,
+  },
+  savedMediaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 18,
+  },
+  savedMediaItem: {
+    width: '48%',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 10,
+    position: 'relative',
+  },
+  savedMediaImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  savedMediaTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  savedMediaMeta: {
+    fontSize: 12,
+  },
+  savedMediaRemove: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 4,
   },
 });

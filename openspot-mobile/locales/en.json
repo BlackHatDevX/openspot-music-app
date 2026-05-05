@@ -140,7 +140,8 @@
     "liked_songs": "Liked Songs",
     "downloaded": "Downloaded",
     "playlists": "My Playlists",
-    "recently_played": "Recently Played"
+    "recently_played": "Recently Played",
+    "saved": "Saved"
   },
   "downloads": {
     "downloaded_songs": "Downloaded Songs",
@@ -164,6 +165,8 @@
     "provider_description": "Select your preferred music streaming service.",
     "trending": "Trending",
     "trending_description": "Show trending section on home",
+    "rotating_cover": "Rotating Cover",
+    "rotating_cover_description": "Rotate album art when playing",
     "region": "Region",
     "region_description": "Trending songs on home use this region. Default: Auto.",
     "auto": "Auto",

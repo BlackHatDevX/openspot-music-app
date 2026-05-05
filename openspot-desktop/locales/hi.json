@@ -140,7 +140,8 @@
     "liked_songs": "पसंदीदा गाने",
     "downloaded": "डाउनलोड किए गए",
     "playlists": "मेरी प्लेलिस्ट",
-    "recently_played": "हाल ही में चलाए गए"
+    "recently_played": "हाल ही में चलाए गए",
+    "saved": "सेव किए गए"
   },
   "downloads": {
     "downloaded_songs": "डाउनलोड किए गए गाने",
@@ -163,7 +164,9 @@
     "music_provider": "संगीत प्रदाता",
     "provider_description": "अपनी पसंदीदा स्ट्रीमिंग सेवा चुनें।",
     "trending": "ट्रेंडिंग",
-    "trending_description": "होम पर ट्रेंडिंग सेक्शन दिखाएँ",
+    "trending_description": "होम पर ट्रेंडिंग सेक्शन दिखाएं",
+    "rotating_cover": "घूमता कवर",
+    "rotating_cover_description": "बजने पर एल्बम आर्ट घुमाएं",
     "region": "क्षेत्र",
     "region_description": "ट्रेंडिंग गाने इस क्षेत्र का उपयोग करते हैं। डिफ़ॉल्ट: स्वतः।",
     "auto": "स्वतः",

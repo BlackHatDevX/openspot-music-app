@@ -14,6 +14,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { MusicAPI } from '@/lib/music-api';
 import { Track } from '@/types/music';
@@ -22,6 +23,80 @@ import { useLikedSongs } from '@/hooks/useLikedSongs';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 type MediaType = 'album' | 'artist' | 'playlist';
+
+interface TrackListItemProps {
+  item: Track;
+  index: number;
+  isCurrentTrack: boolean;
+  isPlaying: boolean;
+  theme: any;
+  tracks: Track[];
+  onTrackSelect: (track: Track, tracks: Track[], index: number) => void;
+  onToggleLike: (track: Track) => void;
+  onAddToQueue: (track: Track) => void;
+  isLiked: boolean;
+}
+
+const TrackListItem = React.memo(({ item, index, isCurrentTrack, isPlaying, theme, tracks, onTrackSelect, onToggleLike, onAddToQueue, isLiked }: TrackListItemProps) => {
+  const handlePress = useCallback(() => {
+    onTrackSelect(item, tracks, index);
+  }, [item, tracks, index, onTrackSelect]);
+
+  const handleLike = useCallback(() => {
+    onToggleLike(item);
+  }, [item, onToggleLike]);
+
+  const handleQueue = useCallback(() => {
+    onAddToQueue(item);
+  }, [item, onAddToQueue]);
+
+  return (
+    <TouchableOpacity style={[styles.trackItem, { backgroundColor: theme.glass }]} onPress={handlePress}>
+      <Image
+        source={{ uri: MusicAPI.getOptimalImage(item.images) }}
+        style={styles.trackCover}
+        contentFit="cover"
+      />
+      <View style={styles.trackInfo}>
+        <Text style={[styles.trackTitle, { color: theme.textPrimary }, isCurrentTrack && { color: theme.accent }]} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <Text style={[styles.trackArtist, { color: theme.textSecondary }, isCurrentTrack && { color: theme.accent }]} numberOfLines={1}>
+          {item.artist}
+        </Text>
+      </View>
+      <TouchableOpacity style={styles.iconButton} onPress={handleLike}>
+        <Ionicons
+          name={isLiked ? 'heart' : 'heart-outline'}
+          size={20}
+          color={isLiked ? theme.accent : theme.textSecondary}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.iconButton} onPress={handleQueue}>
+        <Ionicons
+          name="add-circle-outline"
+          size={20}
+          color={theme.textSecondary}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.iconButton} onPress={handlePress}>
+        <Ionicons
+          name={isCurrentTrack && isPlaying ? 'pause' : 'play'}
+          size={20}
+          color={isCurrentTrack ? theme.accent : theme.textSecondary}
+        />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.isCurrentTrack === nextProps.isCurrentTrack &&
+    prevProps.isPlaying === nextProps.isPlaying &&
+    prevProps.isLiked === nextProps.isLiked &&
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.index === nextProps.index
+  );
+});
 
 export default function MediaDetailsScreen() {
   const router = useRouter();
@@ -48,6 +123,7 @@ export default function MediaDetailsScreen() {
   const [artistPage, setArtistPage] = useState(0);
   const [hasMoreSongs, setHasMoreSongs] = useState(true);
   const [totalSongs, setTotalSongs] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
 
   const { handleTrackSelect, musicQueue, currentTrack, isPlaying } = useContext(MusicPlayerContext);
   const { isLiked, toggleLike } = useLikedSongs();
@@ -113,7 +189,14 @@ export default function MediaDetailsScreen() {
       }
     };
 
+    const checkIfSaved = async () => {
+      const savedKey = `saved_${mediaType}_${mediaId}`;
+      const saved = await AsyncStorage.getItem(savedKey);
+      setIsSaved(!!saved);
+    };
+
     fetchDetails();
+    checkIfSaved();
     return () => {
       isMounted = false;
     };
@@ -122,6 +205,31 @@ export default function MediaDetailsScreen() {
   const handlePlayAll = () => {
     if (tracks.length > 0) {
       handleTrackSelect(tracks[0], tracks, 0);
+    }
+  };
+
+  const handleShufflePlay = () => {
+    if (tracks.length > 0) {
+      const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+      const randomIndex = Math.floor(Math.random() * shuffled.length);
+      handleTrackSelect(shuffled[randomIndex], shuffled, randomIndex);
+    }
+  };
+
+  const handleToggleSave = async () => {
+    const savedKey = `saved_${mediaType}_${mediaId}`;
+    if (isSaved) {
+      await AsyncStorage.removeItem(savedKey);
+      setIsSaved(false);
+    } else {
+      await AsyncStorage.setItem(savedKey, JSON.stringify({
+        type: mediaType,
+        id: mediaId,
+        title,
+        image: coverImage,
+        totalSongs,
+      }));
+      setIsSaved(true);
     }
   };
 
@@ -159,52 +267,34 @@ export default function MediaDetailsScreen() {
         handleBackPress();
         return true;
       });
+      const checkSavedStatus = async () => {
+        const savedKey = `saved_${mediaType}_${mediaId}`;
+        const saved = await AsyncStorage.getItem(savedKey);
+        setIsSaved(!!saved);
+      };
+      checkSavedStatus();
       return () => subscription.remove();
-    }, [handleBackPress])
+    }, [handleBackPress, mediaType, mediaId])
   );
 
-  const renderTrackItem = ({ item, index }: { item: Track; index: number }) => {
+  const renderTrackItem = useCallback(({ item, index }: { item: Track; index: number }) => {
     const isCurrentTrack = currentTrack?.id === item.id;
 
     return (
-      <TouchableOpacity style={[styles.trackItem, { backgroundColor: theme.glass }]} onPress={() => handleTrackSelect(item, tracks, index)}>
-        <Image
-          source={{ uri: MusicAPI.getOptimalImage(item.images) }}
-          style={styles.trackCover}
-          contentFit="cover"
-        />
-        <View style={styles.trackInfo}>
-          <Text style={[styles.trackTitle, { color: theme.textPrimary }, isCurrentTrack && { color: theme.accent }]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={[styles.trackArtist, { color: theme.textSecondary }, isCurrentTrack && { color: theme.accent }]} numberOfLines={1}>
-            {item.artist}
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.iconButton} onPress={() => toggleLike(item)}>
-          <Ionicons
-            name={isLiked(item.id) ? 'heart' : 'heart-outline'}
-            size={20}
-            color={isLiked(item.id) ? theme.accent : theme.textSecondary}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} onPress={() => musicQueue.addToQueue(item)}>
-          <Ionicons
-            name="add-circle-outline"
-            size={20}
-            color={theme.textSecondary}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} onPress={() => handleTrackSelect(item, tracks, index)}>
-          <Ionicons
-            name={isCurrentTrack && isPlaying ? 'pause' : 'play'}
-            size={20}
-            color={isCurrentTrack ? theme.accent : theme.textSecondary}
-          />
-        </TouchableOpacity>
-      </TouchableOpacity>
+      <TrackListItem
+        item={item}
+        index={index}
+        isCurrentTrack={isCurrentTrack}
+        isPlaying={isPlaying}
+        theme={theme}
+        tracks={tracks}
+        onTrackSelect={handleTrackSelect}
+        onToggleLike={toggleLike}
+        onAddToQueue={musicQueue.addToQueue}
+        isLiked={isLiked(item.id)}
+      />
     );
-  };
+  }, [currentTrack?.id, isPlaying, theme, tracks, handleTrackSelect, toggleLike, musicQueue.addToQueue, isLiked]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.base }]}>
@@ -216,7 +306,9 @@ export default function MediaDetailsScreen() {
         <Text style={[styles.headerTitle, { color: theme.textPrimary }]} numberOfLines={1}>
           {title}
         </Text>
-        <View style={styles.backButton} />
+        <TouchableOpacity onPress={handleToggleSave} style={styles.backButton}>
+          <Ionicons name={isSaved ? 'heart' : 'heart-outline'} size={24} color={isSaved ? theme.accent : theme.icon} />
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.heroCard, { backgroundColor: theme.glass, borderColor: theme.glassBorder }]}>
@@ -226,16 +318,19 @@ export default function MediaDetailsScreen() {
           <Text style={[styles.heroTitle, { color: theme.textPrimary }]} numberOfLines={2}>
             {title}
           </Text>
-          <Text style={[styles.heroMeta, { color: theme.textSecondary }]}>
-            {totalSongs} {totalSongs === 1 ? t('media.song') : t('media.songs')}
-          </Text>
         </View>
       </View>
 
-      <TouchableOpacity style={[styles.playAllButton, { backgroundColor: theme.accent }]} onPress={handlePlayAll} disabled={tracks.length === 0}>
-        <Ionicons name="play" size={20} color="#fff" />
-        <Text style={styles.playAllText}>{t('media.play_all')}</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={[styles.playButton, { backgroundColor: theme.accent }]} onPress={handlePlayAll} disabled={tracks.length === 0}>
+          <Ionicons name="play" size={20} color="#fff" />
+          <Text style={[styles.playButtonText, { color: '#fff' }]}>{t('media.play_all')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.playButton, { backgroundColor: theme.glass, borderColor: theme.glassBorder, borderWidth: 1 }]} onPress={handleShufflePlay} disabled={tracks.length === 0}>
+          <Ionicons name="shuffle" size={20} color={theme.icon} />
+          <Text style={[styles.playButtonText, { color: theme.icon }]}>{t('player.shuffle')}</Text>
+        </TouchableOpacity>
+      </View>
 
       {isLoading ? (
         <View style={styles.centerContent}>
@@ -254,6 +349,11 @@ export default function MediaDetailsScreen() {
           renderItem={renderTrackItem}
           contentContainerStyle={styles.listContent}
           style={styles.flatList}
+          getItemLayout={(data, index) => ({ length: 74, offset: 74 * index, index })}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
           ListEmptyComponent={
             <View style={styles.centerContent}>
               <Text style={[styles.helperText, { color: theme.textSecondary }]}>{t('media.no_songs_found', { type: t(`media.${mediaType}`) })}</Text>
@@ -329,9 +429,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 8,
   },
-  playAllButton: {
+  buttonRow: {
+    flexDirection: 'row',
     marginHorizontal: 16,
     marginTop: 14,
+    gap: 12,
+  },
+  playButton: {
+    flex: 1,
     borderRadius: 24,
     paddingVertical: 12,
     alignItems: 'center',
@@ -339,8 +444,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  playAllText: {
-    color: '#fff',
+  playButtonText: {
     fontSize: 15,
     fontWeight: '700',
   },

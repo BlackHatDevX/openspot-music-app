@@ -140,7 +140,8 @@
     "liked_songs": "שירים שאהבתי",
     "downloaded": "הורד",
     "playlists": "הפלייליסטים שלי",
-    "recently_played": "הושמע לאחרונה"
+    "recently_played": "הושמע לאחרונה",
+    "saved": "שמורים"
   },
   "downloads": {
     "downloaded_songs": "שירים שהורדו",
@@ -163,7 +164,9 @@
     "music_provider": "ספק מוזיקה",
     "provider_description": "בחר את שירות הזרמת המוזיקה המועדף עליך.",
     "trending": "טרנדים",
-    "trending_description": "הצג קטע טרנדים בעמוד הבית",
+    "trending_description": "הצג מגמות בדף הבית",
+    "rotating_cover": "כריכה מסתובבת",
+    "rotating_cover_description": "סובב את עטיפת האלבום בעת נגינה",
     "region": "אזור",
     "region_description": "שירים טרנדיים בעמוד הבית משתמשים באזור זה. ברירת מחדל: אוטומטי.",
     "auto": "אוטומטי",

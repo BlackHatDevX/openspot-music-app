@@ -21,7 +21,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeMode, useThemeMode } from '@/hooks/theme-mode';
 import { useApiStatus } from '@/hooks/useApiStatus';
 import { useToast } from '@/hooks/useToast';
-const CURRENT_VERSION = '3.1.3';
+const CURRENT_VERSION = '3.1.4';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/jash-gro/';
 const TELEGRAM_URL = 'https://telegram.dog/deveIoper_x';
 const INSTAGRAM_URL = 'https://www.instagram.com/jash_gro/';
@@ -34,6 +34,7 @@ const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
 const LANGUAGE_KEY = 'openspot_language_v1';
 const PROVIDER_KEY = 'openspot_provider_v1';
 const TRENDING_ENABLED_KEY = 'openspot_trending_enabled_v1';
+const ROTATING_COVER_KEY = 'openspot_rotating_cover_v1';
 
 interface UpdateConfig {
   latest_version: string;
@@ -56,6 +57,7 @@ export default function SettingsScreen() {
   const [language, setLanguage] = useState<string>('en');
   const [provider, setProvider] = useState<string>('saavn');
   const [trendingEnabled, setTrendingEnabled] = useState<boolean>(true);
+  const [rotatingCover, setRotatingCover] = useState<boolean>(true);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [updateConfig, setUpdateConfig] = useState<UpdateConfig | null>(null);
   const [showForceUpdate, setShowForceUpdate] = useState(false);
@@ -204,10 +206,22 @@ export default function SettingsScreen() {
       }
     };
 
+    const loadRotatingCover = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(ROTATING_COVER_KEY);
+        if (stored !== null) {
+          setRotatingCover(stored === 'true');
+        }
+      } catch (error) {
+        console.error('Failed to load rotating cover setting:', error);
+      }
+    };
+
     void loadRegion();
     void loadLanguage();
     void loadProvider();
     void loadTrendingEnabled();
+    void loadRotatingCover();
     void loadRegionOptions();
     void checkForUpdates();
   }, [i18n, checkForUpdates]);
@@ -275,6 +289,15 @@ export default function SettingsScreen() {
       await AsyncStorage.setItem(TRENDING_ENABLED_KEY, String(enabled));
     } catch (error) {
       console.error('Failed to save trending setting:', error);
+    }
+  };
+
+  const handleRotatingCoverToggle = async (enabled: boolean) => {
+    setRotatingCover(enabled);
+    try {
+      await AsyncStorage.setItem(ROTATING_COVER_KEY, String(enabled));
+    } catch (error) {
+      console.error('Failed to save rotating cover setting:', error);
     }
   };
 
@@ -415,6 +438,22 @@ export default function SettingsScreen() {
               activeOpacity={0.8}
             >
               <View style={[styles.toggleThumb, trendingEnabled && styles.toggleThumbOn]} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.cardTitle, { color: theme.textPrimary, marginBottom: 2 }]}>{t('settings.rotating_cover')}</Text>
+              <Text style={[styles.cardText, { color: theme.textSecondary }]}>{t('settings.rotating_cover_description')}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.toggleTrack, { backgroundColor: rotatingCover ? theme.accent : theme.surfaceElevated }]}
+              onPress={() => handleRotatingCoverToggle(!rotatingCover)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.toggleThumb, rotatingCover && styles.toggleThumbOn]} />
             </TouchableOpacity>
           </View>
         </View>

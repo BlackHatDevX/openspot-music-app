@@ -140,7 +140,8 @@
     "liked_songs": "Beğenilen Şarkılar",
     "downloaded": "İndirilenler",
     "playlists": "Çalma Listelerim",
-    "recently_played": "Son Dinlenenler"
+    "recently_played": "Son Dinlenenler",
+    "saved": "Kaydedilenler"
   },
   "downloads": {
     "downloaded_songs": "İndirilen Şarkılar",
@@ -162,8 +163,10 @@
     "version": "Sürüm",
     "music_provider": "Müzik Sağlayıcısı",
     "provider_description": "Tercih ettiğin müzik akış hizmetini seç.",
-    "trending": "Trend",
+    "trending": "Trend Olanlar",
     "trending_description": "Ana sayfada trend bölümünü göster",
+    "rotating_cover": "Dönen Kapak",
+    "rotating_cover_description": "Çalarken albüm kapağını döndür",
     "region": "Bölge",
     "region_description": "Ana sayfadaki trend şarkılar bu bölgeyi kullanır. Varsayılan: Otomatik.",
     "auto": "Otomatik",

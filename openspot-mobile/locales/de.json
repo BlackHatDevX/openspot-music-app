@@ -140,7 +140,8 @@
     "liked_songs": "Gefällt mir",
     "downloaded": "Heruntergeladen",
     "playlists": "Meine Playlists",
-    "recently_played": "Zuletzt gespielt"
+    "recently_played": "Zuletzt gespielt",
+    "saved": "Gespeichert"
   },
   "downloads": {
     "downloaded_songs": "Heruntergeladene Songs",
@@ -163,7 +164,9 @@
     "music_provider": "Musikanbieter",
     "provider_description": "Wähle deinen bevorzugten Musik-Streaming-Dienst.",
     "trending": "Trends",
-    "trending_description": "Zeige Trends auf der Startseite",
+    "trending_description": "Trends-Bereich auf der Startseite anzeigen",
+    "rotating_cover": "Drehendes Cover",
+    "rotating_cover_description": "Album-Cover bei Wiedergabe drehen",
     "region": "Region",
     "region_description": "Trendsongs auf der Startseite verwenden diese Region. Standard: Auto.",
     "auto": "Auto",

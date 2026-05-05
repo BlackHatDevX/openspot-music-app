@@ -140,7 +140,8 @@
     "liked_songs": "Понравившиеся треки",
     "downloaded": "Скачано",
     "playlists": "Мои плейлисты",
-    "recently_played": "Недавно прослушано"
+    "recently_played": "Недавно прослушано",
+    "saved": "Сохраненные"
   },
   "downloads": {
     "downloaded_songs": "Скачанные треки",
@@ -163,7 +164,9 @@
     "music_provider": "Музыкальный провайдер",
     "provider_description": "Выберите предпочитаемый стриминговый сервис.",
     "trending": "Тренды",
-    "trending_description": "Показывать раздел трендов на главной",
+    "trending_description": "Показывать тренды на главной",
+    "rotating_cover": "Вращающаяся Обложка",
+    "rotating_cover_description": "Вращать обложку при воспроизведении",
     "region": "Регион",
     "region_description": "Трендовые треки на главной используют этот регион. По умолчанию: Авто.",
     "auto": "Авто",

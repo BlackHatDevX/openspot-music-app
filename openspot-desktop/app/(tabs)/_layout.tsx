@@ -80,7 +80,7 @@ export default function TabLayout() {
 
   const [updateConfig, setUpdateConfig] = useState<UpdateConfig | null>(null);
   const [showForceUpdate, setShowForceUpdate] = useState(false);
-  const currentVersion = Constants.expoConfig?.version ?? '3.1.3';
+  const currentVersion = Constants.expoConfig?.version ?? '3.1.4';
 
   const compareVersions = (v1: string, v2: string): number => {
     const parts1 = v1.split('.').map(Number);
@@ -201,7 +201,6 @@ export default function TabLayout() {
 
   useEffect(() => {
     if (!isOffline) return;
-    setIsPlaying(false);
     if (!pathname?.includes('/downloads')) {
       router.replace('/downloads');
     }
