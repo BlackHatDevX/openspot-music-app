@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>OpenSpot Music · Stream & Download High‑Quality Music, Free</title>
+    <meta name="description" content="Stream and download high-quality music for free. No ads, no login required. Available for Android, iOS, Windows, macOS, and Linux.">
+    <meta name="keywords" content="music streaming, free music, download music, OpenSpot, music app, no ads, offline music, high quality audio, spotify alternative">
+    <meta name="theme-color" content="#191414">
+    <meta name="author" content="Jash Gro">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="https://blackhatdevx.github.io/openspot-music-app/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://blackhatdevx.github.io/openspot-music-app/">
+    <meta property="og:title" content="OpenSpot Music · Free Music Streaming & Downloads">
+    <meta property="og:description" content="Stream and download high-quality music for free. No ads, no login required. Available for Android, iOS, Windows, macOS, and Linux.">
+    <meta property="og:image" content="https://blackhatdevx.github.io/openspot-music-app/icon.png">
+    <meta property="og:site_name" content="OpenSpot Music">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://blackhatdevx.github.io/openspot-music-app/">
+    <meta property="twitter:title" content="OpenSpot Music · Free Music Streaming & Downloads">
+    <meta property="twitter:description" content="Stream and download high-quality music for free. No ads, no login required. Available for Android, iOS, Windows, macOS, and Linux.">
+    <meta property="twitter:image" content="https://blackhatdevx.github.io/openspot-music-app/icon.png">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* CSS variables - dark mode only */
+        :root {
+            --primary: #1DB954;
+            --primary-hover: #2be06c;
+            --primary-soft: rgba(29, 185, 84, 0.18);
+            --accent-blue: #6ea8fe;
+            --text-primary: #f1f3f5;
+            --text-secondary: #b9c3cf;
+            --text-muted: #7e8b9c;
+            --bg-surface: #121212;
+            --bg-elevated: #1e1e1e;
+            --bg-card: #1e1e1e;
+            --border-light: #2a2e35;
+            --shadow-sm: 0 8px 20px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 20px 32px -8px rgba(0, 0, 0, 0.5);
+            --hero-gradient: linear-gradient(125deg, #0f2b1a 0%, #1a1e24 45%, #121212 100%);
+            --hero-overlay: radial-gradient(circle at 20% 30%, rgba(29, 185, 84, 0.15) 0%, transparent 70%);
+            --code-bg: #2c2f36;
+            --modal-warning-bg: #2e2a1f;
+            --modal-warning-border: #b87c1f;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            line-height: 1.5;
+            transition: background 0.25s ease, color 0.2s ease;
+            scroll-behavior: smooth;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            backdrop-filter: blur(14px);
+            background: rgba(18, 18, 18, 0.92);
+            border-bottom: 1px solid var(--border-light);
+            z-index: 1000;
+            transition: all 0.2s;
+        }
+
+        .nav-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0.8rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 700;
+            font-size: 1.4rem;
+            letter-spacing: -0.3px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: var(--primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .logo-icon.large {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+        }
+
+        .logo-text {
+            background: linear-gradient(135deg, var(--primary), #2ad66d);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.8rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .github-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--text-primary);
+            color: var(--bg-surface) !important;
+            padding: 0.5rem 1.1rem;
+            border-radius: 40px;
+            font-weight: 600;
+        }
+
+        .github-link:hover {
+            background: var(--primary);
+            color: white !important;
+        }
+
+        .theme-toggle {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-light);
+            border-radius: 60px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle i {
+            font-size: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: var(--hero-gradient);
+            position: relative;
+            overflow: hidden;
+            padding-top: 80px;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: var(--hero-overlay);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin: 1.5rem 0 2rem;
+            max-width: 540px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.8rem 1.8rem;
+            border-radius: 60px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(29, 185, 84, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px -8px rgba(29, 185, 84, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1.5px solid var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-soft);
+        }
+
+        /* phone mockup */
+        .phone-mockup {
+            width: 280px;
+            height: 560px;
+            background: #111;
+            border-radius: 36px;
+            padding: 10px;
+            box-shadow: 0 30px 40px -20px rgba(0, 0, 0, 0.4);
+            margin: 0 auto;
+            transition: transform 0.3s;
+        }
+
+        .phone-mockup:hover {
+            transform: scale(1.02) rotate(0.5deg);
+        }
+
+        .screen {
+            background: linear-gradient(145deg, #1f2b3c, #15202b);
+            border-radius: 28px;
+            height: 100%;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .player-controls {
+            text-align: center;
+        }
+
+        .album-art {
+            width: 110px;
+            height: 110px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 24px;
+            margin: 0 auto 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .album-art i {
+            font-size: 3rem;
+            color: var(--primary);
+        }
+
+        .track-title {
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.25rem;
+        }
+
+        .track-artist {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-bar {
+            background: rgba(255,255,255,0.2);
+            height: 4px;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 1.8rem;
+        }
+        .progress {
+            width: 47%;
+            background: var(--primary);
+            height: 4px;
+            border-radius: 4px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            color: white;
+        }
+        .control.play {
+            background: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        /* sections */
+        section {
+            padding: 5rem 0;
+        }
+
+        .section-title {
+            font-size: 2.3rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card, .download-card {
+            background: var(--bg-card);
+            border-radius: 28px;
+            padding: 2rem;
+            border: 1px solid var(--border-light);
+            transition: all 0.25s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .feature-card:hover, .download-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary-soft);
+        }
+
+        .feature-icon {
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.8rem;
+        }
+
+        .platform-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .install-note code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        .ios-buttons {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .about-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2.5rem;
+        }
+
+        .app-row {
+            display: flex;
+            gap: 1rem;
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: 20px;
+            margin-top: 1rem;
+            border: 1px solid var(--border-light);
+        }
+
+        footer {
+            background: var(--bg-elevated);
+            border-top: 1px solid var(--border-light);
+            padding: 3rem 0 2rem;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        /* modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+        }
+        .modal-content {
+            position: relative;
+            max-width: 880px;
+            width: 90%;
+            max-height: 85vh;
+            background: var(--bg-surface);
+            border-radius: 32px;
+            overflow-y: auto;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-lg);
+            animation: modalSlide 0.25s ease;
+        }
+        @keyframes modalSlide {
+            from { opacity: 0; transform: scale(0.96) translateY(10px);}
+            to { opacity: 1; transform: scale(1) translateY(0);}
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-light);
+            background: var(--bg-elevated);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .modal-body {
+            padding: 2rem;
+        }
+        .warning-box {
+            background: var(--modal-warning-bg);
+            border-left: 4px solid var(--modal-warning-border);
+            padding: 1rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+        .step {
+            margin-bottom: 2rem;
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-light);
+        }
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .step-number {
+            width: 38px;
+            height: 38px;
+            background: var(--primary);
+            border-radius: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: white;
+        }
+        .requirements-list li {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.8rem;
+        }
+        .modal .btn {
+            margin-top: 0.5rem;
+        }
+        @media (max-width: 800px) {
+            .hero-content { grid-template-columns: 1fr; text-align: center; }
+            .hero-title { justify-content: center; }
+            .about-content { grid-template-columns: 1fr; }
+            .nav-links a:not(.github-link, .theme-toggle) { display: none; }
+            .container { padding: 0 1.2rem; }
+            .hero-title { font-size: 2.5rem; }
+        }
+        @media (max-width: 500px) {
+            .phone-mockup { width: 240px; height: 480px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="hero" id="home">
+    <div class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <img src="icon.png" alt="OpenSpot Music App Logo - Free Music Streaming" class="logo-icon" width="32" height="32">
+                <span class="logo-text">OpenSpot</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#downloads">Downloads</a>
+                <a href="#about">About</a>
+                <a href="#" id="ios-guide-link">iOS Guide</a>
+                <a href="https://github.com/BlackHatDevX/openspot-music-app" target="_blank" class="github-link">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="container hero-content">
+        <div class="hero-text">
+            <h1 class="hero-title">
+                <div class="logo-icon large"><i class="fas fa-headphones"></i></div>
+                OpenSpot Music
+            </h1>
+            <p class="hero-subtitle">Stream & download high-quality music, free, no ads, no login. Your music, your way.</p>
+            <div class="hero-buttons">
+                <a href="#downloads" class="btn btn-primary"><i class="fas fa-download"></i> Download Now</a>
+                <a href="https://github.com/BlackHatDevX/openspot-music-app" target="_blank" class="btn btn-secondary"><i class="fab fa-github"></i> GitHub</a>
+            </div>
+        </div>
+        <div class="hero-image">
+            <div class="phone-mockup">
+                <div class="screen" style="position:relative;overflow:hidden;">
+                    <video id="heroVideo" src="video.webm" autoplay loop muted playsinline style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:28px;"></video>
+                    <button id="videoMuteBtn" style="position:absolute;bottom:12px;right:12px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(4px);">
+                        <i id="muteIcon" class="fas fa-volume-xmark" style="color:white;font-size:14px;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<section id="features">
+    <div class="container">
+        <h2 class="section-title"><i class="fas fa-sparkle"></i> Why OpenSpot?</h2>
+        <div class="features-grid">
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-headphones"></i></div><h3>High-Quality Audio</h3><p>Crystal clear streaming up to 320kbps, no compromise.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-download"></i></div><h3>Offline Mode</h3><p>Download tracks & listen anywhere, anytime.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-heart"></i></div><h3>Smart playlists</h3><p>Save favorites and build custom libraries.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-ban"></i></div><h3>Zero login</h3><p>Open app → play music. No signup walls.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-gift"></i></div><h3>100% free & ad-free</h3><p>No subscriptions, no ads, forever.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-sync-alt"></i></div><h3>Background play</h3><p>Listen while multitasking, close the app? music continues.</p></div>
+        </div>
+    </div>
+</section>
+
+<section id="downloads" class="downloads" style="background: var(--bg-elevated);">
+    <div class="container">
+        <h2 class="section-title"><i class="fas fa-download"></i> Downloads</h2>
+        <div class="platform-section">
+            <h3 style="text-align:center; margin-bottom:2rem;"><i class="fas fa-mobile-alt"></i> Mobile</h3>
+            <div class="download-grid">
+                <div class="download-card"><div class="platform-icon"><i class="fab fa-android"></i></div><h4>Android</h4><p>APK (arm64 + universal)</p><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.apk" class="btn btn-primary" target="_blank">Download APK</a></div>
+                <div class="download-card"><div class="platform-icon"><i class="fab fa-apple"></i></div><h4>iOS (IPA)</h4><p>Unsigned IPA, sideload required</p><div class="ios-buttons"><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.ipa" class="btn btn-secondary" target="_blank">Download IPA</a><button class="btn btn-outline ios-guide-trigger" style="background:transparent;">📘 Installation Guide</button></div></div>
+            </div>
+        </div>
+        <div class="platform-section">
+            <h3 style="text-align:center; margin:2rem 0 1.5rem;"><i class="fas fa-desktop"></i> Desktop</h3>
+            <div class="download-grid">
+                <div class="download-card"><div class="platform-icon"><i class="fab fa-apple"></i></div><h4>macOS</h4><p>Apple Silicon + Intel</p><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.dmg" class="btn btn-primary">Download DMG</a><small class="install-note"><code>xattr -rd com.apple.quarantine /Applications/OpenSpot.app</code></small></div>
+                <div class="download-card"><div class="platform-icon"><i class="fab fa-windows"></i></div><h4>Windows</h4><p>EXE installer</p><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.exe" class="btn btn-primary">Download EXE</a></div>
+                <div class="download-card"><div class="platform-icon"><i class="fab fa-linux"></i></div><h4>Linux</h4><p>DEB + AppImage</p><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.deb" class="btn btn-primary">.deb</a><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.AppImage" style="margin-left:0.5rem;" class="btn btn-secondary">AppImage</a></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="about">
+    <div class="container">
+        <h2 class="section-title"><i class="fas fa-circle-info"></i> About OpenSpot</h2>
+        <div class="about-content">
+            <div><p>OpenSpot is a modern open-source music streaming app built for freedom. No tracking, no ads, just pure listening. Available across mobile & desktop with feature parity.</p><div class="app-row"><i class="fas fa-mobile-alt" style="font-size:1.5rem;"></i><div><strong>Mobile:</strong> React Native + Expo, offline DB, background play</div></div><div class="app-row"><i class="fas fa-laptop-code"></i><div><strong>Desktop:</strong> Tauri + React (lightweight, fast)</div></div></div>
+            <div class="tech-stack"><h3><i class="fas fa-cube"></i> Tech Stack</h3><div class="tech-grid"><div>✅ TypeScript 95% • React • Tauri</div><div>🎵 Expo AV • Material-UI</div><div>📦 100% Open Source (MIT)</div></div></div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <div><div class="logo" style="margin-bottom:1rem;"><img src="icon.png" alt="OpenSpot Music App Logo - Free Music Streaming" class="logo-icon" width="32" height="32"><span class="logo-text">OpenSpot</span></div><p>Music without limits · forever free</p></div>
+            <div><h4 style="color:var(--text-primary);margin-bottom:0.5rem;">Community</h4><a href="https://t.me/openspot_music" target="_blank" style="color:var(--accent-blue);text-decoration:none;">Telegram</a><br><a href="https://github.com/BlackHatDevX/openspot-music-app/issues" target="_blank" style="color:var(--accent-blue);text-decoration:none;">Report Issue</a></div>
+            <div><h4 style="color:var(--text-primary);margin-bottom:0.5rem;">Author</h4><p style="color:var(--text-secondary);">Jash Gro</p><div><a href="https://github.com/BlackHatDevX" target="_blank" style="color:var(--accent-blue);text-decoration:none;">GitHub</a> <span style="color:var(--text-muted);">•</span> <a href="https://linkedin.com/in/jash-gro/" target="_blank" style="color:var(--accent-blue);text-decoration:none;">LinkedIn</a></div></div>
+        </div>
+        <div class="footer-bottom" style="text-align:center; margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border-light);">© 2026 OpenSpot Music — MIT License</div>
+    </div>
+</footer>
+
+<!-- iOS MODAL -->
+<div id="ios-modal" class="modal">
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal-content">
+        <div class="modal-header"><h2><i class="fab fa-apple"></i> iOS Installation Guide</h2><button class="modal-close" id="closeModalBtn"><i class="fas fa-times"></i></button></div>
+        <div class="modal-body">
+            <div class="warning-box"><i class="fas fa-exclamation-triangle"></i><div><strong>Unsigned IPA — sideload only</strong><br>The iOS build is distributed as an unsigned IPA and must be sideloaded using third-party tools. Requires a free Apple ID. App expires after 7 days (free dev certificate).</div></div>
+
+            <div class="step"><div class="step-header"><div class="step-number">1</div><h4>Recommended: SideStore</h4></div><p>SideStore is the recommended sideloading tool.</p><div class="ios-buttons"><a href="https://sidestore.io/" target="_blank" class="btn btn-secondary">SideStore Website</a><a href="https://docs.sidestore.io/" target="_blank" class="btn btn-secondary">SideStore Docs</a></div><p style="margin-top:1rem;"><strong>Steps:</strong></p><ol style="margin-left:1.5rem;color:var(--text-secondary);"><li>Install SideStore.</li><li>Complete the initial pairing (requires a computer, one-time setup).</li><li>Add OpenSpot by pasting the apps.json URL into SideStore sources.</li><li>Install the app directly from SideStore.</li></ol></div>
+
+            <div class="step"><div class="step-header"><div class="step-number">2</div><h4>apps.json Feed</h4></div><p>Add this source URL to SideStore (or compatible tools):</p><code style="display:block;background:var(--code-bg);padding:0.75rem;border-radius:12px;margin:0.5rem 0;font-size:0.85rem;word-break:break-all;">https://raw.githubusercontent.com/BlackHatDevX/openspot-music-app/main/apps.json</code><p style="color:var(--text-secondary);"><strong>Benefits:</strong> Direct installation, easy updates, no manual IPA downloads.</p></div>
+
+            <div class="step"><div class="step-header"><div class="step-number">3</div><h4>Alternative: AltStore</h4></div><p><strong>Steps for AltStore:</strong></p><ol style="margin-left:1.5rem;color:var(--text-secondary);"><li>Install <a href="https://altstore.io/" target="_blank" style="color:var(--accent-blue);">AltStore</a> on your device.</li><li>Download the latest IPA from the <a href="https://github.com/BlackHatDevX/openspot-music-app/releases/latest" target="_blank" style="color:var(--accent-blue);">releases page</a>.</li><li>Open AltStore, go to <strong>My Apps</strong>, then tap the <strong>+</strong> button.</li><li>Select the downloaded IPA and install.</li></ol></div>
+
+            <div class="warning-box" style="margin-top:1rem;"><i class="fas fa-info-circle"></i><div><strong>Note:</strong> With a free Apple ID, apps expire after <strong>7 days</strong> and must be refreshed. Initial setup may require a computer. These limitations are due to Apple's sideloading restrictions.</div></div>
+
+            <div class="help-section"><h3> Need help?</h3><div class="help-buttons"><a href="https://t.me/openspot_music" class="btn btn-primary"><i class="fab fa-telegram"></i> Telegram Support</a><a href="https://github.com/BlackHatDevX/openspot-music-app/issues" class="btn btn-secondary">GitHub Issues</a></div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // --- MODAL logic (iOS guide)
+        const modal = document.getElementById('ios-modal');
+        const openTriggers = document.querySelectorAll('#ios-guide-link, .ios-guide-trigger');
+        const closeBtn = document.getElementById('closeModalBtn');
+        const overlay = document.getElementById('modalOverlay');
+
+        function openModal() {
+            if(modal) modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeModal() {
+            if(modal) modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        if(openTriggers.length) {
+            openTriggers.forEach(trigger => {
+                trigger.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openModal();
+                });
+            });
+        }
+        if(closeBtn) closeBtn.addEventListener('click', closeModal);
+        if(overlay) overlay.addEventListener('click', closeModal);
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape' && modal && modal.classList.contains('active')) closeModal();
+        });
+
+        // smooth scroll for internal links
+        document.querySelectorAll('a[href^="#"]:not([href="#"])').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const targetId = this.getAttribute('href');
+                if(targetId === '#') return;
+                const targetElem = document.querySelector(targetId);
+                if(targetElem) {
+                    e.preventDefault();
+                    targetElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // fix potential iOS modal overflow
+        window.addEventListener('resize', () => {});
+
+        // Video mute toggle
+        const video = document.getElementById('heroVideo');
+        const muteBtn = document.getElementById('videoMuteBtn');
+        const muteIcon = document.getElementById('muteIcon');
+        if(video && muteBtn) {
+            muteBtn.addEventListener('click', () => {
+                video.muted = !video.muted;
+                muteIcon.className = video.muted ? 'fas fa-volume-xmark' : 'fas fa-volume-high';
+            });
+        }
+    })();
+</script>
+
+<!-- JSON-LD Structured Data for SEO -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "OpenSpot Music",
+    "applicationCategory": "MusicApplication",
+    "operatingSystem": "Android, iOS, Windows, macOS, Linux",
+    "softwareVersion": "3.1.4",
+    "description": "Free music streaming and download app. Stream high-quality music without ads or login requirements.",
+    "url": "https://blackhatdevx.github.io/openspot-music-app/",
+    "downloadUrl": "https://github.com/BlackHatDevX/openspot-music-app/releases",
+    "author": {
+        "@type": "Person",
+        "name": "Jash Gro",
+        "url": "https://github.com/BlackHatDevX"
+    },
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "150"
+    },
+    "featureList": "High-quality audio streaming, Offline downloads, No ads, No login required, Background playback, Cross-platform support"
+}
+</script>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "OpenSpot Music - Free Music Streaming & Downloads",
+    "description": "Stream and download high-quality music for free. No ads, no login required. Available for Android, iOS, Windows, macOS, and Linux.",
+    "url": "https://blackhatdevx.github.io/openspot-music-app/",
+    "mainEntity": {
+        "@type": "SoftwareApplication",
+        "name": "OpenSpot Music"
+    }
+}
+</script>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "OpenSpot Music",
+    "url": "https://blackhatdevx.github.io/openspot-music-app/",
+    "logo": "https://blackhatdevx.github.io/openspot-music-app/icon.png",
+    "sameAs": [
+        "https://github.com/BlackHatDevX/openspot-music-app",
+        "https://t.me/openspot_music"
+    ]
+}
+</script>
+</body>
+</html>
