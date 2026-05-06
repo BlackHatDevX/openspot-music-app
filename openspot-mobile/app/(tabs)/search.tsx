@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useRef } from 'react';
 import { View, StyleSheet, StatusBar, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSearch } from '@/hooks/useSearch';
@@ -17,16 +17,24 @@ export default function SearchScreen() {
   const isDark = colorScheme !== 'light';
   const background = isDark ? '#050505' : '#f5efe6';
   const params = useLocalSearchParams();
+  const lastQRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (params.q && typeof params.q === 'string') {
-      searchState.setQuery(params.q);
-      if (params.type && typeof params.type === 'string') {
-        searchState.setSearchType(params.type as 'track' | 'album' | 'artist' | 'playlist');
-      }
-      searchState.searchTracks(params.q, params.type as 'track' | 'album' | 'artist' | 'playlist');
+    const q = params.q;
+    if (!q || typeof q !== 'string') {
+      lastQRef.current = undefined;
+      return;
     }
-  }, [params, searchState]);
+    if (q === lastQRef.current) return;
+
+    lastQRef.current = q;
+    searchState.setQuery(q);
+    const type = params.type;
+    if (type && typeof type === 'string') {
+      searchState.setSearchType(type as 'track' | 'album' | 'artist' | 'playlist');
+    }
+    searchState.searchTracks(q, type as 'track' | 'album' | 'artist' | 'playlist');
+  }, [params.q, params.type, searchState]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: background }]}>
