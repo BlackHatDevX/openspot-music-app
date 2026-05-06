@@ -226,11 +226,10 @@
             flex-wrap: wrap;
         }
 
-        .hero-subtitle {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            margin: 1.5rem 0 2rem;
-            max-width: 540px;
+        .modal .btn-secondary[style*="--hover-bg"]:hover {
+            background: var(--hover-bg) !important;
+            color: var(--hover-color) !important;
+            border-color: var(--hover-bg) !important;
         }
 
         .btn {
@@ -674,7 +673,7 @@
         <div class="modal-body">
             <div class="warning-box"><i class="fas fa-exclamation-triangle"></i><div><strong>Unsigned IPA — sideload only</strong><br>The iOS build is distributed as an unsigned IPA and must be sideloaded using third-party tools. Requires a free Apple ID. App expires after 7 days (free dev certificate).</div></div>
 
-            <div class="step"><div class="step-header"><div class="step-number">1</div><h4>Recommended: SideStore</h4></div><p>SideStore is the recommended sideloading tool.</p><div class="ios-buttons"><a href="https://sidestore.io/" target="_blank" class="btn btn-secondary">SideStore Website</a><a href="https://docs.sidestore.io/" target="_blank" class="btn btn-secondary">SideStore Docs</a></div><p style="margin-top:1rem;"><strong>Steps:</strong></p><ol style="margin-left:1.5rem;color:var(--text-secondary);"><li>Install SideStore.</li><li>Complete the initial pairing (requires a computer, one-time setup).</li><li>Add OpenSpot by pasting the apps.json URL into SideStore sources.</li><li>Install the app directly from SideStore.</li></ol></div>
+            <div class="step"><div class="step-header"><div class="step-number">1</div><h4>Recommended: SideStore</h4></div><p>SideStore is the recommended sideloading tool.</p><div class="ios-buttons"><a href="https://sidestore.io/" target="_blank" class="btn btn-secondary" style="--hover-bg:#1DB954;--hover-color:#191414;">SideStore Website</a><a href="https://docs.sidestore.io/" target="_blank" class="btn btn-secondary" style="--hover-bg:#1DB954;--hover-color:#191414;">SideStore Docs</a></div><p style="margin-top:1rem;"><strong>Steps:</strong></p><ol style="margin-left:1.5rem;color:var(--text-secondary);"><li>Install SideStore.</li><li>Complete the initial pairing (requires a computer, one-time setup).</li><li>Add OpenSpot by pasting the apps.json URL into SideStore sources.</li><li>Install the app directly from SideStore.</li></ol></div>
 
             <div class="step"><div class="step-header"><div class="step-number">2</div><h4>apps.json Feed</h4></div><p>Add this source URL to SideStore (or compatible tools):</p><code style="display:block;background:var(--code-bg);padding:0.75rem;border-radius:12px;margin:0.5rem 0;font-size:0.85rem;word-break:break-all;">https://raw.githubusercontent.com/BlackHatDevX/openspot-music-app/main/apps.json</code><p style="color:var(--text-secondary);"><strong>Benefits:</strong> Direct installation, easy updates, no manual IPA downloads.</p></div>
 
@@ -682,7 +681,7 @@
 
             <div class="warning-box" style="margin-top:1rem;"><i class="fas fa-info-circle"></i><div><strong>Note:</strong> With a free Apple ID, apps expire after <strong>7 days</strong> and must be refreshed. Initial setup may require a computer. These limitations are due to Apple's sideloading restrictions.</div></div>
 
-            <div class="help-section"><h3> Need help?</h3><div class="help-buttons"><a href="https://t.me/openspot_music" class="btn btn-primary"><i class="fab fa-telegram"></i> Telegram Support</a><a href="https://github.com/BlackHatDevX/openspot-music-app/issues" class="btn btn-secondary">GitHub Issues</a></div></div>
+            <div class="help-section"><h3> Need help?</h3><div class="help-buttons"><a href="https://t.me/openspot_music" class="btn btn-primary"><i class="fab fa-telegram"></i> Telegram Support</a><a href="https://github.com/BlackHatDevX/openspot-music-app/issues" class="btn btn-secondary" style="--hover-bg:#1DB954;--hover-color:#191414;">GitHub Issues</a></div></div>
         </div>
     </div>
 </div>
