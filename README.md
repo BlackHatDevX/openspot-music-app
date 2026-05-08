@@ -41,7 +41,8 @@
 
 ---
 
-<img width="1376" height="768" alt="IMG_20260428_163423" src="https://github.com/user-attachments/assets/0cd68ebc-d8c9-4d49-8266-7f8be9690d25" />
+<img width="1774" height="887" alt="ChatGPT Image May 8, 2026, 10_37_03 AM" src="https://github.com/user-attachments/assets/62838963-6ad1-42a0-8050-062a023bf76e" />
+
 
 <div align="center">
 
