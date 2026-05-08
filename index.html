@@ -271,7 +271,7 @@
 
         /* phone mockup */
         .phone-mockup {
-            width: 280px;
+            width: 270px;
             height: 560px;
             background: #111;
             border-radius: 36px;
@@ -597,11 +597,15 @@
             </div>
         </div>
         <div class="hero-image">
-            <div class="phone-mockup">
-                <div class="screen" style="position:relative;overflow:hidden;">
-                    <video id="heroVideo" src="video.webm" autoplay loop muted playsinline style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:28px;"></video>
-                    <button id="videoMuteBtn" style="position:absolute;bottom:12px;right:12px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(4px);">
-                        <i id="muteIcon" class="fas fa-volume-xmark" style="color:white;font-size:14px;"></i>
+            <div class="phone-mockup" style="overflow:hidden;">
+                <div class="screen" style="position:relative;overflow:hidden;padding:0;border-radius:28px;">
+                    <iframe src="https://www.youtube.com/embed/kSBNWKSVJlc?autoplay=1&mute=1&loop=1&playlist=kSBNWKSVJlc&hd=1&vq=hd1080&controls=0&modestbranding=1&disablekb=1&rel=0&fs=0&iv_load_policy=3&showinfo=0&playsinline=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;transform:scale(1.24);transform-origin:center;"></iframe>
+                    <a href="https://www.youtube.com/shorts/kSBNWKSVJlc" target="_blank" style="position:absolute;inset:0;z-index:5;text-decoration:none;"></a>
+                    <a href="https://www.youtube.com/shorts/kSBNWKSVJlc?action=like" target="_blank" style="position:absolute;bottom:12px;right:12px;width:28px;height:28px;background:rgba(0,0,0,0.6);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(4px);text-decoration:none;">
+                        <i class="far fa-heart" style="color:white;font-size:12px;"></i>
+                    </a>
+                    <button id="unmuteBtn" style="position:absolute;bottom:12px;left:12px;width:28px;height:28px;background:rgba(0,0,0,0.6);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(4px);border:none;cursor:pointer;">
+                        <i class="fas fa-volume-xmark" style="color:white;font-size:12px;"></i>
                     </button>
                 </div>
             </div>
@@ -636,7 +640,7 @@
         <div class="platform-section">
             <h3 style="text-align:center; margin:2rem 0 1.5rem;"><i class="fas fa-desktop"></i> Desktop</h3>
             <div class="download-grid">
-                <div class="download-card"><div class="platform-icon"><i class="fab fa-apple"></i></div><h4>macOS</h4><p>Apple Silicon + Intel</p><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.dmg" class="btn btn-primary">Download DMG</a><small class="install-note"><code>xattr -rd com.apple.quarantine /Applications/OpenSpot.app</code></small></div>
+                <div class="download-card"><div class="platform-icon"><i class="fab fa-apple"></i></div><h4>macOS</h4><p>Apple Silicon + Intel</p><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.dmg" class="btn btn-primary">Download DMG</a><button id="macInstallBtn" style="margin-top:0.75rem;width:100%;padding:0.6rem;background:var(--code-bg);border:1px solid var(--border-light);border-radius:8px;color:var(--text-primary);font-size:0.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;" onclick="const cmd='curl -L -o /tmp/OpenSpot.dmg https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.dmg && hdiutil attach /tmp/OpenSpot.dmg && cp -R /Volumes/OpenSpot/OpenSpot.app /Applications/ && hdiutil detach /Volumes/OpenSpot && xattr -rd com.apple.quarantine /Applications/OpenSpot.app && open /Applications/OpenSpot.app';navigator.clipboard.writeText(cmd);const btn=document.getElementById('macInstallBtn');const original=btn.innerHTML;btn.innerHTML='<i class=\'fas fa-check\'></i> Command copied — paste in Terminal';btn.style.background='var(--primary-soft)';btn.style.color='var(--primary)';setTimeout(()=>{btn.innerHTML=original;btn.style.background='';btn.style.color='';},2500);"><i class="fas fa-terminal"></i> One-click install</button></div>
                 <div class="download-card"><div class="platform-icon"><i class="fab fa-windows"></i></div><h4>Windows</h4><p>EXE installer</p><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.exe" class="btn btn-primary">Download EXE</a></div>
                 <div class="download-card"><div class="platform-icon"><i class="fab fa-linux"></i></div><h4>Linux</h4><p>DEB + AppImage</p><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.deb" class="btn btn-primary">.deb</a><a href="https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.4/OpenSpot-3.1.4-release.AppImage" style="margin-left:0.5rem;" class="btn btn-secondary">AppImage</a></div>
             </div>
@@ -730,20 +734,30 @@
             });
         });
 
+        // Unmute button for YouTube embed
+        const unmuteBtn = document.getElementById('unmuteBtn');
+        let isMuted = true;
+        if(unmuteBtn) {
+            unmuteBtn.addEventListener('click', () => {
+                const iframe = document.querySelector('.screen iframe');
+                if(iframe) {
+                    const src = iframe.src;
+                    isMuted = !isMuted;
+                    if(isMuted) {
+                        iframe.src = src.replace('&mute=0', '&mute=1').replace('mute=0&', 'mute=1&');
+                        unmuteBtn.querySelector('i').className = 'fas fa-volume-xmark';
+                    } else {
+                        iframe.src = src.replace('&mute=1', '&mute=0').replace('mute=1&', 'mute=0&');
+                        unmuteBtn.querySelector('i').className = 'fas fa-volume-high';
+                    }
+                }
+            });
+        }
+
         // fix potential iOS modal overflow
         window.addEventListener('resize', () => {});
 
-        // Video mute toggle
-        const video = document.getElementById('heroVideo');
-        const muteBtn = document.getElementById('videoMuteBtn');
-        const muteIcon = document.getElementById('muteIcon');
-        if(video && muteBtn) {
-            muteBtn.addEventListener('click', () => {
-                video.muted = !video.muted;
-                muteIcon.className = video.muted ? 'fas fa-volume-xmark' : 'fas fa-volume-high';
-            });
-        }
-    })();
+            })();
 </script>
 
 <!-- JSON-LD Structured Data for SEO -->
