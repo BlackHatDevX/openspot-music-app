@@ -134,8 +134,8 @@ This monorepo delivers **two fully independent music streaming apps** built with
 
 | App | Platforms | Framework | Location |
 |-----|-----------|-----------|----------|
-| 📱 **Mobile** | Android, iOS *(coming)* | React Native + Expo | `openspot-mobile/` |
-| 🖥️ **Desktop** | macOS, Windows/Linux *(coming)* | Tauri + React | `openspot-desktop/` |
+| 📱 **Mobile** | Android, iOS | React Native + Expo | `openspot-mobile/` |
+| 🖥️ **Desktop** | macOS, Windows/Linux | Tauri + React | `openspot-desktop/` |
 
 Both apps share the same powerful streaming core, giving you a seamless listening experience across all your devices.
 
