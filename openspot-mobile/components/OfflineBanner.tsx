@@ -21,7 +21,7 @@ export function OfflineBanner() {
     <View style={[styles.root, { backgroundColor: theme.bg, borderColor: theme.border, top: insets.top }]}>
       <Ionicons name="cloud-offline-outline" size={16} color={theme.text} />
       <Text style={[styles.text, { color: theme.text }]}>
-        You&apos;re offline. Showing downloads.
+        You&apos;re offline.
       </Text>
     </View>
   );

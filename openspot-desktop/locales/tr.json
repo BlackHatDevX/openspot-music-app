@@ -9,7 +9,8 @@
     "search": "Ara",
     "back": "Geri",
     "close": "Kapat",
-    "done": "Tamam"
+    "done": "Tamam",
+    "show_more": "Daha fazla göster"
   },
   "tabs": {
     "home": "Ana Sayfa",
@@ -34,7 +35,14 @@
     "your_country": "ülken",
     "welcome_title": "OpenSpot'a Hoş Geldin",
     "welcome_subtitle": "Tercihlerini bir kez ayarla. Trendler arka planda yüklenir.",
-    "continue": "Devam Et"
+    "continue": "Devam Et",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "Şimdi Çalıyor",

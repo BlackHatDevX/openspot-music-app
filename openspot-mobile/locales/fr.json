@@ -34,7 +34,14 @@
     "your_country": "ton pays",
     "welcome_title": "Bienvenue sur OpenSpot",
     "welcome_subtitle": "Configure tes préférences une fois. Les tendances se chargent en arrière-plan.",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "En cours de lecture",
@@ -66,6 +73,7 @@
     "artist": "Artiste",
     "playlist": "Playlist",
     "loading_more": "Chargement...",
+    "show_more": "Afficher plus",
     "searching": "Recherche en cours...",
     "search_error": "Erreur de recherche",
     "no_results": "Aucun résultat",

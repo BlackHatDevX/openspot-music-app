@@ -23,11 +23,15 @@ const buildApiUrl = (endpoint: string, params: Record<string, string | number> =
   url.searchParams.append('_marker', '0');
   url.searchParams.append('api_version', '4');
   url.searchParams.append('ctx', 'web6dot0');
-  
+
   Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, String(value));
+    if (key === 'ctx') {
+      url.searchParams.set('ctx', String(value));
+    } else {
+      url.searchParams.append(key, String(value));
+    }
   });
-  
+
   return url.toString();
 };
 
@@ -174,11 +178,6 @@ export class MusicApi {
   private static inFlightSearch = new Map<string, Promise<SearchResponse>>();
   private static inFlightStream = new Map<string, Promise<string>>();
 
-  private static getPageFromOffset(offset: number, limit: number): number {
-    const safeOffset = Math.max(0, offset);
-    return Math.floor(safeOffset / limit) + 1;
-  }
-
   private static getCachedSearch(key: string): SearchResponse | null {
     const entry = this.searchCache.get(key);
     if (!entry) return null;
@@ -208,10 +207,10 @@ export class MusicApi {
   }
 
   static async search(params: SearchParams): Promise<SearchResponse> {
-    if (params.type === 'album') return this.searchAlbums(params.q, params.offset || 0, 20);
-    if (params.type === 'artist') return this.searchArtists(params.q, params.offset || 0, 20);
-    if (params.type === 'playlist') return this.searchPlaylists(params.q, params.offset || 0, 20);
-    return this.searchTracks(params.q, params.offset || 0, 20);
+    if (params.type === 'album') return this.searchAlbums(params.q, params.page || 1, 20);
+    if (params.type === 'artist') return this.searchArtists(params.q, params.page || 1, 20);
+    if (params.type === 'playlist') return this.searchPlaylists(params.q, params.page || 1, 20);
+    return this.searchTracks(params.q, params.page || 1, 20);
   }
 
   static async getAlbumSongs(albumId: string): Promise<Track[]> {
@@ -230,7 +229,7 @@ export class MusicApi {
       const data = await fetchJioSaavn('artist.getArtistMoreSong', { 
         artistId, 
         page: page + 1, 
-        n_song: 20 
+        n_song: 50 
       });
       const songs = this.extractSongsFromEntityResponse(data);
       const total = data?.topSongs?.total || data?.total_songs || data?.song_count || songs.length;
@@ -245,24 +244,49 @@ export class MusicApi {
   }
 
   static async getPlaylistSongs(playlistId: string): Promise<Track[]> {
+    return this.getPlaylistSongsPaginated(playlistId, 0).then((r) => r.tracks);
+  }
+
+  static async getPlaylistSongsPaginated(playlistId: string, page = 0): Promise<{ tracks: Track[]; total: number }> {
     try {
-      const data = await fetchJioSaavn('playlist.getDetails', { listid: playlistId });
+      const data = await fetchJioSaavn('webapi.get', { 
+        token: playlistId,
+        type: 'playlist',
+        p: page,
+        n_song: 50,
+        ctx: 'wap6dot0',
+      });
       const songs = this.extractSongsFromEntityResponse(data);
-      return songs.map((item: any) => this.transformSongToTrack(item));
+      if (!songs || songs.length === 0) {
+        if (page === 0) {
+          const all = await this.getPlaylistSongs(playlistId);
+          return { tracks: all, total: all.length };
+        }
+        return { tracks: [], total: 0 };
+      }
+      const total = data?.song_count || data?.topSongs?.total || data?.total || songs.length;
+      return {
+        tracks: songs.map((item: any) => this.transformSongToTrack(item)),
+        total: parseInt(String(total)) || songs.length,
+      };
     } catch (error) {
-      console.error('Api playlist songs error:', error);
+      console.error('Api playlist songs paginated error:', error);
+      if (page === 0) {
+        const all = await this.getPlaylistSongs(playlistId);
+        return { tracks: all, total: all.length };
+      }
       throw new Error(`MusicApi playlist songs failed: ${isAxiosError(error) ? error.message : 'unknown'}`);
     }
   }
 
-  static async searchTracks(query: string, offset = 0, limit = 20): Promise<SearchResponse> {
-    const key = `tracks_${query}_${offset}_${limit}`;
+  static async searchTracks(query: string, page = 1, limit = 20): Promise<SearchResponse> {
+    const key = `tracks_${query}_${page}_${limit}`;
     const cached = this.getCachedSearch(key);
     if (cached) return cached;
 
     if (this.inFlightSearch.has(key)) return this.inFlightSearch.get(key)!;
 
-    const promise = this.performSearch(query, offset, limit).then(result => {
+    const promise = this.performSearch(query, page, limit).then(result => {
       this.setCachedSearch(key, result);
       return result;
     }).finally(() => this.inFlightSearch.delete(key));
@@ -271,14 +295,14 @@ export class MusicApi {
     return promise;
   }
 
-  static async searchArtists(query: string, offset = 0, limit = 20): Promise<SearchResponse> {
-    const key = `artists_${query}_${offset}_${limit}`;
+  static async searchArtists(query: string, page = 1, limit = 20): Promise<SearchResponse> {
+    const key = `artists_${query}_${page}_${limit}`;
     const cached = this.getCachedSearch(key);
     if (cached) return cached;
 
     if (this.inFlightSearch.has(key)) return this.inFlightSearch.get(key)!;
 
-    const promise = this.performArtistSearch(query, offset, limit).then(result => {
+    const promise = this.performArtistSearch(query, page, limit).then(result => {
       this.setCachedSearch(key, result);
       return result;
     }).finally(() => this.inFlightSearch.delete(key));
@@ -287,14 +311,14 @@ export class MusicApi {
     return promise;
   }
 
-  static async searchPlaylists(query: string, offset = 0, limit = 20): Promise<SearchResponse> {
-    const key = `playlists_${query}_${offset}_${limit}`;
+  static async searchPlaylists(query: string, page = 1, limit = 20): Promise<SearchResponse> {
+    const key = `playlists_${query}_${page}_${limit}`;
     const cached = this.getCachedSearch(key);
     if (cached) return cached;
 
     if (this.inFlightSearch.has(key)) return this.inFlightSearch.get(key)!;
 
-    const promise = this.performPlaylistSearch(query, offset, limit).then(result => {
+    const promise = this.performPlaylistSearch(query, page, limit).then(result => {
       this.setCachedSearch(key, result);
       return result;
     }).finally(() => this.inFlightSearch.delete(key));
@@ -303,14 +327,14 @@ export class MusicApi {
     return promise;
   }
 
-  static async searchAlbums(query: string, offset = 0, limit = 20): Promise<SearchResponse> {
-    const key = `albums_${query}_${offset}_${limit}`;
+  static async searchAlbums(query: string, page = 1, limit = 20): Promise<SearchResponse> {
+    const key = `albums_${query}_${page}_${limit}`;
     const cached = this.getCachedSearch(key);
     if (cached) return cached;
 
     if (this.inFlightSearch.has(key)) return this.inFlightSearch.get(key)!;
 
-    const promise = this.performAlbumSearch(query, offset, limit).then(result => {
+    const promise = this.performAlbumSearch(query, page, limit).then(result => {
       this.setCachedSearch(key, result);
       return result;
     }).finally(() => this.inFlightSearch.delete(key));
@@ -335,11 +359,11 @@ export class MusicApi {
     return promise;
   }
 
-  private static async performSearch(query: string, offset: number, limit: number): Promise<SearchResponse> {
+  private static async performSearch(query: string, page: number, limit: number): Promise<SearchResponse> {
     try {
       const data = await fetchJioSaavn('search.getResults', { 
         q: query, 
-        p: this.getPageFromOffset(offset, limit), 
+        p: page, 
         n: limit 
       });
       return this.transformSearchResponse(data);
@@ -349,11 +373,11 @@ export class MusicApi {
     }
   }
 
-  private static async performArtistSearch(query: string, offset: number, limit: number): Promise<SearchResponse> {
+  private static async performArtistSearch(query: string, page: number, limit: number): Promise<SearchResponse> {
     try {
       const data = await fetchJioSaavn('search.getArtistResults', { 
         q: query, 
-        p: this.getPageFromOffset(offset, limit), 
+        p: page, 
         n: limit 
       });
       return this.transformArtistSearchResponse(data);
@@ -363,11 +387,11 @@ export class MusicApi {
     }
   }
 
-  private static async performPlaylistSearch(query: string, offset: number, limit: number): Promise<SearchResponse> {
+  private static async performPlaylistSearch(query: string, page: number, limit: number): Promise<SearchResponse> {
     try {
       const data = await fetchJioSaavn('search.getPlaylistResults', { 
         q: query, 
-        p: this.getPageFromOffset(offset, limit), 
+        p: page, 
         n: limit 
       });
       return this.transformPlaylistSearchResponse(data);
@@ -377,11 +401,11 @@ export class MusicApi {
     }
   }
 
-  private static async performAlbumSearch(query: string, offset: number, limit: number): Promise<SearchResponse> {
+  private static async performAlbumSearch(query: string, page: number, limit: number): Promise<SearchResponse> {
     try {
       const data = await fetchJioSaavn('search.getAlbumResults', { 
         q: query, 
-        p: this.getPageFromOffset(offset, limit), 
+        p: page, 
         n: limit 
       });
       return this.transformAlbumSearchResponse(data);
@@ -425,6 +449,7 @@ export class MusicApi {
     const songs = data?.response?.songs || data?.songs || data?.results || [];
     if (!Array.isArray(songs) || songs.length === 0) return this.emptyResponse();
     const tracks: Track[] = songs.map((item: any) => this.transformSongToTrack(item));
+    const total = parseInt(data?.response?.total ?? data?.total ?? tracks.length);
     return {
       tracks,
       albums: [],
@@ -432,8 +457,8 @@ export class MusicApi {
       playlists: [],
       pagination: {
         offset: 0,
-        total: tracks.length,
-        hasMore: false,
+        total,
+        hasMore: total > tracks.length,
       },
     };
   }
@@ -442,6 +467,7 @@ export class MusicApi {
     const albums = data?.response?.albums || data?.albums || data?.results || [];
     if (!Array.isArray(albums) || albums.length === 0) return this.emptyResponse();
     const transformedAlbums: Album[] = albums.map((item: any) => this.transformAlbumToAlbum(item));
+    const total = parseInt(data?.response?.total ?? data?.total ?? transformedAlbums.length);
     return {
       tracks: [],
       albums: transformedAlbums,
@@ -449,8 +475,8 @@ export class MusicApi {
       playlists: [],
       pagination: {
         offset: 0,
-        total: transformedAlbums.length,
-        hasMore: false,
+        total,
+        hasMore: total > transformedAlbums.length,
       },
     };
   }
@@ -458,7 +484,11 @@ export class MusicApi {
   private static transformArtistSearchResponse(data: any): SearchResponse {
     const artists = data?.response?.artists || data?.artists || data?.results || [];
     if (!Array.isArray(artists) || artists.length === 0) return this.emptyResponse();
-    const transformedArtists: Artist[] = artists.map((item: any) => this.transformArtist(item));
+    const transformedArtists: Artist[] = artists
+      .map((item: any) => this.transformArtist(item))
+      .filter((a) => a.images.large || a.images.thumbnail || a.images.small);
+    if (transformedArtists.length === 0) return this.emptyResponse();
+    const total = parseInt(data?.response?.total ?? data?.total ?? transformedArtists.length);
     return {
       tracks: [],
       albums: [],
@@ -466,8 +496,8 @@ export class MusicApi {
       playlists: [],
       pagination: {
         offset: 0,
-        total: transformedArtists.length,
-        hasMore: false,
+        total,
+        hasMore: total > transformedArtists.length,
       },
     };
   }
@@ -476,6 +506,7 @@ export class MusicApi {
     const playlists = data?.response?.playlists || data?.playlists || data?.results || [];
     if (!Array.isArray(playlists) || playlists.length === 0) return this.emptyResponse();
     const transformedPlaylists: PlaylistSearchItem[] = playlists.map((item: any) => this.transformPlaylist(item));
+    const total = parseInt(data?.response?.total ?? data?.total ?? transformedPlaylists.length);
     return {
       tracks: [],
       albums: [],
@@ -483,8 +514,8 @@ export class MusicApi {
       playlists: transformedPlaylists,
       pagination: {
         offset: 0,
-        total: transformedPlaylists.length,
-        hasMore: false,
+        total,
+        hasMore: total > transformedPlaylists.length,
       },
     };
   }

@@ -34,7 +34,14 @@
     "your_country": "ваша страна",
     "welcome_title": "Добро пожаловать в OpenSpot",
     "welcome_subtitle": "Настройте предпочтения один раз. Тренды загружаются в фоновом режиме.",
-    "continue": "Продолжить"
+    "continue": "Продолжить",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "Сейчас играет",
@@ -66,6 +73,7 @@
     "artist": "Артист",
     "playlist": "Плейлист",
     "loading_more": "Загрузка...",
+    "show_more": "Показать еще",
     "searching": "Поиск...",
     "search_error": "Ошибка поиска",
     "no_results": "Ничего не найдено",

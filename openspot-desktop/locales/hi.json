@@ -9,7 +9,8 @@
     "search": "खोजें",
     "back": "पीछे",
     "close": "बंद करें",
-    "done": "हो गया"
+    "done": "हो गया",
+    "show_more": "और दिखाएं"
   },
   "tabs": {
     "home": "होम",
@@ -34,7 +35,14 @@
     "your_country": "आपका देश",
     "welcome_title": "OpenSpot में आपका स्वागत है",
     "welcome_subtitle": "अपनी प्राथमिकताएँ एक बार सेट करें। ट्रेंडिंग बैकग्राउंड में लोड होता है।",
-    "continue": "जारी रखें"
+    "continue": "जारी रखें",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "अब चल रहा है",

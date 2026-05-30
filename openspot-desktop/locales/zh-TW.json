@@ -9,7 +9,8 @@
     "search": "搜尋",
     "back": "返回",
     "close": "關閉",
-    "done": "完成"
+    "done": "完成",
+    "show_more": "顯示更多"
   },
   "tabs": {
     "home": "首頁",
@@ -34,7 +35,14 @@
     "your_country": "你的國家/地區",
     "welcome_title": "歡迎使用 OpenSpot",
     "welcome_subtitle": "設定一次偏好即可。熱門內容將在背景載入。",
-    "continue": "繼續"
+    "continue": "繼續",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "正在播放",

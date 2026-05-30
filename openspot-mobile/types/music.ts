@@ -133,6 +133,6 @@ export interface SearchResponse {
 
 export interface SearchParams {
   q: string;
-  offset?: number;
+  page?: number;
   type?: 'track' | 'album' | 'artist' | 'playlist';
 } 

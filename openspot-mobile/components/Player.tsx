@@ -579,7 +579,7 @@ export function Player({
       const downloadResumable = FileSystem.createDownloadResumable(
         audioUrl,
         fileUri,
-        {},
+        { sessionType: FileSystem.FileSystemSessionType.BACKGROUND },
         (downloadProgress) => {
           if (isMountedRef.current && !signal.aborted) {
             const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;

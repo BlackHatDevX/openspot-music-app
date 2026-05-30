@@ -13,6 +13,7 @@ interface PlaylistCardProps {
   onShuffle?: () => void;
   onPlay?: () => void;
   onLongPress?: () => void;
+  onDelete?: () => void;
   theme?: {
     surface: string;
     border: string;
@@ -23,7 +24,7 @@ interface PlaylistCardProps {
   };
 }
 
-export function PlaylistCard({ playlist, onPress, onShuffle, onPlay, onLongPress, theme }: PlaylistCardProps) {
+export function PlaylistCard({ playlist, onPress, onShuffle, onPlay, onLongPress, onDelete, theme }: PlaylistCardProps) {
   const { t } = useTranslation();
   return (
     <View style={[styles.card, theme && { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -41,6 +42,11 @@ export function PlaylistCard({ playlist, onPress, onShuffle, onPlay, onLongPress
         </View>
       </TouchableOpacity>
       <View style={styles.actionRow}>
+        {onDelete && (
+          <TouchableOpacity style={styles.iconButton} onPress={onDelete}>
+            <Ionicons name="trash" size={18} color="#ff4444" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.iconButton} onPress={onShuffle}>
           <Ionicons name="shuffle" size={20} color={theme?.icon ?? "#fff"} />
         </TouchableOpacity>

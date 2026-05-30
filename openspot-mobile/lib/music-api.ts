@@ -37,12 +37,12 @@ export class MusicAPI {
     return MusicApi.search(params);
   }
 
-  static async searchTracks(query: string, offset: number = 0, limit: number = 20): Promise<SearchResponse> {
+  static async searchTracks(query: string, page: number = 1, limit: number = 20): Promise<SearchResponse> {
     const provider = await this.getProvider();
     if (provider === 'ytmusic') {
       return YTMusicAPI.search({ q: query, type: 'track' });
     }
-    return MusicApi.searchTracks(query, offset, limit);
+    return MusicApi.searchTracks(query, page, limit);
   }
 
   static async getStreamUrl(trackId: string, trackOrProvider?: Track | 'saavn' | 'ytmusic'): Promise<string> {
@@ -88,6 +88,10 @@ export class MusicAPI {
     
     if (provider === 'ytmusic') return MusicApi.getPlaylistSongs(playlistId);
     return MusicApi.getPlaylistSongs(playlistId);
+  }
+
+  static async getPlaylistSongsPaginated(playlistId: string, page = 0): Promise<{ tracks: Track[]; total: number }> {
+    return MusicApi.getPlaylistSongsPaginated(playlistId, page);
   }
 
   static async getRecentlyPlayed(): Promise<Track[]> {

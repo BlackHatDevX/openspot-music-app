@@ -90,6 +90,16 @@ export class MusicAPI {
     return MusicApi.getPlaylistSongs(playlistId);
   }
 
+  static async getPlaylistSongsPaginated(playlistId: string, page = 0): Promise<{ tracks: Track[]; total: number }> {
+    const provider = await this.getProvider();
+    
+    if (provider === 'ytmusic') {
+      const all = await MusicApi.getPlaylistSongs(playlistId);
+      return { tracks: all, total: all.length };
+    }
+    return MusicApi.getPlaylistSongsPaginated(playlistId, page);
+  }
+
   static async getRecentlyPlayed(): Promise<Track[]> {
     try {
       const stored = await AsyncStorage.getItem(this.recentlyPlayedStorageKey);

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, StatusBar, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSearch } from '@/hooks/useSearch';
@@ -17,15 +17,19 @@ import { COUNTRY_NAMES } from '@/constants/countryNames';
 import { useTranslation } from 'react-i18next';
 import { useThemeMode, ThemeMode } from '@/hooks/theme-mode';
 import { useConnectivity } from '@/hooks/useConnectivity';
+import { GreetingHeader } from '@/components/GreetingHeader';
+import { QuickActions } from '@/components/QuickActions';
+import { SectionHeader } from '@/components/SectionHeader';
 
-const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/trending.json';
+const KWORD_URL = 'https://kworb.net/spotify/';
+const REGION_URL_MAP_KEY = 'openspot_region_url_map_v1';
+const REGION_URL_MAP_TIMESTAMP_KEY = 'openspot_region_url_map_ts_v1';
+const REGION_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const TRENDING_TRACKS_CACHE_KEY = 'TRENDING_TRACKS_CACHE_V1';
 const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
 const LANGUAGE_KEY = 'openspot_language_v1';
 const FIRST_RUN_SETUP_KEY = 'openspot_first_run_setup_done_v1';
 const TRENDING_ENABLED_KEY = 'openspot_trending_enabled_v1';
-
-type TrendingDataType = Record<string, string[]>;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -56,8 +60,7 @@ export default function HomeScreen() {
   const [detectedCountry, setDetectedCountry] = useState('your country');
   const [regionOverride, setRegionOverride] = useState<string>('auto');
   const [countryLoading, setCountryLoading] = useState(true);
-  const [trendingData, setTrendingData] = useState<TrendingDataType | null>(null);
-  const [trendingDataLoading, setTrendingDataLoading] = useState(true);
+  const [regionUrlMap, setRegionUrlMap] = useState<Record<string, string>>({});
   const [trendingCache, setTrendingCache] = useState<Record<string, Track>>({});
   const [recentlyPlayedTracks, setRecentlyPlayedTracks] = useState<Track[]>([]);
   const [showFirstRunSetup, setShowFirstRunSetup] = useState(false);
@@ -69,6 +72,7 @@ export default function HomeScreen() {
   const { isOffline } = useConnectivity();
   const wasOfflineRef = React.useRef(false);
   const [trendingEnabled, setTrendingEnabled] = useState<boolean>(true);
+  const scrollRef = useRef<ScrollView>(null);
 
   const languageOptions: { label: string; value: string; nativeLabel: string }[] = [
     { label: 'English', value: 'en', nativeLabel: 'English' },
@@ -86,12 +90,18 @@ export default function HomeScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const cacheStr = await AsyncStorage.getItem(TRENDING_TRACKS_CACHE_KEY);
+        const [cacheStr, mapStr] = await Promise.all([
+          AsyncStorage.getItem(TRENDING_TRACKS_CACHE_KEY),
+          AsyncStorage.getItem(REGION_URL_MAP_KEY),
+        ]);
         if (cacheStr) {
           setTrendingCache(JSON.parse(cacheStr));
         }
+        if (mapStr) {
+          setRegionUrlMap(JSON.parse(mapStr));
+        }
       } catch (e) {
-        console.error('Failed to load trending tracks cache:', e);
+        console.error('Failed to load cached data:', e);
       }
     })();
   }, []);
@@ -143,14 +153,24 @@ export default function HomeScreen() {
     if (!isOffline && wasOfflineRef.current) {
       void (async () => {
         try {
-          setTrendingDataLoading(true);
-          const res = await fetch(TRENDING_URL);
-          const data = await res.json();
-          setTrendingData(data);
+          const timestamp = await AsyncStorage.getItem(REGION_URL_MAP_TIMESTAMP_KEY);
+          const isStale = !timestamp || Date.now() - parseInt(timestamp, 10) > REGION_CACHE_TTL_MS;
+          if (!isStale) return;
+
+          const res = await fetch(KWORD_URL);
+          const html = await res.text();
+          const map: Record<string, string> = {};
+          const regex = /<tr><td class="mp text">([^<]+)<\/td>\s*<td class="mp text">[\s\S]*?<a href="([^"]+)">Weekly<\/a>/g;
+          let match;
+          while ((match = regex.exec(html)) !== null) {
+            const name = match[1].trim();
+            map[name] = `https://kworb.net/spotify/${match[2]}`;
+          }
+          setRegionUrlMap(map);
+          await AsyncStorage.setItem(REGION_URL_MAP_KEY, JSON.stringify(map));
+          await AsyncStorage.setItem(REGION_URL_MAP_TIMESTAMP_KEY, Date.now().toString());
         } catch (e) {
-          console.error('Trending data re-fetch error:', e);
-        } finally {
-          setTrendingDataLoading(false);
+          console.error('Region URL map re-fetch error:', e);
         }
       })();
       if (regionOverride === 'auto') {
@@ -214,15 +234,24 @@ export default function HomeScreen() {
   useEffect(() => {
     (async () => {
       try {
-        setTrendingDataLoading(true);
-        const res = await fetch(TRENDING_URL);
-        const data = await res.json();
-        setTrendingData(data);
+        const timestamp = await AsyncStorage.getItem(REGION_URL_MAP_TIMESTAMP_KEY);
+        const isStale = !timestamp || Date.now() - parseInt(timestamp, 10) > REGION_CACHE_TTL_MS;
+        if (!isStale) return;
+
+        const res = await fetch(KWORD_URL);
+        const html = await res.text();
+        const map: Record<string, string> = {};
+        const regex = /<tr><td class="mp text">([^<]+)<\/td>\s*<td class="mp text">[\s\S]*?<a href="([^"]+)">Weekly<\/a>/g;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+          const name = match[1].trim();
+          map[name] = `https://kworb.net/spotify/${match[2]}`;
+        }
+        setRegionUrlMap(map);
+        await AsyncStorage.setItem(REGION_URL_MAP_KEY, JSON.stringify(map));
+        await AsyncStorage.setItem(REGION_URL_MAP_TIMESTAMP_KEY, Date.now().toString());
       } catch (e) {
-        console.error('Trending data fetch error:', e);
-        setTrendingData(null);
-      } finally {
-        setTrendingDataLoading(false);
+        console.error('Failed to fetch region URL map:', e);
       }
     })();
   }, []);
@@ -254,25 +283,26 @@ export default function HomeScreen() {
 
   useEffect(() => {
     let isMounted = true;
+
     const fetchTrendingTracks = async (list: string[]) => {
-      
+
       let cache = { ...trendingCache };
       const tracks: Track[] = [];
       let cacheChanged = false;
-      
-      
+
+
       for (const entry of list) {
         if (cache[entry]) {
           tracks.push(cache[entry]);
         }
       }
-      
-      
+
+
       if (isMounted) {
         setTrendingTracks([...tracks]);
       }
-      
-      
+
+
       for (const entry of list) {
         if (!cache[entry]) {
           try {
@@ -281,8 +311,8 @@ export default function HomeScreen() {
               cache[entry] = res.tracks[0];
               tracks.push(res.tracks[0]);
               cacheChanged = true;
-              
-              
+
+
               if (isMounted) {
                 setTrendingTracks([...tracks]);
               }
@@ -294,7 +324,7 @@ export default function HomeScreen() {
           }
         }
       }
-      
+
       if (cacheChanged) {
         setTrendingCache(cache);
         try {
@@ -304,28 +334,42 @@ export default function HomeScreen() {
         }
       }
     };
-    if (!countryLoading && !trendingDataLoading && trendingData && activeRegion && activeRegion !== 'your country') {
-      if (activeRegion.toLowerCase() === 'global' && trendingData.global) {
-        fetchTrendingTracks(trendingData.global);
-        return () => { isMounted = false; };
-      }
 
-      const activeRegionKey = activeRegion.toLowerCase();
-      const trendingKey = Object.keys(trendingData).find(
-        k => k.toLowerCase() === activeRegionKey
-      );
-      if (trendingKey && trendingData[trendingKey]) {
-        fetchTrendingTracks(trendingData[trendingKey]);
-      } else if (trendingData.global) {
-        fetchTrendingTracks(trendingData.global);
+    const fetchKworbWeekly = async (weeklyUrl: string) => {
+      try {
+        const res = await fetch(weeklyUrl);
+        const html = await res.text();
+        const trackRegex = /<td class="text mp"><div><a href="[^"]+">([^<]+)<\/a> - <a href="[^"]+">([^<]+)<\/a>/g;
+        const searchQueries: string[] = [];
+        let match;
+        while ((match = trackRegex.exec(html)) !== null) {
+          searchQueries.push(match[2].trim());
+        }
+        fetchTrendingTracks(searchQueries.slice(0, 50));
+      } catch (e) {
+        console.error('Failed to fetch kworb weekly chart:', e);
+        if (isMounted) setTrendingTracks([]);
+      }
+    };
+
+    if (!countryLoading && activeRegion && activeRegion !== 'your country') {
+      const activeKey = activeRegion.toLowerCase();
+      const regionKey = Object.keys(regionUrlMap).find(k => k.toLowerCase() === activeKey);
+      if (regionKey && regionUrlMap[regionKey]) {
+        fetchKworbWeekly(regionUrlMap[regionKey]);
       } else {
-        setTrendingTracks([]);
+        const globalKey = Object.keys(regionUrlMap).find(k => k.toLowerCase() === 'global');
+        if (globalKey && regionUrlMap[globalKey]) {
+          fetchKworbWeekly(regionUrlMap[globalKey]);
+        } else {
+          if (isMounted) setTrendingTracks([]);
+        }
       }
     } else {
-      setTrendingTracks([]);
+      if (isMounted) setTrendingTracks([]);
     }
     return () => { isMounted = false; };
-  }, [activeRegion, countryLoading, trendingData, trendingDataLoading, trendingCache]);
+  }, [activeRegion, countryLoading, regionUrlMap, trendingCache]);
 
   const handleViewChange = (view: 'home' | 'search') => {
     setCurrentView(view);
@@ -370,56 +414,20 @@ export default function HomeScreen() {
     [handleTrackSelect]
   );
 
-  // eslint-disable-next-line react/display-name
-  const renderRecentTrackItem = (tracks: Track[]) => ({ item, index }: { item: Track; index: number }) => {
-    const isCurrentTrack = currentTrack?.id === item.id;
-    return (
-      <TouchableOpacity
-        style={[
-          styles.recentTrackItem,
-          { backgroundColor: theme.surface, borderColor: theme.border },
-          isCurrentTrack && [styles.currentTrackItem, { borderColor: theme.accent }],
-        ]}
-        onPress={() => handleHomeTrackSelect(item, tracks, index)}
-        activeOpacity={0.85}
-      >
-        <Image
-          source={{ uri: MusicAPI.getOptimalImage(item.images) }}
-          style={styles.recentAlbumCover}
-          contentFit="cover"
-        />
-        <View style={styles.recentTrackInfo}>
-          <Text style={[styles.recentTrackTitle, { color: theme.textPrimary }, isCurrentTrack && { color: theme.accent }]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={[styles.recentTrackArtist, { color: theme.textSecondary }, isCurrentTrack && { color: theme.accent }]} numberOfLines={1}>
-            {item.artist}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.surfaceElevated }]}
-          onPress={() => handleHomeTrackSelect(item, tracks, index)}
-        >
-          <Ionicons
-            name={isCurrentTrack && isPlaying ? 'pause' : 'play'}
-            size={20}
-            color={isCurrentTrack ? theme.accent : theme.textSecondary}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.surfaceElevated, marginLeft: 8 }]}
-          onPress={() => musicQueue.addToQueue(item)}
-        >
-          <Ionicons
-            name="add"
-            size={20}
-            color={theme.textSecondary}
-          />
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
-  };
-  renderRecentTrackItem.displayName = 'renderRecentTrackItem';
+  const handleShuffleLiked = React.useCallback(() => {
+    if (likedTracks.length > 0) {
+      const randomIndex = Math.floor(Math.random() * likedTracks.length);
+      handleHomeTrackSelect(likedTracks[randomIndex], likedTracks, randomIndex);
+    }
+  }, [likedTracks, handleHomeTrackSelect]);
+
+  const handleLibraryNav = React.useCallback(() => {
+    router.push('/library');
+  }, [router]);
+
+  const handleDownloadsNav = React.useCallback(() => {
+    router.push('/downloads');
+  }, [router]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -433,62 +441,81 @@ export default function HomeScreen() {
       />
       <View style={styles.mainContent}>
         {currentView === 'home' ? (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            <View style={[styles.heroCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Text style={[styles.heroEyebrow, { color: theme.accent }]}>{t('home.for_you')}</Text>
-              <Text style={[styles.heroTitle, { color: theme.textPrimary }]}>{t('home.daily_mix_ready')}</Text>
-              <Text style={[styles.heroSubtitle, { color: theme.textSecondary }]}>
-                {t('home.daily_mix_subtitle')}
-              </Text>
-            </View>
+          <ScrollView
+            ref={scrollRef}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <GreetingHeader />
+            <QuickActions
+              onShuffleLiked={handleShuffleLiked}
+              onDownloads={handleDownloadsNav}
+              onLibrary={handleLibraryNav}
+            />
+
             {trendingEnabled && (
-              <HorizontalTrackList
-                title={t('home.trending_in', { region: countryLoading ? '...' : (formattedActiveRegion || t('home.your_country')) })}
-                tracks={trendingTracks}
-                onTrackSelect={handleHomeTrackSelect}
-                isPlaying={isPlaying}
-                currentTrack={currentTrack}
-              />
+              <View>
+                <SectionHeader
+                  title={t('home.trending_in', { region: countryLoading ? '...' : (formattedActiveRegion || t('home.your_country')) })}
+                />
+                {trendingTracks.length > 0 ? (
+                  <HorizontalTrackList
+                    title=""
+                    tracks={trendingTracks}
+                    onTrackSelect={handleHomeTrackSelect}
+                    isPlaying={isPlaying}
+                    currentTrack={currentTrack}
+                  />
+                ) : (
+                  Object.keys(regionUrlMap).length > 0 && (
+                    <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8, marginBottom: 16 }}>
+                      {t('home.loading_trending')}
+                    </Text>
+                  )
+                )}
+              </View>
             )}
-            {trendingEnabled && trendingTracks.length === 0 && !trendingDataLoading && (
-              <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 24 }}>
-                {t('home.loading_trending')}
-              </Text>
-            )}
-            {likedTracks.length > 0 ? (
-              <HorizontalTrackList
-                title={t('home.liked_songs')}
-                tracks={likedTracks}
-                onTrackSelect={handleHomeTrackSelect}
-                isPlaying={isPlaying}
-                currentTrack={currentTrack}
-              />
-            ) : (
-              <View style={styles.emptyLikedSection}>
-                <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('home.liked_songs')}</Text>
-                <View style={[styles.emptyLikedBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+
+            <View style={{ marginTop: 16 }}>
+              <SectionHeader title={t('home.liked_songs')} onSeeAll={handleLibraryNav} />
+              {likedTracks.length > 0 ? (
+                <HorizontalTrackList
+                  title=""
+                  tracks={likedTracks}
+                  onTrackSelect={handleHomeTrackSelect}
+                  isPlaying={isPlaying}
+                  currentTrack={currentTrack}
+                />
+              ) : (
+                <View style={[styles.emptyBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                   <Ionicons name="heart-outline" size={24} color={theme.textSecondary} />
-                  <Text style={[styles.emptyLikedText, { color: theme.textSecondary }]}>
+                  <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
                     {t('home.empty_liked')}
                   </Text>
                 </View>
-              </View>
-            )}
-            <View style={styles.recentSection}>
-              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('home.recently_played')}</Text>
-              {recentlyPlayedTracks.length === 0 ? (
-                <View style={[styles.emptyRecentBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              )}
+            </View>
+
+            <View style={{ marginTop: 16 }}>
+              <SectionHeader title={t('home.continue_listening')} />
+              {recentlyPlayedTracks.length > 0 ? (
+                <HorizontalTrackList
+                  title=""
+                  tracks={recentlyPlayedTracks.slice(0, 10)}
+                  onTrackSelect={handleHomeTrackSelect}
+                  isPlaying={isPlaying}
+                  currentTrack={currentTrack}
+                />
+              ) : (
+                <View style={[styles.emptyBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                   <Ionicons name="time-outline" size={24} color={theme.textSecondary} />
-                  <Text style={[styles.emptyRecentText, { color: theme.textSecondary }]}>
+                  <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
                     {t('home.empty_recent')}
                   </Text>
                 </View>
-              ) : (
-                recentlyPlayedTracks.slice(0, 12).map((item, index) => (
-                  <View key={`recent-${item.id}-${index}`}>{renderRecentTrackItem(recentlyPlayedTracks)({ item, index })}</View>
-                ))
               )}
             </View>
+
             <View style={{ height: 140 }} />
           </ScrollView>
         ) : (
@@ -505,7 +532,7 @@ export default function HomeScreen() {
 
             <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>{t('settings.region')}</Text>
             <View style={styles.setupWrap}>
-              {['auto', ...Object.keys(trendingData || {})].slice(0, 12).map((option) => {
+              {['auto', ...Object.keys(regionUrlMap)].slice(0, 12).map((option) => {
                 const active = setupRegion === option;
                 const label =
                   option === 'auto'
@@ -751,91 +778,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 22,
   },
-  heroCard: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 14,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-  },
-  heroEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.7,
-    marginBottom: 6,
-  },
-  heroTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginLeft: 16,
-    marginTop: 10,
-    marginBottom: 12,
-    letterSpacing: -0.4,
-  },
-  recentSection: {
-    marginTop: 6,
-    paddingHorizontal: 8,
-  },
-  recentTrackItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    marginHorizontal: 8,
-    marginBottom: 10,
-    padding: 10,
-    borderWidth: 1,
-  },
-  currentTrackItem: {
-    borderWidth: 1.5,
-  },
-  recentAlbumCover: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    marginRight: 10,
-  },
-  recentTrackInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  recentTrackTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  recentTrackArtist: {
-    fontSize: 13,
-  },
-  actionButton: {
-    padding: 10,
-    borderRadius: 18,
-  },
-  emptyRecentBox: {
-    marginHorizontal: 8,
-    borderRadius: 14,
-    paddingVertical: 18,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  emptyRecentText: {
-    marginTop: 8,
-    fontSize: 13,
-  },
-  emptyLikedSection: {
-    marginTop: 6,
-  },
-  emptyLikedBox: {
+  emptyBox: {
     marginHorizontal: 16,
     borderRadius: 14,
     paddingVertical: 18,
@@ -843,7 +786,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
   },
-  emptyLikedText: {
+  emptyText: {
     marginTop: 8,
     fontSize: 13,
   },

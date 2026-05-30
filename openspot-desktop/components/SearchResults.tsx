@@ -263,12 +263,20 @@ export function SearchResults({
 
   const renderFooter = () => {
     if (!hasMore) return null;
-    
+
+    if (isLoading) {
+      return (
+        <View style={styles.loadingFooter}>
+          <ActivityIndicator size="small" color="#1DB954" />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('components.loading_more')}</Text>
+        </View>
+      );
+    }
+
     return (
-      <View style={styles.loadingFooter}>
-        <ActivityIndicator size="small" color="#1DB954" />
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>{t('components.loading_more')}</Text>
-      </View>
+      <TouchableOpacity style={styles.showMoreButton} onPress={loadMore} activeOpacity={0.7}>
+        <Text style={styles.showMoreText}>{t('components.show_more')}</Text>
+      </TouchableOpacity>
     );
   };
 
@@ -331,8 +339,6 @@ export function SearchResults({
             : (renderPlaylistItem as any)
         }
         keyExtractor={(item, index) => `${searchType}-${item.id?.toString?.() ?? 'unknown'}-${index}`}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.1}
         ListFooterComponent={renderFooter}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={searchType === 'track' ? styles.listContainer : styles.albumListContainer}
@@ -490,5 +496,18 @@ const styles = StyleSheet.create({
   albumYear: {
     fontSize: 11,
     color: '#666',
+  },
+  showMoreButton: {
+    alignSelf: 'center',
+    backgroundColor: '#1DB954',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    marginVertical: 16,
+  },
+  showMoreText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 }); 

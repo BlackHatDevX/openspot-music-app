@@ -34,7 +34,14 @@
     "your_country": "你的国家/地区",
     "welcome_title": "欢迎使用 OpenSpot",
     "welcome_subtitle": "设置一次偏好即可。热门内容将在后台加载。",
-    "continue": "继续"
+    "continue": "继续",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "正在播放",
@@ -66,6 +73,7 @@
     "artist": "艺人",
     "playlist": "歌单",
     "loading_more": "加载更多...",
+    "show_more": "显示更多",
     "searching": "搜索中...",
     "search_error": "搜索错误",
     "no_results": "未找到结果",

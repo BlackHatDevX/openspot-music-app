@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState, useRef } from 'react';
 import { View, StyleSheet, StatusBar, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSearch } from '@/hooks/useSearch';
@@ -10,7 +10,10 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useLikedSongs } from '@/hooks/useLikedSongs';
 import { HorizontalTrackList } from '@/components/HorizontalTrackList';
-import { useRouter , useFocusEffect } from 'expo-router';
+import { GreetingHeader } from '@/components/GreetingHeader';
+import { QuickActions } from '@/components/QuickActions';
+import { SectionHeader } from '@/components/SectionHeader';
+import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { COUNTRY_NAMES } from '@/constants/countryNames';
@@ -370,56 +373,21 @@ export default function HomeScreen() {
     [handleTrackSelect]
   );
 
-  // eslint-disable-next-line react/display-name
-  const renderRecentTrackItem = (tracks: Track[]) => ({ item, index }: { item: Track; index: number }) => {
-    const isCurrentTrack = currentTrack?.id === item.id;
-    return (
-      <TouchableOpacity
-        style={[
-          styles.recentTrackItem,
-          { backgroundColor: theme.surface, borderColor: theme.border },
-          isCurrentTrack && [styles.currentTrackItem, { borderColor: theme.accent }],
-        ]}
-        onPress={() => handleHomeTrackSelect(item, tracks, index)}
-        activeOpacity={0.85}
-      >
-        <Image
-          source={{ uri: MusicAPI.getOptimalImage(item.images) }}
-          style={styles.recentAlbumCover}
-          contentFit="cover"
-        />
-        <View style={styles.recentTrackInfo}>
-          <Text style={[styles.recentTrackTitle, { color: theme.textPrimary }, isCurrentTrack && { color: theme.accent }]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={[styles.recentTrackArtist, { color: theme.textSecondary }, isCurrentTrack && { color: theme.accent }]} numberOfLines={1}>
-            {item.artist}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.surfaceElevated }]}
-          onPress={() => handleHomeTrackSelect(item, tracks, index)}
-        >
-          <Ionicons
-            name={isCurrentTrack && isPlaying ? 'pause' : 'play'}
-            size={20}
-            color={isCurrentTrack ? theme.accent : theme.textSecondary}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.surfaceElevated, marginLeft: 8 }]}
-          onPress={() => musicQueue.addToQueue(item)}
-        >
-          <Ionicons
-            name="add"
-            size={20}
-            color={theme.textSecondary}
-          />
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
-  };
-  renderRecentTrackItem.displayName = 'renderRecentTrackItem';
+  const handleShuffleLiked = React.useCallback(() => {
+    if (likedTracks.length > 0) {
+      const shuffled = [...likedTracks].sort(() => Math.random() - 0.5);
+      handleTrackSelect(shuffled[0], shuffled, 0);
+    }
+  }, [likedTracks, handleTrackSelect]);
+
+  const handleDownloadsNav = React.useCallback(() => {
+    router.push('/downloads');
+  }, [router]);
+
+  const handleLibraryNav = React.useCallback(() => {
+    router.push('/library');
+  }, [router]);
+
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -434,13 +402,12 @@ export default function HomeScreen() {
       <View style={styles.mainContent}>
         {currentView === 'home' ? (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            <View style={[styles.heroCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Text style={[styles.heroEyebrow, { color: theme.accent }]}>{t('home.for_you')}</Text>
-              <Text style={[styles.heroTitle, { color: theme.textPrimary }]}>{t('home.daily_mix_ready')}</Text>
-              <Text style={[styles.heroSubtitle, { color: theme.textSecondary }]}>
-                {t('home.daily_mix_subtitle')}
-              </Text>
-            </View>
+            <GreetingHeader />
+            <QuickActions
+              onShuffleLiked={handleShuffleLiked}
+              onDownloads={handleDownloadsNav}
+              onLibrary={handleLibraryNav}
+            />
             {trendingEnabled && (
               <HorizontalTrackList
                 title={t('home.trending_in', { region: countryLoading ? '...' : (formattedActiveRegion || t('home.your_country')) })}
@@ -455,38 +422,44 @@ export default function HomeScreen() {
                 {t('home.loading_trending')}
               </Text>
             )}
-            {likedTracks.length > 0 ? (
-              <HorizontalTrackList
-                title={t('home.liked_songs')}
-                tracks={likedTracks}
-                onTrackSelect={handleHomeTrackSelect}
-                isPlaying={isPlaying}
-                currentTrack={currentTrack}
-              />
-            ) : (
-              <View style={styles.emptyLikedSection}>
-                <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('home.liked_songs')}</Text>
-                <View style={[styles.emptyLikedBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+
+            <View style={{ marginTop: 16 }}>
+              <SectionHeader title={t('home.liked_songs')} onSeeAll={handleLibraryNav} />
+              {likedTracks.length > 0 ? (
+                <HorizontalTrackList
+                  title=""
+                  tracks={likedTracks}
+                  onTrackSelect={handleHomeTrackSelect}
+                  isPlaying={isPlaying}
+                  currentTrack={currentTrack}
+                />
+              ) : (
+                <View style={[styles.emptyBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                   <Ionicons name="heart-outline" size={24} color={theme.textSecondary} />
-                  <Text style={[styles.emptyLikedText, { color: theme.textSecondary }]}>
+                  <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
                     {t('home.empty_liked')}
                   </Text>
                 </View>
-              </View>
-            )}
-            <View style={styles.recentSection}>
-              <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('home.recently_played')}</Text>
-              {recentlyPlayedTracks.length === 0 ? (
-                <View style={[styles.emptyRecentBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              )}
+            </View>
+
+            <View style={{ marginTop: 16 }}>
+              <SectionHeader title={t('home.continue_listening')} />
+              {recentlyPlayedTracks.length > 0 ? (
+                <HorizontalTrackList
+                  title=""
+                  tracks={recentlyPlayedTracks.slice(0, 10)}
+                  onTrackSelect={handleHomeTrackSelect}
+                  isPlaying={isPlaying}
+                  currentTrack={currentTrack}
+                />
+              ) : (
+                <View style={[styles.emptyBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                   <Ionicons name="time-outline" size={24} color={theme.textSecondary} />
-                  <Text style={[styles.emptyRecentText, { color: theme.textSecondary }]}>
+                  <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
                     {t('home.empty_recent')}
                   </Text>
                 </View>
-              ) : (
-                recentlyPlayedTracks.slice(0, 12).map((item, index) => (
-                  <View key={`recent-${item.id}-${index}`}>{renderRecentTrackItem(recentlyPlayedTracks)({ item, index })}</View>
-                ))
               )}
             </View>
             <View style={{ height: 140 }} />
@@ -751,100 +724,16 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 22,
   },
-  heroCard: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 14,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-  },
-  heroEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.7,
-    marginBottom: 6,
-  },
-  heroTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginLeft: 16,
-    marginTop: 10,
-    marginBottom: 12,
-    letterSpacing: -0.4,
-  },
-  recentSection: {
-    marginTop: 6,
-    paddingHorizontal: 8,
-  },
-  recentTrackItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    marginHorizontal: 8,
-    marginBottom: 10,
-    padding: 10,
-    borderWidth: 1,
-  },
-  currentTrackItem: {
-    borderWidth: 1.5,
-  },
-  recentAlbumCover: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    marginRight: 10,
-  },
-  recentTrackInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  recentTrackTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  recentTrackArtist: {
-    fontSize: 13,
-  },
-  actionButton: {
-    padding: 10,
-    borderRadius: 18,
-  },
-  emptyRecentBox: {
-    marginHorizontal: 8,
-    borderRadius: 14,
-    paddingVertical: 18,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  emptyRecentText: {
+  emptyText: {
     marginTop: 8,
     fontSize: 13,
   },
-  emptyLikedSection: {
-    marginTop: 6,
-  },
-  emptyLikedBox: {
+  emptyBox: {
     marginHorizontal: 16,
     borderRadius: 14,
     paddingVertical: 18,
     paddingHorizontal: 14,
     borderWidth: 1,
     alignItems: 'center',
-  },
-  emptyLikedText: {
-    marginTop: 8,
-    fontSize: 13,
   },
 });

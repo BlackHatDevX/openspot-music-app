@@ -9,7 +9,8 @@
     "search": "Поиск",
     "back": "Назад",
     "close": "Закрыть",
-    "done": "Готово"
+    "done": "Готово",
+    "show_more": "Показать еще"
   },
   "tabs": {
     "home": "Главная",
@@ -34,7 +35,14 @@
     "your_country": "ваша страна",
     "welcome_title": "Добро пожаловать в OpenSpot",
     "welcome_subtitle": "Настройте предпочтения один раз. Тренды загружаются в фоновом режиме.",
-    "continue": "Продолжить"
+    "continue": "Продолжить",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "Сейчас играет",

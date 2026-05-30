@@ -9,7 +9,8 @@
     "search": "搜索",
     "back": "返回",
     "close": "关闭",
-    "done": "完成"
+    "done": "完成",
+    "show_more": "显示更多"
   },
   "tabs": {
     "home": "主页",
@@ -34,7 +35,14 @@
     "your_country": "你的国家/地区",
     "welcome_title": "欢迎使用 OpenSpot",
     "welcome_subtitle": "设置一次偏好即可。热门内容将在后台加载。",
-    "continue": "继续"
+    "continue": "继续",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "正在播放",

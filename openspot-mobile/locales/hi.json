@@ -34,7 +34,14 @@
     "your_country": "आपका देश",
     "welcome_title": "OpenSpot में आपका स्वागत है",
     "welcome_subtitle": "अपनी प्राथमिकताएँ एक बार सेट करें। ट्रेंडिंग बैकग्राउंड में लोड होता है।",
-    "continue": "जारी रखें"
+    "continue": "जारी रखें",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "अब चल रहा है",
@@ -66,6 +73,7 @@
     "artist": "कलाकार",
     "playlist": "प्लेलिस्ट",
     "loading_more": "और लोड हो रहा...",
+    "show_more": "और दिखाएं",
     "searching": "खोज हो रही है...",
     "search_error": "खोज त्रुटि",
     "no_results": "कोई परिणाम नहीं मिला",

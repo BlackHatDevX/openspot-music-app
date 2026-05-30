@@ -10,6 +10,7 @@ import {
   Modal,
   FlatList,
   Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +23,7 @@ import { ThemeMode, useThemeMode } from '@/hooks/theme-mode';
 import { useApiStatus } from '@/hooks/useApiStatus';
 import { useToast } from '@/hooks/useToast';
 import { openExternalUrl } from '@/lib/tauri-offline';
-const CURRENT_VERSION = '3.1.4';
+const CURRENT_VERSION = '3.1.5';
 const LINKEDIN_URL = 'https://www.linkedin.com/in/jash-gro/';
 const TELEGRAM_URL = 'https://telegram.dog/deveIoper_x';
 const INSTAGRAM_URL = 'https://www.instagram.com/jash_gro/';
@@ -32,6 +33,9 @@ const GITHUB_URL = 'https://github.com/BlackHatDevX';
 const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/update-desktop.json';
 const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/trending.json';
 const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
+const REGION_URL_MAP_KEY = 'openspot_region_url_map_v1';
+const REGION_URL_MAP_TIMESTAMP_KEY = 'openspot_region_url_map_ts_v1';
+const REGION_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const LANGUAGE_KEY = 'openspot_language_v1';
 const PROVIDER_KEY = 'openspot_provider_v1';
 const TRENDING_ENABLED_KEY = 'openspot_trending_enabled_v1';
@@ -60,6 +64,7 @@ export default function SettingsScreen() {
   const [trendingEnabled, setTrendingEnabled] = useState<boolean>(true);
   const [rotatingCover, setRotatingCover] = useState<boolean>(true);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
   const [updateConfig, setUpdateConfig] = useState<UpdateConfig | null>(null);
   const [showForceUpdate, setShowForceUpdate] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
@@ -134,9 +139,22 @@ export default function SettingsScreen() {
       const mergedOptions = ['auto', ...supportedRegions];
       setRegionOptions(mergedOptions);
       setRegion((current) => (mergedOptions.includes(current) ? current : 'auto'));
+      await AsyncStorage.setItem(REGION_URL_MAP_KEY, JSON.stringify(mergedOptions));
+      await AsyncStorage.setItem(REGION_URL_MAP_TIMESTAMP_KEY, Date.now().toString());
     } catch (error) {
       console.error('Failed to load supported regions:', error);
       setRegionOptions(['auto', 'global']);
+    }
+  };
+
+  const refreshRegionOptionsIfStale = async () => {
+    try {
+      const timestamp = await AsyncStorage.getItem(REGION_URL_MAP_TIMESTAMP_KEY);
+      if (!timestamp || Date.now() - parseInt(timestamp, 10) > REGION_CACHE_TTL_MS) {
+        await loadRegionOptions();
+      }
+    } catch {
+      await loadRegionOptions();
     }
   };
 
@@ -223,7 +241,18 @@ export default function SettingsScreen() {
     void loadProvider();
     void loadTrendingEnabled();
     void loadRotatingCover();
-    void loadRegionOptions();
+    void (async () => {
+      try {
+        const cached = await AsyncStorage.getItem(REGION_URL_MAP_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          const merged = ['auto', ...parsed.filter((r: string) => r !== 'auto')];
+          setRegionOptions(merged);
+          setRegion((current) => (merged.includes(current) ? current : 'auto'));
+        }
+      } catch {}
+      await refreshRegionOptionsIfStale();
+    })();
     void checkForUpdates();
   }, [i18n, checkForUpdates]);
 
@@ -308,65 +337,6 @@ export default function SettingsScreen() {
         <Text style={[styles.title, { color: theme.textPrimary }]}>{t('settings.settings')}</Text>
 
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.version')}</Text>
-          <Text style={[styles.cardText, { color: theme.textSecondary }]}>Current: v{currentVersion}</Text>
-          {latestVersion && (
-            <Text style={[styles.cardText, { color: updateAvailable ? theme.accent : theme.textSecondary }]}>
-              Latest: v{latestVersion}
-              {updateAvailable && !isVersionSupported && ' (Update Required)'}
-              {updateAvailable && isVersionSupported && ' (Update Available)'}
-            </Text>
-          )}
-          {!isVersionSupported && (
-            <Text style={[styles.cardText, { color: '#ff4444', marginTop: 4 }]}>
-              Your version is no longer supported. Please update to continue.
-            </Text>
-          )}
-          <View style={styles.versionButtonsRow}>
-            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: theme.accent, flex: 1 }]} onPress={checkForUpdates}>
-              {isCheckingUpdate ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Check</Text>
-              )}
-            </TouchableOpacity>
-            {updateConfig && (
-              <TouchableOpacity style={[styles.secondaryButton, { borderColor: theme.border, flex: 1, marginLeft: 8 }]} onPress={() => setShowChangelog(true)}>
-                <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>Changelog</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {updateAvailable && (
-            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 8 }]} onPress={() => openExternalUrl(updateConfig?.release_url || '')}>
-              <Text style={styles.primaryButtonText}>Update Now</Text>
-            </TouchableOpacity>
-          )}
-
-          <View style={[styles.shareSection, { borderTopColor: theme.border }]}>
-            <Text style={[styles.shareTitle, { color: theme.textPrimary }]}>{t('settings.share_with_friends')}</Text>
-            <Text style={[styles.shareText, { color: theme.textSecondary }]}>
-              {t('settings.share_description')}
-            </Text>
-            <TouchableOpacity
-              style={[styles.shareButton, { backgroundColor: theme.accent }]}
-              onPress={async () => {
-                const shareUrl = `https://github.com/BlackHatDevX/openspot-music-app/releases`;
-                try {
-                  await Share.share({
-                    message: `${t('settings.share_message')}\n\n${shareUrl}`,
-                  });
-                } catch {
-                  // User cancelled or failed
-                }
-              }}
-            >
-              <Ionicons name="share-social" size={18} color="#fff" style={styles.shareButtonIcon} />
-              <Text style={styles.shareButtonText}>{t('settings.share_app')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.theme')}</Text>
           <View style={styles.segmentRow}>
             {modeOptions.map((option) => {
@@ -429,22 +399,6 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.toggleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: theme.textPrimary, marginBottom: 2 }]}>{t('settings.trending')}</Text>
-              <Text style={[styles.cardText, { color: theme.textSecondary }]}>{t('settings.trending_description')}</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.toggleTrack, { backgroundColor: trendingEnabled ? theme.accent : theme.surfaceElevated }]}
-              onPress={() => handleTrendingToggle(!trendingEnabled)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.toggleThumb, trendingEnabled && styles.toggleThumbOn]} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <View style={styles.toggleRow}>
-            <View style={{ flex: 1 }}>
               <Text style={[styles.cardTitle, { color: theme.textPrimary, marginBottom: 2 }]}>{t('settings.rotating_cover')}</Text>
               <Text style={[styles.cardText, { color: theme.textSecondary }]}>{t('settings.rotating_cover_description')}</Text>
             </View>
@@ -458,35 +412,98 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }, !trendingEnabled && { opacity: 0.5 }]}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.region')}</Text>
-          <Text style={[styles.cardText, { color: theme.textSecondary }]}>
-            {t('settings.region_description')}
-          </Text>
-          <View style={styles.regionWrap}>
-            {regionOptions.map((option) => {
-              const active = region === option;
-              const label =
-                option === 'auto'
+        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.cardTitle, { color: theme.textPrimary, marginBottom: 2 }]}>{t('settings.trending')}</Text>
+              <Text style={[styles.cardText, { color: theme.textSecondary }]}>{t('settings.trending_description')}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.toggleTrack, { backgroundColor: trendingEnabled ? theme.accent : theme.surfaceElevated }]}
+              onPress={() => handleTrendingToggle(!trendingEnabled)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.toggleThumb, trendingEnabled && styles.toggleThumbOn]} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={[!trendingEnabled && { opacity: 0.5 }]}>
+            <TouchableOpacity
+              style={[styles.dropdownButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, marginTop: 12 }]}
+              onPress={async () => {
+                await refreshRegionOptionsIfStale();
+                setIsRegionModalOpen(true);
+              }}
+            >
+              <Text style={[styles.dropdownButtonText, { color: theme.textPrimary }]}>
+                {region === 'auto'
                   ? t('settings.auto')
-                  : option
+                  : region
                       .split(' ')
                       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-                      .join(' ');
-              return (
-                <TouchableOpacity
-                  key={option}
-                  style={[
-                    styles.regionChip,
-                    { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
-                    active && { backgroundColor: theme.accent, borderColor: theme.accent },
-                  ]}
-                  onPress={() => handleRegionChange(option)}
-                >
-                  <Text style={[styles.regionChipText, { color: active ? '#fff' : theme.textSecondary }]}>{label}</Text>
-                </TouchableOpacity>
-              );
-            })}
+                      .join(' ')}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{t('settings.version')}</Text>
+          <Text style={[styles.cardText, { color: theme.textSecondary }]}>Current: v{currentVersion}</Text>
+          {latestVersion && (
+            <Text style={[styles.cardText, { color: updateAvailable ? theme.accent : theme.textSecondary }]}>
+              Latest: v{latestVersion}
+              {updateAvailable && !isVersionSupported && ' (Update Required)'}
+              {updateAvailable && isVersionSupported && ' (Update Available)'}
+            </Text>
+          )}
+          {!isVersionSupported && (
+            <Text style={[styles.cardText, { color: '#ff4444', marginTop: 4 }]}>
+              Your version is no longer supported. Please update to continue.
+            </Text>
+          )}
+          <View style={styles.versionButtonsRow}>
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: theme.accent, flex: 1 }]} onPress={checkForUpdates}>
+              {isCheckingUpdate ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Check</Text>
+              )}
+            </TouchableOpacity>
+            {updateConfig && (
+              <TouchableOpacity style={[styles.secondaryButton, { borderColor: theme.border, flex: 1, marginLeft: 8 }]} onPress={() => setShowChangelog(true)}>
+                <Text style={[styles.secondaryButtonText, { color: theme.textPrimary }]}>Changelog</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {updateAvailable && (
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#ff4444', marginTop: 8 }]} onPress={() => openExternalUrl(updateConfig?.release_url || '')}>
+              <Text style={styles.primaryButtonText}>Update Now</Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={[styles.shareSection, { borderTopColor: theme.border }]}>
+            <Text style={[styles.shareTitle, { color: theme.textPrimary }]}>{t('settings.share_with_friends')}</Text>
+            <Text style={[styles.shareText, { color: theme.textSecondary }]}>
+              {t('settings.share_description')}
+            </Text>
+            <TouchableOpacity
+              style={[styles.shareButton, { backgroundColor: theme.accent }]}
+              onPress={async () => {
+                const shareUrl = `https://github.com/BlackHatDevX/openspot-music-app/releases`;
+                try {
+                  await Share.share({
+                    message: `${t('settings.share_message')}\n\n${shareUrl}`,
+                  });
+                } catch {
+                  // User cancelled or failed
+                }
+              }}
+            >
+              <Ionicons name="share-social" size={18} color="#fff" style={styles.shareButtonIcon} />
+              <Text style={styles.shareButtonText}>{t('settings.share_app')}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -581,6 +598,50 @@ export default function SettingsScreen() {
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             />
             <TouchableOpacity style={styles.cancelButtonRow} onPress={() => setIsLanguageModalOpen(false)}>
+              <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('common.close')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Region Modal */}
+      <Modal
+        visible={isRegionModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsRegionModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.languageModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.textPrimary, marginBottom: 12 }]}>{t('settings.region')}</Text>
+            <FlatList
+              data={regionOptions}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => {
+                const active = region === item;
+                const label = item === 'auto' ? t('settings.auto') : item;
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.languageOptionRow,
+                      { borderColor: theme.border, backgroundColor: theme.surfaceElevated },
+                      active && { borderColor: theme.accent },
+                    ]}
+                    onPress={() => {
+                      handleRegionChange(item);
+                      setIsRegionModalOpen(false);
+                    }}
+                  >
+                    <View>
+                      <Text style={[styles.languageOptionTitle, { color: theme.textPrimary }]}>{label}</Text>
+                    </View>
+                    {active && <Ionicons name="checkmark-circle" size={18} color={theme.accent} />}
+                  </TouchableOpacity>
+                );
+              }}
+              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            />
+            <TouchableOpacity style={styles.cancelButtonRow} onPress={() => setIsRegionModalOpen(false)}>
               <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
@@ -800,22 +861,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
     paddingVertical: 8,
-  },
-  regionWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 6,
-  },
-  regionChip: {
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  regionChipText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,

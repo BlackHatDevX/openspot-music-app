@@ -28,7 +28,7 @@ export function useSearch(): UseSearchReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
-  const [offset, setOffset] = useState(0);
+  const [page, setPage] = useState(1);
   const [searchType, setSearchType] = useState<'track' | 'album' | 'artist' | 'playlist'>('track');
 
 
@@ -39,16 +39,14 @@ export function useSearch(): UseSearchReturn {
   const mergeUniqueById = useCallback(<T extends { id: string | number }>(existing: T[], incoming: T[]) => {
     const seen = new Set(existing.map((item) => item.id.toString()));
     const merged = [...existing];
-    let addedCount = 0;
     for (const item of incoming) {
       const key = item.id.toString();
       if (!seen.has(key)) {
         seen.add(key);
         merged.push(item);
-        addedCount += 1;
       }
     }
-    return { merged, addedCount };
+    return { merged };
   }, []);
 
   const searchTracks = useCallback(async (searchQuery: string, type?: 'track' | 'album' | 'artist' | 'playlist') => {
@@ -73,12 +71,12 @@ export function useSearch(): UseSearchReturn {
 
     setIsLoading(true);
     setError(null);
-    setOffset(0);
+    setPage(1);
 
     try {
       const response = await MusicAPI.search({
         q: searchQuery,
-        offset: 0,
+        page: 1,
         type: type || searchType
       });
 
@@ -90,25 +88,21 @@ export function useSearch(): UseSearchReturn {
           setAlbums([]);
           setArtists([]);
           setPlaylists([]);
-          setOffset(response.tracks.length);
         } else if (searchTypeToUse === 'album') {
           setAlbums(response.albums);
           setResults([]);
           setArtists([]);
           setPlaylists([]);
-          setOffset(response.albums.length);
         } else if (searchTypeToUse === 'artist') {
           setArtists(response.artists);
           setResults([]);
           setAlbums([]);
           setPlaylists([]);
-          setOffset(response.artists.length);
         } else {
           setPlaylists(response.playlists);
           setResults([]);
           setAlbums([]);
           setArtists([]);
-          setOffset(response.playlists.length);
         }
         setHasMore(response.pagination.hasMore);
       }
@@ -137,7 +131,7 @@ export function useSearch(): UseSearchReturn {
       setAlbums([]);
       setArtists([]);
       setPlaylists([]);
-      setOffset(0);
+      setPage(1);
       setHasMore(false);
       if (query.trim()) {
         searchTracks(query, type);
@@ -149,44 +143,40 @@ export function useSearch(): UseSearchReturn {
     if (!query.trim() || !hasMore || isLoadingMoreRef.current) return;
     isLoadingMoreRef.current = true;
 
+    const nextPage = page + 1;
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await MusicAPI.search({
         q: query,
-        offset,
+        page: nextPage,
         type: searchType
       });
 
       if (searchType === 'track') {
-        const { merged, addedCount } = mergeUniqueById(results, response.tracks);
+        const { merged } = mergeUniqueById(results, response.tracks);
         setResults(merged);
-        setOffset(prev => prev + addedCount);
-        setHasMore(addedCount > 0 && response.pagination.hasMore);
       } else if (searchType === 'album') {
-        const { merged, addedCount } = mergeUniqueById(albums, response.albums);
+        const { merged } = mergeUniqueById(albums, response.albums);
         setAlbums(merged);
-        setOffset(prev => prev + addedCount);
-        setHasMore(addedCount > 0 && response.pagination.hasMore);
       } else if (searchType === 'artist') {
-        const { merged, addedCount } = mergeUniqueById(artists, response.artists);
+        const { merged } = mergeUniqueById(artists, response.artists);
         setArtists(merged);
-        setOffset(prev => prev + addedCount);
-        setHasMore(addedCount > 0 && response.pagination.hasMore);
       } else {
-        const { merged, addedCount } = mergeUniqueById(playlists, response.playlists);
+        const { merged } = mergeUniqueById(playlists, response.playlists);
         setPlaylists(merged);
-        setOffset(prev => prev + addedCount);
-        setHasMore(addedCount > 0 && response.pagination.hasMore);
       }
+      setPage(nextPage);
+      setHasMore(response.pagination.hasMore);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load more results');
     } finally {
       isLoadingMoreRef.current = false;
       setIsLoading(false);
     }
-  }, [query, offset, hasMore, searchType, mergeUniqueById, results, albums, artists, playlists]);
+  }, [query, page, hasMore, searchType, mergeUniqueById, results, albums, artists, playlists]);
 
   const clearResults = useCallback(() => {
 
@@ -201,7 +191,7 @@ export function useSearch(): UseSearchReturn {
     setQuery('');
     setError(null);
     setHasMore(false);
-    setOffset(0);
+    setPage(1);
     setIsLoading(false);
     isLoadingMoreRef.current = false;
     currentSearchRef.current = '';
@@ -232,4 +222,4 @@ export function useSearch(): UseSearchReturn {
     loadMore,
     clearResults,
   };
-} 
+}

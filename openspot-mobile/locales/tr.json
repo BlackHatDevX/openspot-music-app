@@ -34,7 +34,14 @@
     "your_country": "ülken",
     "welcome_title": "OpenSpot'a Hoş Geldin",
     "welcome_subtitle": "Tercihlerini bir kez ayarla. Trendler arka planda yüklenir.",
-    "continue": "Devam Et"
+    "continue": "Devam Et",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "Şimdi Çalıyor",
@@ -66,6 +73,7 @@
     "artist": "Sanatçı",
     "playlist": "Çalma Listesi",
     "loading_more": "Daha fazla yükleniyor...",
+    "show_more": "Daha fazla göster",
     "searching": "Aranıyor...",
     "search_error": "Arama Hatası",
     "no_results": "Sonuç bulunamadı",

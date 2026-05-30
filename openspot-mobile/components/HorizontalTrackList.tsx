@@ -6,6 +6,7 @@ import { Track } from '@/types/music';
 import { MusicAPI } from '@/lib/music-api';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
+import { typography } from '@/constants/typography';
 
 
 interface HorizontalTrackListProps {
@@ -87,7 +88,7 @@ export function HorizontalTrackList({ title, tracks, onTrackSelect, onAddToQueue
 
   return (
     <View style={styles.sectionContainer}>
-      <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#2d2219' }]}>{title}</Text>
+      {title ? <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#2d2219' }]}>{title}</Text> : null}
       <FlatList
         data={tracks}
         renderItem={renderTrackItem}
@@ -100,18 +101,16 @@ export function HorizontalTrackList({ title, tracks, onTrackSelect, onAddToQueue
   );
 }
 
-const CARD_WIDTH = 138;
-const CARD_HEIGHT = 194;
-const ALBUM_SIZE = 120;
+const CARD_WIDTH = 156;
+const CARD_HEIGHT = 212;
+const ALBUM_SIZE = 132;
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    marginBottom: 8,
+    marginBottom: 0,
   },
   sectionTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...typography.h3,
     marginLeft: 16,
     marginTop: 16,
     marginBottom: 8,
@@ -130,9 +129,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -161,9 +160,9 @@ const styles = StyleSheet.create({
     bottom: 8,
     right: 8,
     backgroundColor: '#1DB954',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
+    borderRadius: 22,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -182,14 +181,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   trackTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.bodyBold,
     color: '#fff',
     marginBottom: 3,
-    lineHeight: 18,
   },
   trackArtist: {
-    fontSize: 12,
+    ...typography.caption,
     color: '#888',
     lineHeight: 16,
   },
@@ -208,7 +205,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   queueButtonText: {
+    ...typography.pill,
     fontSize: 11,
-    fontWeight: '600',
   },
 }); 

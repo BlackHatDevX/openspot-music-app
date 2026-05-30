@@ -6,6 +6,7 @@ import { Track } from '@/types/music';
 import { MusicAPI } from '@/lib/music-api';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
+import { typography } from '@/constants/typography';
 
 
 interface HorizontalTrackListProps {
@@ -100,18 +101,16 @@ export function HorizontalTrackList({ title, tracks, onTrackSelect, onAddToQueue
   );
 }
 
-const CARD_WIDTH = 138;
-const CARD_HEIGHT = 194;
-const ALBUM_SIZE = 120;
+const CARD_WIDTH = 156;
+const CARD_HEIGHT = 212;
+const ALBUM_SIZE = 132;
 
 const styles = StyleSheet.create({
   sectionContainer: {
     marginBottom: 8,
   },
   sectionTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...typography.h3,
     marginLeft: 16,
     marginTop: 16,
     marginBottom: 8,
@@ -182,16 +181,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   trackTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.bodyBold,
     color: '#fff',
     marginBottom: 3,
-    lineHeight: 18,
   },
   trackArtist: {
-    fontSize: 12,
+    ...typography.caption,
     color: '#888',
-    lineHeight: 16,
   },
   currentTrackText: {
     color: '#1DB954',

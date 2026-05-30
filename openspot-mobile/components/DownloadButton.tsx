@@ -22,6 +22,8 @@ const ANIMATION_DURATION = 350;
 const ANIMATION_BOUNCE_HEIGHT = -10;
 const ICON_SIZE = 24;
 
+const downloadingTrackIds: Set<string> = new Set();
+
 interface DownloadButtonProps {
   track: Track;
   style?: StyleProp<ViewStyle>;
@@ -131,12 +133,10 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   }, [isDownloading, bounceAnim]);
 
   useEffect(() => {
-    return () => {
-      if (downloadRef.current) {
-        downloadRef.current.pauseAsync().catch(() => { });
-      }
-    };
-  }, []);
+    if (track?.id && downloadingTrackIds.has(track.id.toString())) {
+      setIsDownloading(true);
+    }
+  }, [track?.id]);
 
   const ensureDirectoryExists = async () => {
     try {
@@ -164,6 +164,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 
     try {
       setIsDownloading(true);
+      downloadingTrackIds.add(track.id.toString());
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       await ensureDirectoryExists();
@@ -189,7 +190,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
       const audioUrl = await MusicAPI.getDownloadUrl(trackIdStr, track);
       const fileUri = getOfflineFilePath('mp3');
 
-      downloadRef.current = FileSystem.createDownloadResumable(audioUrl, fileUri);
+      downloadRef.current = FileSystem.createDownloadResumable(audioUrl, fileUri, { sessionType: FileSystem.FileSystemSessionType.BACKGROUND });
       const result = await downloadRef.current.downloadAsync();
 
       if (!result || !result.uri) {
@@ -252,6 +253,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 
     } finally {
       setIsDownloading(false);
+      if (track?.id) downloadingTrackIds.delete(track.id.toString());
       downloadRef.current = null;
     }
   };

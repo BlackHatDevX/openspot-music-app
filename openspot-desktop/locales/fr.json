@@ -9,7 +9,8 @@
     "search": "Rechercher",
     "back": "Retour",
     "close": "Fermer",
-    "done": "Terminé"
+    "done": "Terminé",
+    "show_more": "Afficher plus"
   },
   "tabs": {
     "home": "Accueil",
@@ -34,7 +35,14 @@
     "your_country": "ton pays",
     "welcome_title": "Bienvenue sur OpenSpot",
     "welcome_subtitle": "Configure tes préférences une fois. Les tendances se chargent en arrière-plan.",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "En cours de lecture",

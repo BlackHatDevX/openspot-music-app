@@ -162,21 +162,25 @@ export default function MediaDetailsScreen() {
       setTotalSongs(0);
       try {
         let fetchedTracks: Track[] = [];
+        let total = 0;
         if (mediaType === 'album') {
           fetchedTracks = await MusicAPI.getAlbumSongs(mediaId);
-          setTotalSongs(fetchedTracks.length);
+          total = fetchedTracks.length;
         } else if (mediaType === 'artist') {
           const result = await MusicAPI.getArtistSongs(mediaId, 0);
           fetchedTracks = result.tracks;
-          setTotalSongs(result.total);
-          setHasMoreSongs(fetchedTracks.length === 10);
+          total = result.total;
+          setHasMoreSongs(fetchedTracks.length < total);
         } else {
-          fetchedTracks = await MusicAPI.getPlaylistSongs(mediaId);
-          setTotalSongs(fetchedTracks.length);
+          const result = await MusicAPI.getPlaylistSongsPaginated(mediaId, 0);
+          fetchedTracks = result.tracks;
+          total = result.total;
+          setHasMoreSongs(fetchedTracks.length < total);
         }
 
         if (isMounted) {
           setTracks(fetchedTracks);
+          setTotalSongs(total);
         }
       } catch (fetchError) {
         if (isMounted) {
@@ -233,16 +237,21 @@ export default function MediaDetailsScreen() {
     }
   };
 
-  const loadMoreArtistSongs = async () => {
-    if (mediaType !== 'artist' || isLoadingMore || !hasMoreSongs) return;
+  const loadMoreSongs = async () => {
+    if (isLoadingMore || !hasMoreSongs) return;
     setIsLoadingMore(true);
     const nextPage = artistPage + 1;
     try {
-      const result = await MusicAPI.getArtistSongs(mediaId, nextPage);
+      let result: { tracks: Track[]; total: number };
+      if (mediaType === 'artist') {
+        result = await MusicAPI.getArtistSongs(mediaId, nextPage);
+      } else {
+        result = await MusicAPI.getPlaylistSongsPaginated(mediaId, nextPage);
+      }
       if (result.tracks.length > 0) {
         setTracks((prev) => [...prev, ...result.tracks]);
         setArtistPage(nextPage);
-        setHasMoreSongs(result.tracks.length === 10);
+        setHasMoreSongs(tracks.length + result.tracks.length < result.total);
       } else {
         setHasMoreSongs(false);
       }
@@ -364,10 +373,12 @@ export default function MediaDetailsScreen() {
               <View style={styles.loadMoreContainer}>
                 <ActivityIndicator size="small" color={theme.accent} />
               </View>
+            ) : hasMoreSongs ? (
+              <TouchableOpacity style={[styles.showMoreButton, { backgroundColor: theme.accent }]} onPress={loadMoreSongs} activeOpacity={0.7}>
+                <Text style={styles.showMoreText}>Show More</Text>
+              </TouchableOpacity>
             ) : null
           }
-          onEndReached={mediaType === 'artist' ? loadMoreArtistSongs : undefined}
-          onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -473,6 +484,18 @@ const styles = StyleSheet.create({
   loadMoreContainer: {
     paddingVertical: 16,
     alignItems: 'center',
+  },
+  showMoreButton: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    marginVertical: 16,
+  },
+  showMoreText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   trackItem: {
     flexDirection: 'row',

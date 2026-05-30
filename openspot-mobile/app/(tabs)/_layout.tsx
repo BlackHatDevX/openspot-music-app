@@ -1,5 +1,5 @@
 import React, { useMemo, useState, createContext, useRef, useEffect } from 'react';
-import { Tabs, usePathname, useRouter } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import { Player } from '@/components/Player';
 import { QueueDisplay } from '@/components/QueueDisplay';
 import { useMusicQueue } from '@/hooks/useMusicQueue';
@@ -66,7 +66,6 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { isOffline } = useConnectivity();
-  const router = useRouter();
   const pathname = usePathname();
   const { isProviderDisabled } = useApiStatus();
   const { toastMessage, toastType, showToast } = useToast();
@@ -85,7 +84,7 @@ export default function TabLayout() {
 
   const [updateConfig, setUpdateConfig] = useState<UpdateConfig | null>(null);
   const [showForceUpdate, setShowForceUpdate] = useState(false);
-  const currentVersion = Constants.expoConfig?.version ?? '3.1.4';
+  const currentVersion = Constants.expoConfig?.version ?? '3.1.5';
 
   const compareVersions = (v1: string, v2: string): number => {
     const parts1 = v1.split('.').map(Number);
@@ -209,13 +208,6 @@ export default function TabLayout() {
   const closeQueue = () => {
     setIsQueueOpen(false);
   };
-
-  useEffect(() => {
-    if (!isOffline) return;
-    if (!pathname?.includes('/downloads')) {
-      router.replace('/downloads');
-    }
-  }, [isOffline, pathname, router]);
 
   return (
     <MusicPlayerContext.Provider

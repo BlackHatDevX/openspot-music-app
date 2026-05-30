@@ -9,7 +9,8 @@
     "search": "חיפוש",
     "back": "חזור",
     "close": "סגור",
-    "done": "סיום"
+    "done": "סיום",
+    "show_more": "הצג עוד"
   },
   "tabs": {
     "home": "בית",
@@ -34,7 +35,14 @@
     "your_country": "המדינה שלך",
     "welcome_title": "ברוך הבא ל-OpenSpot",
     "welcome_subtitle": "הגדר את ההעדפות שלך פעם אחת. הטרנדים נטענים ברקע.",
-    "continue": "המשך"
+    "continue": "המשך",
+    "good_morning": "Good Morning",
+    "good_afternoon": "Good Afternoon",
+    "good_evening": "Good Evening",
+    "ready_to_explore": "Ready to explore?",
+    "shuffle_liked": "Shuffle Liked",
+    "continue_listening": "Continue Listening",
+    "see_all": "See All"
   },
   "player": {
     "now_playing": "מתנגן עכשיו",
