@@ -5,7 +5,7 @@
   <p><strong>Stream & download high-quality music, free, no ads, no login.</strong></p>
 
   <p>
-    <!-- <a href="https://github.com/BlackHatDevX/openspot-music-app/releases/latest"><img src="https://img.shields.io/github/v/release/BlackHatDevX/openspot-music-app?style=for-the-badge&color=6366f1" alt="Latest Release" /></a> -->
+    <a href="https://github.com/BlackHatDevX/openspot-music-app/releases/latest"><img src="https://img.shields.io/github/v/release/BlackHatDevX/openspot-music-app?style=for-the-badge&color=6366f1" alt="Latest Release" /></a>
     <a href="https://github.com/BlackHatDevX/openspot-music-app/stargazers"><img src="https://img.shields.io/github/stars/BlackHatDevX/openspot-music-app?style=for-the-badge&color=f59e0b" alt="Stars" /></a>
     <a href="https://github.com/BlackHatDevX/openspot-music-app/network/members"><img src="https://img.shields.io/github/forks/BlackHatDevX/openspot-music-app?style=for-the-badge&color=10b981" alt="Forks" /></a>
     <a href="https://github.com/BlackHatDevX/openspot-music-app/issues"><img src="https://img.shields.io/github/issues/BlackHatDevX/openspot-music-app?style=for-the-badge&color=ef4444" alt="Issues" /></a>
@@ -41,7 +41,7 @@
 
 ---
 
-<img width="1774" height="887" alt="ChatGPT Image May 8, 2026, 10_50_16 AM" src="https://github.com/user-attachments/assets/e5f82f41-6303-41c5-8554-a49be87ffb90" />
+<img width="1774" height="887" alt="ChatGPT Image May 8, 2026, 10_50_16 AM" src="https://github.com/user-attachments/assets/46e244fd-a59b-4158-bde1-a4cded55810c" />
 
 
 <div align="center">
@@ -88,6 +88,19 @@
 ---
 
 </div>
+
+
+## ✨ Upcoming in (v3.1.5)
+- Import Music directly from spotify playlist url
+- Fixed: Empty playlists/album/missing songs in some countries issue  
+- Fixed: Download gets killed in background issue
+- Fixed: Offline mode issues
+
+### If you have any suggestion (new add-on or fix) or wanna test the preview(v3.1.5) build, msg me on telegram
+> https://t.me/deveIoper_X
+
+
+
 
 
 ## ✨ Features
