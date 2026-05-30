@@ -29,7 +29,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.devx.openspot",
-      "versionCode": 42,
+      "versionCode": 43,
       "foregroundService": {
         "type": "mediaPlayback",
         "notification": {

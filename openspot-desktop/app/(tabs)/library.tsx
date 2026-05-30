@@ -8,6 +8,7 @@ import { MusicPlayerContext } from './_layout';
 import { Ionicons } from '@expo/vector-icons';
 import { PlaylistStorage, Playlist } from '@/lib/playlist-storage';
 import { MusicAPI } from '@/lib/music-api';
+import { importSpotifyPlaylist } from '@/lib/spotify-import';
 import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +41,12 @@ export default function LibraryScreen() {
   const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
   const [showLikedSongs, setShowLikedSongs] = useState(false);
   const [savedMedia, setSavedMedia] = useState<any[]>([]);
+  const [showSpotifyModal, setShowSpotifyModal] = useState(false);
+  const [spotifyUrl, setSpotifyUrl] = useState('');
+  const [spotifyName, setSpotifyName] = useState('');
+  const [spotifyProgress, setSpotifyProgress] = useState<string | null>(null);
+  const [spotifyCurrent, setSpotifyCurrent] = useState<number>(0);
+  const [spotifyTotal, setSpotifyTotal] = useState<number>(0);
 
   useEffect(() => {
     fetchPlaylists();
@@ -143,6 +150,28 @@ export default function LibraryScreen() {
     }
     if (playTracks.length > 0) {
       handleTrackSelect(playTracks[0], playTracks, 0);
+    }
+  };
+
+  const handleSpotifyImport = async () => {
+    if (!spotifyUrl.trim()) return;
+    setSpotifyProgress('Starting...');
+    setSpotifyCurrent(0);
+    setSpotifyTotal(0);
+    try {
+      await importSpotifyPlaylist(spotifyUrl.trim(), spotifyName.trim(), (msg, current, total) => {
+        setSpotifyProgress(msg);
+        if (current !== undefined) setSpotifyCurrent(current);
+        if (total !== undefined) setSpotifyTotal(total);
+      });
+      setShowSpotifyModal(false);
+      setSpotifyUrl('');
+      setSpotifyName('');
+      fetchPlaylists();
+    } catch (e: any) {
+      Alert.alert('Import Error', e.message || 'Failed to import playlist');
+    } finally {
+      setSpotifyProgress(null);
     }
   };
 
@@ -283,6 +312,10 @@ export default function LibraryScreen() {
             <Ionicons name="add-circle" size={24} color={theme.accent} style={{ marginRight: 8 }} />
             <Text style={[styles.createButtonText, { color: theme.accent }]}>{t('components.create_playlist')}</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={[styles.createButton, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setShowSpotifyModal(true)}>
+            <Ionicons name="logo-spotify" size={24} color="#1DB954" style={{ marginRight: 8 }} />
+            <Text style={[styles.createButtonText, { color: '#1DB954' }]}>Import from Spotify</Text>
+          </TouchableOpacity>
           <View style={{ height: 120 }} />
         </ScrollView>
       ) : (
@@ -373,6 +406,51 @@ export default function LibraryScreen() {
             <TouchableOpacity style={styles.cancelButton} onPress={() => setShowCreateModal(false)}>
               <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('components.cancel')}</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={showSpotifyModal} transparent animationType="fade" onRequestClose={() => { if (!spotifyProgress) setShowSpotifyModal(false); }}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Import from Spotify</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.textPrimary, borderColor: theme.border }]}
+              placeholder="Spotify playlist URL"
+              placeholderTextColor={theme.textSecondary}
+              value={spotifyUrl}
+              onChangeText={setSpotifyUrl}
+              editable={!spotifyProgress}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.textPrimary, borderColor: theme.border }]}
+              placeholder="Playlist name (optional)"
+              placeholderTextColor={theme.textSecondary}
+              value={spotifyName}
+              onChangeText={setSpotifyName}
+              editable={!spotifyProgress}
+            />
+            {spotifyProgress && (
+              <Text style={{ color: theme.textSecondary, marginVertical: 12, fontSize: 14 }}>
+                {spotifyProgress}{spotifyTotal > 0 ? ` (${spotifyCurrent}/${spotifyTotal})` : ''}
+              </Text>
+            )}
+            {!spotifyProgress ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.createButtonIconOnly, { marginTop: 18, backgroundColor: theme.surface, borderColor: theme.border }]}
+                  onPress={handleSpotifyImport}
+                >
+                  <Ionicons name="logo-spotify" size={32} color="#1DB954" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowSpotifyModal(false)}>
+                  <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('components.cancel')}</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Text style={{ color: theme.textSecondary, marginTop: 8, fontSize: 13 }}>Please wait...</Text>
+            )}
           </View>
         </View>
       </Modal>
