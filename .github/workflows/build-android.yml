@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Remove Expo Dev Tools
+      - name: Remove Expo Dev Tools & add missing deps
         run: |
           node -e "
             const fs = require('fs');
@@ -36,6 +36,7 @@ jobs:
             delete pkg.dependencies['expo-dev-client'];
             delete pkg.dependencies['expo-dev-menu'];
             delete pkg.dependencies['expo-dev-launcher'];
+            pkg.dependencies['expo-asset'] = '~11.1.6';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
 
             const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
@@ -45,10 +46,10 @@ jobs:
             });
             fs.writeFileSync('app.json', JSON.stringify(app, null, 2));
           "
-          rm -rf node_modules/expo-dev-*
+          rm -rf node_modules
 
       - name: Reinstall dependencies
-        run: npm ci
+        run: npm install
 
       - name: Create .env from secret
         run: printf '%s' '${{ secrets.DOT_ENV_CONTENT }}' > .env
