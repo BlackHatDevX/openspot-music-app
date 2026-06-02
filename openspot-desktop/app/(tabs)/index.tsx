@@ -20,6 +20,32 @@ import { COUNTRY_NAMES } from '@/constants/countryNames';
 import { useTranslation } from 'react-i18next';
 import { useThemeMode, ThemeMode } from '@/hooks/theme-mode';
 import { useConnectivity } from '@/hooks/useConnectivity';
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+
+const isTauri = () => {
+  if (typeof window === 'undefined') return false;
+  const w = window as any;
+  return (
+    window.location.protocol === 'tauri:' ||
+    window.location.hostname === 'tauri.localhost' ||
+    !!w.__TAURI__ ||
+    !!w.__TAURI_INTERNALS__ ||
+    !!w.__TAURI_METADATA__
+  );
+};
+
+const crossFetch = async (url: string, init?: RequestInit): Promise<Response> => {
+  if (isTauri()) {
+    return tauriFetch(url, {
+      method: init?.method || 'GET',
+      headers: {
+        'Content-Type': 'text/plain',
+        ...(init?.headers as Record<string, string>),
+      },
+    });
+  }
+  return fetch(url, init);
+};
 
 const KWORD_URL = 'https://kworb.net/spotify/';
 const REGION_URL_MAP_KEY = 'openspot_region_url_map_v1';
@@ -106,7 +132,7 @@ export default function HomeScreen() {
 
         const isStale = !timestamp || Date.now() - parseInt(timestamp, 10) > REGION_CACHE_TTL_MS;
         if (isStale) {
-          const res = await fetch(KWORD_URL);
+          const res = await crossFetch(KWORD_URL);
           const html = await res.text();
           const freshMap: Record<string, string> = {};
           const regex = /<tr><td class="mp text">([^<]+)<\/td>\s*<td class="mp text">[\s\S]*?<a href="([^"]+)">Weekly<\/a>/g;
@@ -133,21 +159,31 @@ export default function HomeScreen() {
     if (!isOffline && wasOfflineRef.current) {
       void (async () => {
         try {
-          setTrendingDataLoading(true);
-          const res = await fetch(TRENDING_URL);
-          const data = await res.json();
-          setTrendingData(data);
+          const timestamp = await AsyncStorage.getItem(REGION_URL_MAP_TIMESTAMP_KEY);
+          const isStale = !timestamp || Date.now() - parseInt(timestamp, 10) > REGION_CACHE_TTL_MS;
+          if (!isStale) return;
+
+          const res = await crossFetch(KWORD_URL);
+          const html = await res.text();
+          const map: Record<string, string> = {};
+          const regex = /<tr><td class="mp text">([^<]+)<\/td>\s*<td class="mp text">[\s\S]*?<a href="([^"]+)">Weekly<\/a>/g;
+          let match;
+          while ((match = regex.exec(html)) !== null) {
+            const name = match[1].trim();
+            map[name] = `https://kworb.net/spotify/${match[2]}`;
+          }
+          setRegionUrlMap(map);
+          await AsyncStorage.setItem(REGION_URL_MAP_KEY, JSON.stringify(map));
+          await AsyncStorage.setItem(REGION_URL_MAP_TIMESTAMP_KEY, Date.now().toString());
         } catch (e) {
-          console.error('Trending data re-fetch error:', e);
-        } finally {
-          setTrendingDataLoading(false);
+          console.error('Region URL map re-fetch error:', e);
         }
       })();
       if (regionOverride === 'auto') {
         void (async () => {
           try {
             setCountryLoading(true);
-            const res = await fetch('https://ipinfo.io/json');
+            const res = await crossFetch('https://ipinfo.io/json');
             const data = await res.json();
             if (data && data.country && COUNTRY_NAMES[data.country]) {
               setDetectedCountry(COUNTRY_NAMES[data.country]);
@@ -204,7 +240,7 @@ export default function HomeScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('https://ipinfo.io/json');
+        const res = await crossFetch('https://ipinfo.io/json');
         const data = await res.json();
         if (data && data.country && COUNTRY_NAMES[data.country]) {
           setDetectedCountry(COUNTRY_NAMES[data.country]);
@@ -282,7 +318,7 @@ export default function HomeScreen() {
 
     const fetchKworbWeekly = async (weeklyUrl: string) => {
       try {
-        const res = await fetch(weeklyUrl);
+        const res = await crossFetch(weeklyUrl);
         const html = await res.text();
         const trackRegex = /<td class="text mp"><div><a href="[^"]+">([^<]+)<\/a> - <a href="[^"]+">([^<]+)<\/a>/g;
         const searchQueries: string[] = [];
@@ -395,18 +431,26 @@ export default function HomeScreen() {
               onLibrary={handleLibraryNav}
             />
             {trendingEnabled && (
-              <HorizontalTrackList
-                title={t('home.trending_in', { region: countryLoading ? '...' : (formattedActiveRegion || t('home.your_country')) })}
-                tracks={trendingTracks}
-                onTrackSelect={handleHomeTrackSelect}
-                isPlaying={isPlaying}
-                currentTrack={currentTrack}
-              />
-            )}
-            {trendingEnabled && trendingTracks.length === 0 && !trendingDataLoading && (
-              <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 24 }}>
-                {t('home.loading_trending')}
-              </Text>
+              <View>
+                <SectionHeader
+                  title={t('home.trending_in', { region: countryLoading ? '...' : (formattedActiveRegion || t('home.your_country')) })}
+                />
+                {trendingTracks.length > 0 ? (
+                  <HorizontalTrackList
+                    title=""
+                    tracks={trendingTracks}
+                    onTrackSelect={handleHomeTrackSelect}
+                    isPlaying={isPlaying}
+                    currentTrack={currentTrack}
+                  />
+                ) : (
+                  Object.keys(regionUrlMap).length > 0 && (
+                    <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8, marginBottom: 16 }}>
+                      {t('home.loading_trending')}
+                    </Text>
+                  )
+                )}
+              </View>
             )}
 
             <View style={{ marginTop: 16 }}>

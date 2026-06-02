@@ -133,19 +133,21 @@ export default function SettingsScreen() {
 
   const loadRegionOptions = async () => {
     try {
-      const res = await fetch(KWORD_URL);
-      const html = await res.text();
-      const regions: string[] = [];
+      const response = await fetch(KWORD_URL);
+      const html = await response.text();
+      const regionMap: Record<string, string> = {};
       const regex = /<tr><td class="mp text">([^<]+)<\/td>\s*<td class="mp text">[\s\S]*?<a href="([^"]+)">Weekly<\/a>/g;
       let match;
       while ((match = regex.exec(html)) !== null) {
-        regions.push(match[1].trim());
+        const name = match[1].trim();
+        const url = `https://kworb.net/spotify/${match[2]}`;
+        regionMap[name] = url;
       }
-      const mergedOptions = ['auto', ...regions];
+      await AsyncStorage.setItem(REGION_URL_MAP_KEY, JSON.stringify(regionMap));
+      await AsyncStorage.setItem(REGION_URL_MAP_TIMESTAMP_KEY, Date.now().toString());
+      const mergedOptions = ['auto', ...Object.keys(regionMap)];
       setRegionOptions(mergedOptions);
       setRegion((current) => (mergedOptions.includes(current) ? current : 'auto'));
-      await AsyncStorage.setItem(REGION_URL_MAP_KEY, JSON.stringify(mergedOptions));
-      await AsyncStorage.setItem(REGION_URL_MAP_TIMESTAMP_KEY, Date.now().toString());
     } catch (error) {
       console.error('Failed to load supported regions:', error);
       setRegionOptions(['auto', 'global']);
@@ -248,10 +250,10 @@ export default function SettingsScreen() {
     void loadRotatingCover();
     void (async () => {
       try {
-        const cached = await AsyncStorage.getItem(REGION_URL_MAP_KEY);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          const merged = ['auto', ...parsed.filter((r: string) => r !== 'auto')];
+        const cachedMap = await AsyncStorage.getItem(REGION_URL_MAP_KEY);
+        if (cachedMap) {
+          const parsed = JSON.parse(cachedMap);
+          const merged = ['auto', ...Object.keys(parsed)];
           setRegionOptions(merged);
           setRegion((current) => (merged.includes(current) ? current : 'auto'));
         }
