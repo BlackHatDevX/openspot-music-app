@@ -24,11 +24,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: openspot-mobile/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Remove Expo Dev Tools
         run: |
@@ -39,7 +37,7 @@ jobs:
             delete pkg.dependencies['expo-dev-menu'];
             delete pkg.dependencies['expo-dev-launcher'];
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-            
+
             const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
             app.expo.plugins = app.expo.plugins.filter(p => {
               const name = typeof p === 'string' ? p : p[0];
@@ -53,11 +51,11 @@ jobs:
         run: npm ci
 
       - name: Create .env from secret
-        run: echo '${{ secrets.DOT_ENV_CONTENT }}' > .env
+        run: printf '%s' '${{ secrets.DOT_ENV_CONTENT }}' > .env
 
       - name: Prebuild Android
         run: npx expo prebuild --platform android --clean
-        
+
       - name: Fix Android theme
         run: |
           sed -i 's/Theme.EdgeToEdge/Theme.Material3.DayNight.NoActionBar/g' android/app/src/main/res/values/styles.xml
@@ -70,7 +68,7 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+          printf '%s' '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | base64 --decode > android/app/release.keystore
 
       - name: Setup signing configs
         run: |
