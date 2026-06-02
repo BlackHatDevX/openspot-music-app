@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use tauri::Manager;
 
@@ -88,6 +89,44 @@ fn offline_file_exists(app: tauri::AppHandle, path: String) -> Result<bool, Stri
     .unwrap_or(false))
 }
 
+#[tauri::command]
+async fn proxy_http(
+  url: String,
+  method: String,
+  headers: HashMap<String, String>,
+  body: Option<String>,
+) -> Result<serde_json::Value, String> {
+  let client = reqwest::Client::builder()
+    .danger_accept_invalid_certs(false)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+  let mut req = match method.to_uppercase().as_str() {
+    "POST" => client.post(&url),
+    "GET" => client.get(&url),
+    "PUT" => client.put(&url),
+    "DELETE" => client.delete(&url),
+    _ => return Err(format!("Unsupported method: {}", method)),
+  };
+
+  for (key, value) in &headers {
+    req = req.header(key.as_str(), value.as_str());
+  }
+
+  if let Some(b) = body {
+    req = req.body(b);
+  }
+
+  let res = req.send().await.map_err(|e| e.to_string())?;
+  let status = res.status().as_u16();
+  let response_body: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+
+  Ok(serde_json::json!({
+    "status": status,
+    "data": response_body,
+  }))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -97,7 +136,8 @@ pub fn run() {
       save_offline_file,
       delete_offline_file,
       read_offline_file,
-      offline_file_exists
+      offline_file_exists,
+      proxy_http
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

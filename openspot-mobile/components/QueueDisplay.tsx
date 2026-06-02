@@ -274,7 +274,7 @@ export function QueueDisplay({
               ref={flatListRef}
               data={musicQueue.tracks}
               renderItem={renderTrackItem}
-              keyExtractor={(item, index) => `${item.id}-${index}`}
+              keyExtractor={(item) => item.id.toString()}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={[styles.listContainer, isLandscape && styles.listContainerLandscape]}
               getItemLayout={getItemLayout}

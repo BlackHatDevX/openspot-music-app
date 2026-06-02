@@ -298,9 +298,19 @@ export class YTMusicAPI {
     return this.getStreamUrl(trackId);
   }
 
-  static async getAlbumSongs(_albumId: string): Promise<Track[]> { return []; }
-  static async getArtistSongs(_artistId: string): Promise<Track[]> { return []; }
-  static async getPlaylistSongs(_playlistId: string): Promise<Track[]> { return []; }
-  static async getPopularTracks(): Promise<Track[]> { return []; }
-  static async getMadeForYou(): Promise<Track[]> { return []; }
+  static async getAlbumSongs(_albumId: string): Promise<Track[]> {
+    throw new Error('Albums are not supported on YouTube Music');
+  }
+  static async getArtistSongs(_artistId: string): Promise<Track[]> {
+    throw new Error('Artist songs not available on YouTube Music');
+  }
+  static async getPlaylistSongs(_playlistId: string): Promise<Track[]> {
+    throw new Error('Playlists are not supported on YouTube Music');
+  }
+  static async getPopularTracks(): Promise<Track[]> {
+    throw new Error('Popular tracks not available on YouTube Music');
+  }
+  static async getMadeForYou(): Promise<Track[]> {
+    throw new Error('Recommended tracks not available on YouTube Music');
+  }
 }

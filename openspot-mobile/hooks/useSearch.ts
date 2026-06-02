@@ -150,12 +150,20 @@ export function useSearch(): UseSearchReturn {
     setIsLoading(true);
     setError(null);
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       const response = await MusicAPI.search({
         q: query,
         page: nextPage,
         type: searchType
       });
+
+      if (abortController.signal.aborted) return;
 
       if (searchType === 'track') {
         const { merged } = mergeUniqueById(results, response.tracks);
@@ -173,10 +181,15 @@ export function useSearch(): UseSearchReturn {
       setPage(nextPage);
       setHasMore(response.pagination.hasMore);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load more results');
+      if (!abortController.signal.aborted) {
+        setError(err instanceof Error ? err.message : 'Failed to load more results');
+        setHasMore(false);
+      }
     } finally {
+      if (!abortController.signal.aborted) {
+        setIsLoading(false);
+      }
       isLoadingMoreRef.current = false;
-      setIsLoading(false);
     }
   }, [query, page, hasMore, searchType, mergeUniqueById, results, albums, artists, playlists]);
 

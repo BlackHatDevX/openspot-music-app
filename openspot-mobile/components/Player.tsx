@@ -92,6 +92,20 @@ export function Player({
   const queueBuildDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const downloadAbortRef = useRef<AbortController | null>(null);
   const isInternalChangeRef = useRef(false);
+  const internalChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastNextCallRef = useRef(0);
+
+  const suppressInternalChanges = useCallback((duration: number = 800) => {
+    isInternalChangeRef.current = true;
+    if (internalChangeTimerRef.current) {
+      clearTimeout(internalChangeTimerRef.current);
+    }
+    internalChangeTimerRef.current = setTimeout(() => {
+      isInternalChangeRef.current = false;
+      internalChangeTimerRef.current = null;
+    }, duration);
+  }, []);
+
   const { position: tpPosition, duration: tpDuration } = useProgress(250);
 
   
@@ -151,6 +165,11 @@ export function Player({
       TrackPlayer.stop().catch(() => {});
       TrackPlayer.reset().catch(() => {});
     };
+  }, []);
+
+  
+  useEffect(() => {
+    TrackPlayer.setVolume(volume).catch(() => {});
   }, [volume]);
 
   
@@ -158,22 +177,29 @@ export function Player({
     if (!isSeeking) {
       setPosition(tpPosition * 1000);
     }
-    setDuration(tpDuration * 1000);
+    setDuration(prev => {
+      const next = tpDuration * 1000;
+      return prev !== next ? next : prev;
+    });
   }, [tpPosition, tpDuration, isSeeking]);
 
   
   useEffect(() => {
     if (!playerReady) return;
-    isInternalChangeRef.current = true;
+    suppressInternalChanges(800);
     if (isPlaying) {
       pendingAutoPlayRef.current = true;
       TrackPlayer.play().catch(() => {});
     } else {
       TrackPlayer.pause().catch(() => {});
     }
-    const timer = setTimeout(() => { isInternalChangeRef.current = false; }, 800);
-    return () => clearTimeout(timer);
-  }, [isPlaying, playerReady, pendingAutoPlayRef]);
+    return () => {
+      if (internalChangeTimerRef.current) {
+        clearTimeout(internalChangeTimerRef.current);
+        internalChangeTimerRef.current = null;
+      }
+    };
+  }, [isPlaying, playerReady, pendingAutoPlayRef, suppressInternalChanges]);
 
   
   const startRotation = useCallback(() => {
@@ -229,34 +255,34 @@ export function Player({
   }, [musicQueue]);
 
   const handleNext = useCallback(() => {
+    if (Date.now() - lastNextCallRef.current < 300) return;
+    lastNextCallRef.current = Date.now();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const queue = musicQueueRef.current;
     const nextTrack = queue.playNext();
     if (nextTrack) {
-      isInternalChangeRef.current = true;
+      suppressInternalChanges(500);
       onPlayingChange(true);
-      setTimeout(() => { isInternalChangeRef.current = false; }, 500);
     } else {
       onPlayingChange(false);
     }
-  }, [onPlayingChange]);
+  }, [onPlayingChange, suppressInternalChanges]);
 
   const handlePrevious = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const queue = musicQueueRef.current;
     const prevTrack = queue.playPrevious();
     if (prevTrack) {
-      
-      isInternalChangeRef.current = true;
+      suppressInternalChanges(500);
       pendingAutoPlayRef.current = true;
       onPlayingChange(true);
-      setTimeout(() => { isInternalChangeRef.current = false; }, 500);
     }
-  }, [pendingAutoPlayRef, onPlayingChange]);
+  }, [pendingAutoPlayRef, onPlayingChange, suppressInternalChanges]);
 
   
   useEffect(() => {
     const sub = TrackPlayer.addEventListener(Event.PlaybackQueueEnded, () => {
+      if (isInternalChangeRef.current) return;
       pendingAutoPlayRef.current = true;
       handleNext();
     });
@@ -283,13 +309,18 @@ export function Player({
     const sub = TrackPlayer.addEventListener(Event.PlaybackActiveTrackChanged, async (event) => {
       if (isInternalChangeRef.current) return;
       const activeTrack = event.track;
-      if (activeTrack?.id && musicQueueRef.current?.tracks?.length) {
-        const queueIndex = musicQueueRef.current.tracks.findIndex(
-          (t: Track) => t.id.toString() === activeTrack.id
-        );
-        if (queueIndex >= 0 && musicQueueRef.current.setCurrentIndex) {
-          musicQueueRef.current.setCurrentIndex(queueIndex);
+      if (!activeTrack?.id) return;
+      if (!musicQueueRef.current?.tracks?.length) {
+        if (musicQueueRef.current?.setCurrentIndex) {
+          musicQueueRef.current.setCurrentIndex(-1);
         }
+        return;
+      }
+      const queueIndex = musicQueueRef.current.tracks.findIndex(
+        (t: Track) => t.id.toString() === activeTrack.id
+      );
+      if (queueIndex >= 0 && musicQueueRef.current.setCurrentIndex) {
+        musicQueueRef.current.setCurrentIndex(queueIndex);
       }
     });
     return () => sub.remove();
@@ -297,9 +328,18 @@ export function Player({
 
   
   const syncTrackPlayerQueue = useCallback(async () => {
-    if (!playerReady) return;
-    if (!musicQueue?.tracks?.length || musicQueue.currentIndex < 0) return;
-    if (!track) return;
+    if (!playerReady) {
+      pendingAutoPlayRef.current = false;
+      return;
+    }
+    if (!musicQueue?.tracks?.length || musicQueue.currentIndex < 0) {
+      pendingAutoPlayRef.current = false;
+      return;
+    }
+    if (!track) {
+      pendingAutoPlayRef.current = false;
+      return;
+    }
 
     if (queueBuildDebounceRef.current) {
       clearTimeout(queueBuildDebounceRef.current);
@@ -349,8 +389,7 @@ export function Player({
       pendingAutoPlayRef.current = false;
 
       
-      isInternalChangeRef.current = true;
-      const suppressTimer = setTimeout(() => { isInternalChangeRef.current = false; }, 1500);
+      suppressInternalChanges(1500);
 
       const activeTrack = await TrackPlayer.getActiveTrack();
       const isSameTrack = activeTrack?.id === current.id.toString();
@@ -397,13 +436,27 @@ export function Player({
           };
           await TrackPlayer.reset();
           await TrackPlayer.add([currentItem]);
+
+          const nextTrack = queueTracks[startIndex + 1];
+          if (nextTrack) {
+            try {
+              const nextUrl = await resolveTrackUrl(nextTrack);
+              await TrackPlayer.add({
+                id: nextTrack.id.toString(),
+                url: nextUrl,
+                title: nextTrack.title,
+                artist: nextTrack.artist,
+                artwork: MusicAPI.getOptimalImage(nextTrack.images),
+                duration: nextTrack.duration ? Math.floor(nextTrack.duration / 1000) : undefined,
+              });
+            } catch {}
+          }
+
           if (shouldPlayNow) await TrackPlayer.play();
           else await TrackPlayer.pause();
         }
       } finally {
-        clearTimeout(suppressTimer);
-        
-        setTimeout(() => { isInternalChangeRef.current = false; }, 800);
+        suppressInternalChanges(800);
       }
 
       if (queueBuildAbortRef.current) {
@@ -477,7 +530,7 @@ export function Player({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       
-      isInternalChangeRef.current = true;
+      suppressInternalChanges(500);
       
       if (isPlaying) {
         await TrackPlayer.pause();
@@ -487,16 +540,11 @@ export function Player({
         await TrackPlayer.play();
         onPlayingChange(true);
       }
-      
-      
-      setTimeout(() => {
-        isInternalChangeRef.current = false;
-      }, 500);
     } catch (error) {
       console.error('Error in handlePlayPause:', error);
       isInternalChangeRef.current = false;
     }
-  }, [isPlaying, onPlayingChange, pendingAutoPlayRef]);
+  }, [isPlaying, onPlayingChange, pendingAutoPlayRef, suppressInternalChanges]);
 
   const handleSeek = async (value: number) => {
     try {

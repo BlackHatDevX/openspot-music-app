@@ -21,8 +21,7 @@ export default async function trackPlayerService() {
 
   TrackPlayer.addEventListener(Event.RemoteSeek, async (e) => {
     try {
-      // @ts-expect-error event typing differs across versions
-      await TrackPlayer.seekTo(e.position);
+      await TrackPlayer.seekTo((e as any).position);
     } catch {}
   });
 }

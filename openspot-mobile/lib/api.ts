@@ -36,30 +36,40 @@ const PROXY_URL = 'https://nextjs-proxy-gamma.vercel.app/api/proxy';
 
 const NON_PROXIED_ENDPOINTS = ['song.getDetails'];
 
-const fetchJioSaavn = async (endpoint: string, params: Record<string, string | number> = {}) => {
+const fetchJioSaavn = async (endpoint: string, params: Record<string, string | number> = {}, timeoutMs = 15000) => {
   const url = buildApiUrl(endpoint, params);
-  if (NON_PROXIED_ENDPOINTS.includes(endpoint)) {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': getRandomUserAgent() },
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    if (NON_PROXIED_ENDPOINTS.includes(endpoint)) {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': getRandomUserAgent() },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      return res.json();
+    }
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url,
+        method: 'GET',
+        headers: {
+          'User-Agent': getRandomUserAgent(),
+        },
+      }),
+      signal: controller.signal,
     });
-    return res.json();
+    clearTimeout(timeout);
+    const data = await res.json();
+    if (!data.body) {
+      throw new Error(`Proxy returned no body (${data.status || res.status})`);
+    }
+    return JSON.parse(data.body);
+  } finally {
+    clearTimeout(timeout);
   }
-  const res = await fetch(PROXY_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      url,
-      method: 'GET',
-      headers: {
-        'User-Agent': getRandomUserAgent(),
-      },
-    }),
-  });
-  const data = await res.json();
-  if (!data.body) {
-    throw new Error(`Proxy returned no body (${data.status || res.status})`);
-  }
-  return JSON.parse(data.body);
 };
 
 export const createDownloadLinks = (encryptedMediaUrl: string) => {

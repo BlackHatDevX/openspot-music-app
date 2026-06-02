@@ -179,13 +179,15 @@ export function FullScreenPlayer({
       setSelected(preSel);
     };
     loadPlaylists();
-    // Clean up rotation on track change and start fresh if playing
+  }, [track]);
+
+  useEffect(() => {
     stopRotation();
     if (isPlaying && rotatingCover) {
       rotationLoop.current = null;
       startRotation();
     }
-  }, [track, isPlaying, rotatingCover, startRotation, stopRotation, rotationLoop]);
+  }, [isPlaying, rotatingCover, startRotation, stopRotation]);
 
   useEffect(() => {
     if (isOpen) {

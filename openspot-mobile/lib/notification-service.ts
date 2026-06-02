@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
 import { Track } from "@/types/music";
 
 const MEDIA_NOTIFICATION_ID = "media-notification";
@@ -65,7 +66,7 @@ export class NotificationService {
           sound: false,
           sticky: true,
           priority: Notifications.AndroidNotificationPriority.HIGH,
-          ...(process.env.EXPO_OS === "android" ? { channelId: MEDIA_CHANNEL_ID } : {}),
+          ...(Platform.OS === "android" ? { channelId: MEDIA_CHANNEL_ID } : {}),
         },
         trigger: null,
       });

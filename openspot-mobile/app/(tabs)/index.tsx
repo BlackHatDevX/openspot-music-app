@@ -69,6 +69,7 @@ export default function HomeScreen() {
   const [setupTheme, setSetupTheme] = useState<ThemeMode>(mode);
   const [isSavingSetup, setIsSavingSetup] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
   const { isOffline } = useConnectivity();
   const wasOfflineRef = React.useRef(false);
   const [trendingEnabled, setTrendingEnabled] = useState<boolean>(true);
@@ -90,57 +91,37 @@ export default function HomeScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [cacheStr, mapStr] = await Promise.all([
+        const [cacheStr, mapStr, done, stored, storedRegion, timestamp] = await Promise.all([
           AsyncStorage.getItem(TRENDING_TRACKS_CACHE_KEY),
           AsyncStorage.getItem(REGION_URL_MAP_KEY),
+          AsyncStorage.getItem(FIRST_RUN_SETUP_KEY),
+          AsyncStorage.getItem(TRENDING_ENABLED_KEY),
+          AsyncStorage.getItem(REGION_OVERRIDE_KEY),
+          AsyncStorage.getItem(REGION_URL_MAP_TIMESTAMP_KEY),
         ]);
-        if (cacheStr) {
-          setTrendingCache(JSON.parse(cacheStr));
-        }
-        if (mapStr) {
-          setRegionUrlMap(JSON.parse(mapStr));
+        if (cacheStr) setTrendingCache(JSON.parse(cacheStr));
+        if (mapStr) setRegionUrlMap(JSON.parse(mapStr));
+        if (!done) setShowFirstRunSetup(true);
+        if (stored !== null) setTrendingEnabled(stored === 'true');
+        if (storedRegion && storedRegion.trim()) setRegionOverride(storedRegion);
+
+        const isStale = !timestamp || Date.now() - parseInt(timestamp, 10) > REGION_CACHE_TTL_MS;
+        if (isStale) {
+          const res = await fetch(KWORD_URL);
+          const html = await res.text();
+          const freshMap: Record<string, string> = {};
+          const regex = /<tr><td class="mp text">([^<]+)<\/td>\s*<td class="mp text">[\s\S]*?<a href="([^"]+)">Weekly<\/a>/g;
+          let match;
+          while ((match = regex.exec(html)) !== null) {
+            const name = match[1].trim();
+            freshMap[name] = `https://kworb.net/spotify/${match[2]}`;
+          }
+          setRegionUrlMap(freshMap);
+          await AsyncStorage.setItem(REGION_URL_MAP_KEY, JSON.stringify(freshMap));
+          await AsyncStorage.setItem(REGION_URL_MAP_TIMESTAMP_KEY, Date.now().toString());
         }
       } catch (e) {
         console.error('Failed to load cached data:', e);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const done = await AsyncStorage.getItem(FIRST_RUN_SETUP_KEY);
-        if (!done) {
-          setShowFirstRunSetup(true);
-        }
-      } catch {
-        setShowFirstRunSetup(true);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const stored = await AsyncStorage.getItem(TRENDING_ENABLED_KEY);
-        if (stored !== null) {
-          setTrendingEnabled(stored === 'true');
-        }
-      } catch (e) {
-        console.error('Failed to load trending setting:', e);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const storedRegion = await AsyncStorage.getItem(REGION_OVERRIDE_KEY);
-        if (storedRegion && storedRegion.trim()) {
-          setRegionOverride(storedRegion);
-        }
-      } catch (e) {
-        console.error('Failed to load region override:', e);
       }
     })();
   }, []);
@@ -208,53 +189,6 @@ export default function HomeScreen() {
   useEffect(() => {
     void loadRecentlyPlayed();
   }, [loadRecentlyPlayed]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      void loadRecentlyPlayed();
-      void (async () => {
-        try {
-          const storedRegion = await AsyncStorage.getItem(REGION_OVERRIDE_KEY);
-          setRegionOverride(storedRegion && storedRegion.trim() ? storedRegion : 'auto');
-        } catch (e) {
-          console.error('Failed to refresh region override:', e);
-        }
-      })();
-      void (async () => {
-        try {
-          const stored = await AsyncStorage.getItem(TRENDING_ENABLED_KEY);
-          if (stored !== null) setTrendingEnabled(stored === 'true');
-        } catch (e) {
-          console.error('Failed to refresh trending setting:', e);
-        }
-      })();
-    }, [loadRecentlyPlayed])
-  );
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const timestamp = await AsyncStorage.getItem(REGION_URL_MAP_TIMESTAMP_KEY);
-        const isStale = !timestamp || Date.now() - parseInt(timestamp, 10) > REGION_CACHE_TTL_MS;
-        if (!isStale) return;
-
-        const res = await fetch(KWORD_URL);
-        const html = await res.text();
-        const map: Record<string, string> = {};
-        const regex = /<tr><td class="mp text">([^<]+)<\/td>\s*<td class="mp text">[\s\S]*?<a href="([^"]+)">Weekly<\/a>/g;
-        let match;
-        while ((match = regex.exec(html)) !== null) {
-          const name = match[1].trim();
-          map[name] = `https://kworb.net/spotify/${match[2]}`;
-        }
-        setRegionUrlMap(map);
-        await AsyncStorage.setItem(REGION_URL_MAP_KEY, JSON.stringify(map));
-        await AsyncStorage.setItem(REGION_URL_MAP_TIMESTAMP_KEY, Date.now().toString());
-      } catch (e) {
-        console.error('Failed to fetch region URL map:', e);
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -531,31 +465,15 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>{t('settings.region')}</Text>
-            <View style={styles.setupWrap}>
-              {['auto', ...Object.keys(regionUrlMap)].slice(0, 12).map((option) => {
-                const active = setupRegion === option;
-                const label =
-                  option === 'auto'
-                    ? t('settings.auto')
-                    : option
-                        .split(' ')
-                        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-                        .join(' ');
-                return (
-                  <TouchableOpacity
-                    key={`setup-region-${option}`}
-                    style={[
-                      styles.setupChip,
-                      { borderColor: theme.border, backgroundColor: theme.surfaceElevated },
-                      active && { backgroundColor: theme.accent, borderColor: theme.accent },
-                    ]}
-                    onPress={() => setSetupRegion(option)}
-                  >
-                    <Text style={[styles.setupChipText, { color: active ? '#fff' : theme.textSecondary }]}>{label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TouchableOpacity
+              style={[styles.setupDropdownButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              onPress={() => setIsRegionModalOpen(true)}
+            >
+              <Text style={[styles.setupDropdownButtonText, { color: theme.textPrimary }]}>
+                {setupRegion === 'auto' ? t('settings.auto') : setupRegion}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
+            </TouchableOpacity>
 
             <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>{t('settings.language')}</Text>
             <TouchableOpacity
@@ -640,6 +558,47 @@ export default function HomeScreen() {
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             />
             <TouchableOpacity style={styles.setupCancelButtonRow} onPress={() => setIsLanguageModalOpen(false)}>
+              <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('common.close')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isRegionModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsRegionModalOpen(false)}
+      >
+        <View style={styles.setupModalOverlay}>
+          <View style={[styles.setupLanguageModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary, marginBottom: 12 }]}>{t('settings.region')}</Text>
+            <FlatList
+              data={['auto', ...Object.keys(regionUrlMap)]}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => {
+                const active = setupRegion === item;
+                const label = item === 'auto' ? t('settings.auto') : item;
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.setupLanguageOptionRow,
+                      { borderColor: theme.border, backgroundColor: theme.surfaceElevated },
+                      active && { borderColor: theme.accent },
+                    ]}
+                    onPress={() => {
+                      setSetupRegion(item);
+                      setIsRegionModalOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.setupLanguageOptionTitle, { color: theme.textPrimary }]}>{label}</Text>
+                    {active && <Ionicons name="checkmark-circle" size={18} color={theme.accent} />}
+                  </TouchableOpacity>
+                );
+              }}
+              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            />
+            <TouchableOpacity style={styles.setupCancelButtonRow} onPress={() => setIsRegionModalOpen(false)}>
               <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>

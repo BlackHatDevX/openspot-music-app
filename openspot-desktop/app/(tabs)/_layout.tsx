@@ -4,7 +4,7 @@ import { Player } from '@/components/Player';
 import { QueueDisplay } from '@/components/QueueDisplay';
 import { useMusicQueue } from '@/hooks/useMusicQueue';
 import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { HomeTabIcon, SearchTabIcon, LibraryTabIcon, DownloadTabIcon, SettingsTabIcon } from '@/components/TabIcons';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Track } from '@/types/music';
@@ -18,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useApiStatus } from '@/hooks/useApiStatus';
 import { useToast } from '@/hooks/useToast';
+import { setupMediaSession, updateMediaSession } from '@/lib/media-session';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface UpdateConfig {
   latest_version: string;
@@ -206,6 +208,24 @@ export default function TabLayout() {
     }
   }, [isOffline, pathname, router]);
 
+  useEffect(() => {
+    setupMediaSession({
+      musicQueue,
+      onPlayingChange: (playing) => setIsPlaying(playing),
+      onTrackSelect: handleTrackSelect,
+    });
+  }, [musicQueue.currentIndex, musicQueue.tracks]);
+
+  useEffect(() => {
+    updateMediaSession(currentTrack, isPlaying);
+  }, [currentTrack, isPlaying]);
+
+  useEffect(() => {
+    try {
+      getCurrentWindow().setTheme(isDark ? 'Dark' : 'Light');
+    } catch {}
+  }, [isDark]);
+
   return (
     <MusicPlayerContext.Provider
       value={{
@@ -223,6 +243,7 @@ export default function TabLayout() {
         <View style={{ flex: 1, position: 'relative' }}>
           {isOffline && !pathname?.includes('/downloads') && <OfflineBanner />}
           <Tabs
+            initialRouteName="downloads"
             screenOptions={{
               tabBarActiveTintColor: tabTheme.active,
               tabBarInactiveTintColor: tabTheme.inactive,
@@ -244,35 +265,35 @@ export default function TabLayout() {
               name="index"
               options={{
                 title: t('tabs.home'),
-                tabBarIcon: ({ color }) => <IconSymbol size={28} name="house" color={color} />,
+                tabBarIcon: ({ color }) => <HomeTabIcon color={color} size={24} />,
               }}
             />
             <Tabs.Screen
               name="search"
               options={{
                 title: t('tabs.search'),
-                tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
+                tabBarIcon: ({ color }) => <SearchTabIcon color={color} size={28} />,
               }}
             />
             <Tabs.Screen
               name="library"
               options={{
                 title: t('tabs.library'),
-                tabBarIcon: ({ color }) => <IconSymbol size={28} name="books.vertical.fill" color={color} />,
+                tabBarIcon: ({ color }) => <LibraryTabIcon color={color} size={28} />,
               }}
             />
             <Tabs.Screen
               name="downloads"
               options={{
                 title: t('tabs.downloads'),
-                tabBarIcon: ({ color }) => <IconSymbol size={28} name="arrow.down.circle.fill" color={color} />,
+                tabBarIcon: ({ color }) => <DownloadTabIcon color={color} size={28} />,
               }}
             />
             <Tabs.Screen
               name="settings"
               options={{
                 title: t('settings.settings'),
-                tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
+                tabBarIcon: ({ color }) => <SettingsTabIcon color={color} size={28} />,
               }}
             />
             <Tabs.Screen

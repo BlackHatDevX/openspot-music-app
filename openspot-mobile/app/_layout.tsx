@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeMode, ThemeModeProvider } from '@/hooks/theme-mode';
 import { LikedSongsProvider } from '@/hooks/useLikedSongs';
 import { useApiStatus } from '@/hooks/useApiStatus';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import '@/lib/i18n';
 
 SplashScreen.preventAutoHideAsync();
@@ -68,10 +69,12 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <ThemeModeProvider>
-        <AppNavigation />
-      </ThemeModeProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeModeProvider>
+          <AppNavigation />
+        </ThemeModeProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

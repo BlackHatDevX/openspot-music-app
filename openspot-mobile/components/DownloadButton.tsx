@@ -169,24 +169,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 
       await ensureDirectoryExists();
 
-      let playlists = await PlaylistStorage.getPlaylists();
-      let offline = playlists.find(pl => pl.name === 'offline');
-
-      if (!offline) {
-        offline = {
-          name: 'offline',
-          cover: track.images?.large || '',
-          trackIds: []
-        };
-        playlists.push(offline);
-      }
-
       const trackIdStr = track.id.toString();
-      if (!offline.trackIds.includes(trackIdStr)) {
-        offline.trackIds.push(trackIdStr);
-        await PlaylistStorage.savePlaylists(playlists);
-      }
-
       const audioUrl = await MusicAPI.getDownloadUrl(trackIdStr, track);
       const fileUri = getOfflineFilePath('mp3');
 
@@ -214,6 +197,8 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
         trackData: track,
         downloadedAt: new Date().toISOString(),
       }));
+
+      await PlaylistStorage.addTrackToPlaylists(track, ['offline']);
 
       setIsDownloaded(true);
       showNotification(t('components.downloaded') || 'Downloaded', 'success'); 

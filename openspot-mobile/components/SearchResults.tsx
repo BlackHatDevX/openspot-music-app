@@ -332,7 +332,7 @@ export function SearchResults({
             ? (renderArtistItem as any)
             : (renderPlaylistItem as any)
         }
-        keyExtractor={(item, index) => `${searchType}-${item.id?.toString?.() ?? 'unknown'}-${index}`}
+        keyExtractor={(item) => `${searchType}-${item.id?.toString?.() ?? 'unknown'}`}
         ListFooterComponent={renderFooter}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={searchType === 'track' ? styles.listContainer : styles.albumListContainer}

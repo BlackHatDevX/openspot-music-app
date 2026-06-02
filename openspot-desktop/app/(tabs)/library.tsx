@@ -30,7 +30,7 @@ export default function LibraryScreen() {
     border: isDark ? '#272727' : '#e4d5c5',
     accent: isDark ? '#1DB954' : '#167c3a',
   };
-  const { handleTrackSelect } = useContext(MusicPlayerContext);
+  const { handleTrackSelect, currentTrack, isPlaying } = useContext(MusicPlayerContext);
   const { getLikedSongsAsTrack, isLiked, toggleLike } = useLikedSongs();
   const likedTracks = getLikedSongsAsTrack();
 
@@ -41,12 +41,12 @@ export default function LibraryScreen() {
   const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
   const [showLikedSongs, setShowLikedSongs] = useState(false);
   const [savedMedia, setSavedMedia] = useState<any[]>([]);
-  const [showSpotifyModal, setShowSpotifyModal] = useState(false);
-  const [spotifyUrl, setSpotifyUrl] = useState('');
-  const [spotifyName, setSpotifyName] = useState('');
-  const [spotifyProgress, setSpotifyProgress] = useState<string | null>(null);
-  const [spotifyCurrent, setSpotifyCurrent] = useState<number>(0);
-  const [spotifyTotal, setSpotifyTotal] = useState<number>(0);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [importName, setImportName] = useState('');
+  const [importStatus, setImportStatus] = useState<'idle' | 'fetching' | 'resolving' | 'done' | 'error'>('idle');
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [playlistCovers, setPlaylistCovers] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchPlaylists();
@@ -98,6 +98,17 @@ export default function LibraryScreen() {
     
     const filteredPlaylists = pls.filter(pl => pl.name !== 'offline');
     setPlaylists(filteredPlaylists);
+
+    const covers: Record<string, string> = {};
+    for (const pl of filteredPlaylists) {
+      if (pl.trackIds.length > 0) {
+        const track = await PlaylistStorage.getTrackData(pl.trackIds[0]);
+        if (track && track.images) {
+          covers[pl.name] = MusicAPI.getOptimalImage(track.images);
+        }
+      }
+    }
+    setPlaylistCovers(covers);
   };
 
   const handlePlaylistPress = async (playlist: Playlist) => {
@@ -153,25 +164,29 @@ export default function LibraryScreen() {
     }
   };
 
-  const handleSpotifyImport = async () => {
-    if (!spotifyUrl.trim()) return;
-    setSpotifyProgress('Starting...');
-    setSpotifyCurrent(0);
-    setSpotifyTotal(0);
+  const handleImportSpotify = async () => {
+    if (!importUrl.trim() || !importName.trim()) return;
+    setImportStatus('fetching');
+    setImportProgress({ current: 0, total: 0 });
     try {
-      await importSpotifyPlaylist(spotifyUrl.trim(), spotifyName.trim(), (msg, current, total) => {
-        setSpotifyProgress(msg);
-        if (current !== undefined) setSpotifyCurrent(current);
-        if (total !== undefined) setSpotifyTotal(total);
-      });
-      setShowSpotifyModal(false);
-      setSpotifyUrl('');
-      setSpotifyName('');
-      fetchPlaylists();
-    } catch (e: any) {
-      Alert.alert('Import Error', e.message || 'Failed to import playlist');
-    } finally {
-      setSpotifyProgress(null);
+      const result = await importSpotifyPlaylist(
+        importUrl.trim(),
+        importName.trim(),
+        (msg, current, total) => {
+          if (current !== undefined && total !== undefined) {
+            setImportProgress({ current, total });
+            if (current < total) {
+              setImportStatus('resolving');
+            } else {
+              setImportStatus('done');
+            }
+          }
+        }
+      );
+      setImportStatus(result.success ? 'done' : 'error');
+    } catch (e) {
+      console.error('Spotify import failed:', e);
+      setImportStatus('error');
     }
   };
 
@@ -216,22 +231,49 @@ export default function LibraryScreen() {
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('components.tracks')}</Text>
           <FlatList
             data={likedTracks}
-            keyExtractor={item => item.id.toString()}
-            renderItem={({ item, index }) => (
-              <>
-                <View style={[styles.trackRowBox, { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }]}>
-                  <TouchableOpacity
-                    style={[styles.trackRow, { flex: 1, backgroundColor: 'transparent' }]}
-                    onPress={() => handleTrackSelect(item, likedTracks, index)}
-                  >
-                    <Text style={[styles.trackRowTitle, { color: theme.textPrimary }]}>{item.title}</Text>
-                    <Text style={[styles.trackRowArtist, { color: theme.textSecondary }]}>{item.artist}</Text>
-                  </TouchableOpacity>
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() => toggleLike(item)}
+            keyExtractor={(item, index) => `${item.id}_${index}`}
+            renderItem={({ item, index }) => {
+              const isActiveTrack = currentTrack?.id?.toString() === item.id?.toString();
+              const isCurrentlyPlaying = isActiveTrack && isPlaying;
+              return (
+                <TouchableOpacity
+                  onPress={() => handleTrackSelect(item, likedTracks, index)}
+                  activeOpacity={0.75}
+                  style={[
+                    styles.playlistTrackRow,
+                    { backgroundColor: theme.surface, borderColor: isActiveTrack ? theme.accent : theme.border },
+                    isActiveTrack && { borderWidth: 1.5 },
+                  ]}
+                >
+                  <View style={styles.playlistArtWrapper}>
+                    <Image
+                      source={{ uri: item.images?.large || item.albumCover }}
+                      style={styles.playlistAlbumArt}
+                      contentFit="cover"
+                    />
+                    {isActiveTrack && (
+                      <View style={[styles.playlistArtOverlay, { backgroundColor: '#000000aa' }]}>
+                        <Ionicons
+                          name={isCurrentlyPlaying ? 'musical-notes' : 'pause'}
+                          size={18}
+                          color={theme.accent}
+                        />
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.playlistTrackInfo}>
+                    <Text
+                      style={[styles.playlistTrackTitle, { color: isActiveTrack ? theme.accent : theme.textPrimary }]}
+                      numberOfLines={1}
                     >
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.playlistTrackArtist, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {item.artist}
+                    </Text>
+                  </View>
+                  <View style={styles.playlistActionRow}>
+                    <TouchableOpacity style={styles.playlistIconButton} onPress={() => toggleLike(item)}>
                       <Ionicons
                         name={isLiked(item.id) ? 'heart' : 'heart-outline'}
                         size={20}
@@ -239,12 +281,15 @@ export default function LibraryScreen() {
                       />
                     </TouchableOpacity>
                   </View>
-                </View>
-                {index < likedTracks.length - 1 && <View style={[styles.trackDivider, { backgroundColor: theme.border }]} />}
-              </>
-            )}
+                </TouchableOpacity>
+              );
+            }}
             ListEmptyComponent={<Text style={{ color: theme.textSecondary, marginTop: 16 }}>{t('components.no_liked_songs')}</Text>}
             contentContainerStyle={{ paddingBottom: 120 }}
+            removeClippedSubviews
+            maxToRenderPerBatch={10}
+            windowSize={8}
+            initialNumToRender={12}
           />
         </View>
       ) : !selectedPlaylist ? (
@@ -287,34 +332,25 @@ export default function LibraryScreen() {
             </>
           )}
           <PlaylistList
-            playlists={playlists.map(pl => {
-              let cover = 'https://misc.scdn.co/liked-songs/liked-songs-640.png';
-              if (pl.trackIds.length > 0) {
-                const lastTrackId = pl.trackIds[pl.trackIds.length - 1];
-                const track = [...likedTracks, ...playlistTracks].find(t => t.id.toString() === lastTrackId);
-                if (track && track.images) {
-                  cover = MusicAPI.getOptimalImage(track.images);
-                }
-              }
-              return {
-                ...pl,
-                trackCount: pl.trackIds.length,
-                cover,
-              };
-            })}
+            playlists={playlists.map(pl => ({
+              ...pl,
+              trackCount: pl.trackIds.length,
+              cover: playlistCovers[pl.name] || 'https://misc.scdn.co/liked-songs/liked-songs-640.png',
+            }))}
             onPlaylistPress={handlePlaylistPress}
             onPlaylistShuffle={pl => handlePlaylistPlay(pl, true)}
             onPlaylistPlay={pl => handlePlaylistPlay(pl, false)}
             onPlaylistLongPress={handleDeletePlaylist}
+            onPlaylistDelete={handleDeletePlaylist}
             theme={{ surface: theme.surface, border: theme.border, textPrimary: theme.textPrimary, textSecondary: theme.textSecondary, accent: theme.accent, icon: theme.textPrimary }}
           />
           <TouchableOpacity style={[styles.createButton, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={handleCreatePlaylist}>
             <Ionicons name="add-circle" size={24} color={theme.accent} style={{ marginRight: 8 }} />
             <Text style={[styles.createButtonText, { color: theme.accent }]}>{t('components.create_playlist')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.createButton, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setShowSpotifyModal(true)}>
-            <Ionicons name="logo-spotify" size={24} color="#1DB954" style={{ marginRight: 8 }} />
-            <Text style={[styles.createButtonText, { color: '#1DB954' }]}>Import from Spotify</Text>
+          <TouchableOpacity style={[styles.createButton, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => setShowImportModal(true)}>
+            <Ionicons name="cloud-download" size={24} color={theme.accent} style={{ marginRight: 8 }} />
+            <Text style={[styles.createButtonText, { color: theme.accent }]}>Import from Spotify</Text>
           </TouchableOpacity>
           <View style={{ height: 120 }} />
         </ScrollView>
@@ -347,42 +383,69 @@ export default function LibraryScreen() {
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('components.tracks')}</Text>
           <FlatList
             data={playlistTracks}
-            keyExtractor={item => item.id.toString()}
-            renderItem={({ item, index }) => (
-              <>
-                <View style={[styles.trackRowBox, { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }]}>
-                  <TouchableOpacity
-                    style={[styles.trackRow, { flex: 1, backgroundColor: 'transparent' }]}
-                    onPress={() => handleTrackSelect(item, playlistTracks, index)}
-                  >
-                    <Text style={[styles.trackRowTitle, { color: theme.textPrimary }]}>{item.title}</Text>
-                    <Text style={[styles.trackRowArtist, { color: theme.textSecondary }]}>{item.artist}</Text>
-                  </TouchableOpacity>
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() => toggleLike(item)}
+            keyExtractor={(item, index) => `${item.id}_${index}`}
+            renderItem={({ item, index }) => {
+              const isActiveTrack = currentTrack?.id?.toString() === item.id?.toString();
+              const isCurrentlyPlaying = isActiveTrack && isPlaying;
+              return (
+                <TouchableOpacity
+                  onPress={() => handleTrackSelect(item, playlistTracks, index)}
+                  activeOpacity={0.75}
+                  style={[
+                    styles.playlistTrackRow,
+                    { backgroundColor: theme.surface, borderColor: isActiveTrack ? theme.accent : theme.border },
+                    isActiveTrack && { borderWidth: 1.5 },
+                  ]}
+                >
+                  <View style={styles.playlistArtWrapper}>
+                    <Image
+                      source={{ uri: item.images?.large || item.albumCover }}
+                      style={styles.playlistAlbumArt}
+                      contentFit="cover"
+                    />
+                    {isActiveTrack && (
+                      <View style={[styles.playlistArtOverlay, { backgroundColor: '#000000aa' }]}>
+                        <Ionicons
+                          name={isCurrentlyPlaying ? 'musical-notes' : 'pause'}
+                          size={18}
+                          color={theme.accent}
+                        />
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.playlistTrackInfo}>
+                    <Text
+                      style={[styles.playlistTrackTitle, { color: isActiveTrack ? theme.accent : theme.textPrimary }]}
+                      numberOfLines={1}
                     >
+                      {item.title}
+                    </Text>
+                    <Text style={[styles.playlistTrackArtist, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {item.artist}
+                    </Text>
+                  </View>
+                  <View style={styles.playlistActionRow}>
+                    <TouchableOpacity style={styles.playlistIconButton} onPress={() => toggleLike(item)}>
                       <Ionicons
                         name={isLiked(item.id) ? 'heart' : 'heart-outline'}
                         size={20}
                         color={isLiked(item.id) ? theme.accent : theme.textPrimary}
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() => handleRemoveTrackFromPlaylist(item.id.toString(), selectedPlaylist.name)}
-                    >
+                    <TouchableOpacity style={styles.playlistIconButton} onPress={() => handleRemoveTrackFromPlaylist(item.id.toString(), selectedPlaylist.name)}>
                       <Ionicons name="trash" size={20} color="#ff4444" />
                     </TouchableOpacity>
                   </View>
-                </View>
-                {index < playlistTracks.length - 1 && <View style={[styles.trackDivider, { backgroundColor: theme.border }]} />}
-              </>
-            )}
+                </TouchableOpacity>
+              );
+            }}
             ListEmptyComponent={<Text style={{ color: theme.textSecondary, marginTop: 16 }}>{t('components.no_tracks_playlist')}</Text>}
             contentContainerStyle={{ paddingBottom: 120 }}
             extraData={playlistTracks}
+            removeClippedSubviews
+            maxToRenderPerBatch={10}
+            windowSize={8}
+            initialNumToRender={12}
           />
       </View>
       )}
@@ -409,7 +472,7 @@ export default function LibraryScreen() {
           </View>
         </View>
       </Modal>
-      <Modal visible={showSpotifyModal} transparent animationType="fade" onRequestClose={() => { if (!spotifyProgress) setShowSpotifyModal(false); }}>
+      <Modal visible={showImportModal} transparent animationType="fade" onRequestClose={() => setShowImportModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Import from Spotify</Text>
@@ -417,40 +480,60 @@ export default function LibraryScreen() {
               style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.textPrimary, borderColor: theme.border }]}
               placeholder="Spotify playlist URL"
               placeholderTextColor={theme.textSecondary}
-              value={spotifyUrl}
-              onChangeText={setSpotifyUrl}
-              editable={!spotifyProgress}
+              value={importUrl}
+              onChangeText={setImportUrl}
               autoCapitalize="none"
               autoCorrect={false}
             />
             <TextInput
               style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.textPrimary, borderColor: theme.border }]}
-              placeholder="Playlist name (optional)"
+              placeholder="New playlist name"
               placeholderTextColor={theme.textSecondary}
-              value={spotifyName}
-              onChangeText={setSpotifyName}
-              editable={!spotifyProgress}
+              value={importName}
+              onChangeText={setImportName}
             />
-            {spotifyProgress && (
-              <Text style={{ color: theme.textSecondary, marginVertical: 12, fontSize: 14 }}>
-                {spotifyProgress}{spotifyTotal > 0 ? ` (${spotifyCurrent}/${spotifyTotal})` : ''}
+            {importStatus !== 'idle' && (
+              <Text style={[styles.importStatusText, { color: theme.textSecondary }]}>
+                {importStatus === 'fetching' && 'Fetching playlist...'}
+                {importStatus === 'resolving' && `Importing track ${importProgress.current} of ${importProgress.total}...`}
+                {importStatus === 'done' && (
+                  <Text style={{ color: theme.accent }}>
+                    Done! {importProgress.current} track{importProgress.current !== 1 ? 's' : ''} matched
+                  </Text>
+                )}
+                {importStatus === 'error' && (
+                  <Text style={{ color: '#ff4444' }}>
+                    Could not import from that playlist. Try another URL.
+                  </Text>
+                )}
               </Text>
             )}
-            {!spotifyProgress ? (
-              <>
+            <View style={{ flexDirection: 'row', marginTop: 18, gap: 12 }}>
+              <TouchableOpacity
+                style={[styles.importModalButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                onPress={() => {
+                  setShowImportModal(false);
+                  if (importStatus !== 'fetching' && importStatus !== 'resolving') {
+                    setImportStatus('idle');
+                    setImportUrl('');
+                    setImportName('');
+                    fetchPlaylists();
+                  }
+                }}
+              >
+                <Text style={{ color: theme.textPrimary, fontSize: 15, fontWeight: '600' }}>
+                  {importStatus === 'done' || importStatus === 'error' ? 'Close' : 'Cancel'}
+                </Text>
+              </TouchableOpacity>
+              {importStatus === 'idle' && (
                 <TouchableOpacity
-                  style={[styles.createButtonIconOnly, { marginTop: 18, backgroundColor: theme.surface, borderColor: theme.border }]}
-                  onPress={handleSpotifyImport}
+                  style={[styles.importModalButton, { backgroundColor: theme.accent, borderColor: theme.accent }]}
+                  onPress={handleImportSpotify}
                 >
-                  <Ionicons name="logo-spotify" size={32} color="#1DB954" />
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>Import</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowSpotifyModal(false)}>
-                  <Text style={{ color: theme.textPrimary, fontSize: 15 }}>{t('components.cancel')}</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <Text style={{ color: theme.textSecondary, marginTop: 8, fontSize: 13 }}>Please wait...</Text>
-            )}
+              )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -549,47 +632,49 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     marginLeft: 2,
   },
-  trackRow: {
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 10,
-  },
-  trackRowTitle: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 1,
-  },
-  trackRowArtist: {
-    color: '#888',
-    fontSize: 12,
-  },
-  trackRowBox: {
+  playlistTrackRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
-    marginBottom: 4,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 10,
+    padding: 10,
   },
-  trackDivider: {
-    height: 1,
-    marginVertical: 2,
-    marginLeft: 8,
+  playlistArtWrapper: {
+    position: 'relative',
+    marginRight: 14,
+  },
+  playlistAlbumArt: {
+    width: 54,
+    height: 54,
+    borderRadius: 8,
+    backgroundColor: '#222',
+  },
+  playlistArtOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playlistTrackInfo: {
+    flex: 1,
     marginRight: 8,
   },
-  iconButton: {
-    marginHorizontal: 2,
-    padding: 8,
-    borderRadius: 16,
+  playlistTrackTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
   },
-  removeButton: {
-    marginLeft: 6,
+  playlistTrackArtist: {
+    fontSize: 13,
   },
-  actionRow: {
+  playlistActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+  },
+  playlistIconButton: {
+    padding: 6,
+    borderRadius: 16,
   },
   savedMediaGrid: {
     flexDirection: 'row',
@@ -625,5 +710,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 12,
     padding: 4,
+  },
+  importStatusText: {
+    fontSize: 14,
+    marginVertical: 12,
+    textAlign: 'center',
+  },
+  importModalButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 24,
+    borderWidth: 1,
   },
 });

@@ -92,7 +92,7 @@ export function HorizontalTrackList({ title, tracks, onTrackSelect, onAddToQueue
       <FlatList
         data={tracks}
         renderItem={renderTrackItem}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
+        keyExtractor={(item) => item.id.toString()}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.horizontalList}

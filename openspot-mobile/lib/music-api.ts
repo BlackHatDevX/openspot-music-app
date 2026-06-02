@@ -70,23 +70,14 @@ export class MusicAPI {
   }
 
   static async getAlbumSongs(albumId: string): Promise<Track[]> {
-    const provider = await this.getProvider();
-    
-    if (provider === 'ytmusic') return MusicApi.getAlbumSongs(albumId);
     return MusicApi.getAlbumSongs(albumId);
   }
 
   static async getArtistSongs(artistId: string, page: number = 0): Promise<{ tracks: Track[]; total: number }> {
-    const provider = await this.getProvider();
-    
-    if (provider === 'ytmusic') return MusicApi.getArtistSongs(artistId, page);
     return MusicApi.getArtistSongs(artistId, page);
   }
 
   static async getPlaylistSongs(playlistId: string): Promise<Track[]> {
-    const provider = await this.getProvider();
-    
-    if (provider === 'ytmusic') return MusicApi.getPlaylistSongs(playlistId);
     return MusicApi.getPlaylistSongs(playlistId);
   }
 

@@ -172,9 +172,7 @@ export default function TabLayout() {
     }
 
     void MusicAPI.addToRecentlyPlayed(track);
-    setTimeout(() => {
-      setIsPlaying(true);
-    }, 0);
+    setIsPlaying(true);
   };
 
   const handleQueueTrackSelect = (track: Track, index: number) => {
@@ -192,9 +190,7 @@ export default function TabLayout() {
     setIsPlaying(false);
     pendingAutoPlayRef.current = true;
     musicQueue.setCurrentIndex(index);
-    setTimeout(() => {
-      setIsPlaying(true);
-    }, 0);
+    setIsPlaying(true);
   };
 
   const handlePlayingStateChange = (playing: boolean) => {

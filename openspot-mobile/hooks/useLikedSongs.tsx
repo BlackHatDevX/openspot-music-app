@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, createContext, useContext, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Track } from '../types/music';
 
@@ -79,37 +79,35 @@ export function LikedSongsProvider({ children }: LikedSongsProviderProps) {
 
   
   const likeSong = useCallback((track: Track) => {
-    if (isLiked(track.id)) {
-      return;
-    }
+    setLikedSongs(prev => {
+      if (prev.some(song => song.id === track.id)) return prev;
 
-    const likedSong: LikedSong = {
-      id: track.id,
-      provider: track.provider,
-      title: track.title,
-      artist: track.artist,
-      albumTitle: track.albumTitle,
-      duration: track.duration,
-      images: track.images,
-      likedAt: new Date().toISOString()
-    };
+      const likedSong: LikedSong = {
+        id: track.id,
+        provider: track.provider,
+        title: track.title,
+        artist: track.artist,
+        albumTitle: track.albumTitle,
+        duration: track.duration,
+        images: track.images,
+        likedAt: new Date().toISOString()
+      };
 
-    const updatedLikedSongs = [likedSong, ...likedSongs]; 
-    setLikedSongs(updatedLikedSongs);
-    saveLikedSongs(updatedLikedSongs);
-  }, [likedSongs, isLiked, saveLikedSongs]);
+      const updated = [likedSong, ...prev];
+      saveLikedSongs(updated);
+      return updated;
+    });
+  }, [saveLikedSongs]);
 
-  
   const unlikeSong = useCallback((trackId: string | number) => {
-    const songToUnlike = likedSongs.find(song => song.id === trackId);
-    if (!songToUnlike) {
-      return;
-    }
+    setLikedSongs(prev => {
+      if (!prev.some(song => song.id === trackId)) return prev;
 
-    const updatedLikedSongs = likedSongs.filter(song => song.id !== trackId);
-    setLikedSongs(updatedLikedSongs);
-    saveLikedSongs(updatedLikedSongs);
-  }, [likedSongs, saveLikedSongs]);
+      const updated = prev.filter(song => song.id !== trackId);
+      saveLikedSongs(updated);
+      return updated;
+    });
+  }, [saveLikedSongs]);
 
   
   const toggleLike = useCallback((track: Track) => {
@@ -133,13 +131,13 @@ export function LikedSongsProvider({ children }: LikedSongsProviderProps) {
   }, [saveLikedSongs]);
 
   
-  const getLikedSongsAsTrack = useCallback((): Track[] => {
+  const likedSongsAsTrack = useMemo((): Track[] => {
     return likedSongs.map(song => ({
       id: song.id,
       provider: song.provider,
       title: song.title,
       artist: song.artist,
-      artistId: 0, 
+      artistId: 0,
       albumTitle: song.albumTitle || '',
       albumCover: song.images.large,
       albumId: '',
@@ -170,6 +168,10 @@ export function LikedSongsProvider({ children }: LikedSongsProviderProps) {
       isrc: ''
     }));
   }, [likedSongs]);
+
+  const getLikedSongsAsTrack = useCallback((): Track[] => {
+    return likedSongsAsTrack;
+  }, [likedSongsAsTrack]);
 
   const contextValue: LikedSongsContextType = {
     likedSongs,

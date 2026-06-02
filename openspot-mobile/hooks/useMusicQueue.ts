@@ -156,31 +156,35 @@ export function useMusicQueue() {
   }, []);
 
   const playNext = useCallback((): Track | null => {
-    const q = queueRef.current;
-    const nextIndex = q.currentIndex + 1;
-    if (nextIndex >= q.tracks.length) return null;
-
-    const nextTrack = q.tracks[nextIndex];
-    setQueue(prev => ({ ...prev, currentIndex: nextIndex }));
-    return nextTrack;
+    let result: Track | null = null;
+    setQueue(prev => {
+      const nextIndex = prev.currentIndex + 1;
+      if (nextIndex >= prev.tracks.length) return prev;
+      result = prev.tracks[nextIndex];
+      return { ...prev, currentIndex: nextIndex };
+    });
+    return result;
   }, []);
 
   const playPrevious = useCallback((): Track | null => {
-    const q = queueRef.current;
-    const prevIndex = q.currentIndex - 1;
-    if (prevIndex < 0) return null;
-
-    const prevTrack = q.tracks[prevIndex];
-    setQueue(prev => ({ ...prev, currentIndex: prevIndex }));
-    return prevTrack;
+    let result: Track | null = null;
+    setQueue(prev => {
+      const prevIndex = prev.currentIndex - 1;
+      if (prevIndex < 0) return prev;
+      result = prev.tracks[prevIndex];
+      return { ...prev, currentIndex: prevIndex };
+    });
+    return result;
   }, []);
 
   const setCurrentIndex = useCallback((index: number): Track | null => {
-    const q = queueRef.current;
-    if (index < 0 || index >= q.tracks.length) return null;
-    const track = q.tracks[index];
-    setQueue(prev => ({ ...prev, currentIndex: index }));
-    return track;
+    let result: Track | null = null;
+    setQueue(prev => {
+      if (index < 0 || index >= prev.tracks.length) return prev;
+      result = prev.tracks[index];
+      return { ...prev, currentIndex: index };
+    });
+    return result;
   }, []);
 
   const shuffleQueue = useCallback(() => {
@@ -218,9 +222,12 @@ export function useMusicQueue() {
   }, []);
 
   const toggleShuffle = useCallback(() => {
-    if (queueRef.current.isShuffled) unshuffleQueue();
-    else shuffleQueue();
-    return !queueRef.current.isShuffled;
+    if (queueRef.current.isShuffled) {
+      unshuffleQueue();
+      return false;
+    }
+    shuffleQueue();
+    return true;
   }, [shuffleQueue, unshuffleQueue]);
 
   const clearQueue = useCallback(() => {
@@ -232,10 +239,13 @@ export function useMusicQueue() {
     });
   }, []);
 
-  const hasNext = useCallback(() => queueRef.current.currentIndex < queueRef.current.tracks.length - 1, []);
-  const hasPrevious = useCallback(() => queueRef.current.currentIndex > 0, []);
+  const hasNext = useMemo(() => queue.currentIndex < queue.tracks.length - 1, [queue.currentIndex, queue.tracks.length]);
+  const hasPrevious = useMemo(() => queue.currentIndex > 0, [queue.currentIndex]);
 
-  const currentTrack = useMemo(() => getCurrentTrack(), [getCurrentTrack]);
+  const currentTrack = useMemo((): Track | null => {
+    const q = queue;
+    return q.currentIndex >= 0 && q.currentIndex < q.tracks.length ? q.tracks[q.currentIndex] : null;
+  }, [queue]);
 
   return {
     queue,

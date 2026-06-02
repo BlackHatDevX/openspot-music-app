@@ -69,6 +69,7 @@ export default function HomeScreen() {
   const [setupTheme, setSetupTheme] = useState<ThemeMode>(mode);
   const [isSavingSetup, setIsSavingSetup] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
   const { isOffline } = useConnectivity();
   const wasOfflineRef = React.useRef(false);
   const [trendingEnabled, setTrendingEnabled] = useState<boolean>(true);
@@ -477,31 +478,15 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>Region</Text>
-            <View style={styles.setupWrap}>
-              {['auto', ...Object.keys(trendingData || {})].slice(0, 12).map((option) => {
-                const active = setupRegion === option;
-                const label =
-                  option === 'auto'
-                    ? 'Auto'
-                    : option
-                        .split(' ')
-                        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-                        .join(' ');
-                return (
-                  <TouchableOpacity
-                    key={`setup-region-${option}`}
-                    style={[
-                      styles.setupChip,
-                      { borderColor: theme.border, backgroundColor: theme.surfaceElevated },
-                      active && { backgroundColor: theme.accent, borderColor: theme.accent },
-                    ]}
-                    onPress={() => setSetupRegion(option)}
-                  >
-                    <Text style={[styles.setupChipText, { color: active ? '#fff' : theme.textSecondary }]}>{label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TouchableOpacity
+              style={[styles.setupDropdownButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              onPress={() => setIsRegionModalOpen(true)}
+            >
+              <Text style={[styles.setupDropdownButtonText, { color: theme.textPrimary }]}>
+                {setupRegion === 'auto' ? 'Auto' : setupRegion}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
+            </TouchableOpacity>
 
             <Text style={[styles.setupSectionTitle, { color: theme.textPrimary }]}>Language</Text>
             <TouchableOpacity
@@ -586,6 +571,47 @@ export default function HomeScreen() {
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             />
             <TouchableOpacity style={styles.setupCancelButtonRow} onPress={() => setIsLanguageModalOpen(false)}>
+              <Text style={{ color: theme.textPrimary, fontSize: 15 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isRegionModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsRegionModalOpen(false)}
+      >
+        <View style={styles.setupModalOverlay}>
+          <View style={[styles.setupLanguageModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.setupSectionTitle, { color: theme.textPrimary, marginBottom: 12 }]}>Region</Text>
+            <FlatList
+              data={['auto', ...Object.keys(trendingData || {})]}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => {
+                const active = setupRegion === item;
+                const label = item === 'auto' ? 'Auto' : item;
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.setupLanguageOptionRow,
+                      { borderColor: theme.border, backgroundColor: theme.surfaceElevated },
+                      active && { borderColor: theme.accent },
+                    ]}
+                    onPress={() => {
+                      setSetupRegion(item);
+                      setIsRegionModalOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.setupLanguageOptionTitle, { color: theme.textPrimary }]}>{label}</Text>
+                    {active && <Ionicons name="checkmark-circle" size={18} color={theme.accent} />}
+                  </TouchableOpacity>
+                );
+              }}
+              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            />
+            <TouchableOpacity style={styles.setupCancelButtonRow} onPress={() => setIsRegionModalOpen(false)}>
               <Text style={{ color: theme.textPrimary, fontSize: 15 }}>Close</Text>
             </TouchableOpacity>
           </View>

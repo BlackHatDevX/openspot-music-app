@@ -21,22 +21,25 @@ export const PlaylistStorage = {
   },
   async addPlaylist(playlist: Playlist) {
     const playlists = await this.getPlaylists();
+    if (playlists.some(p => p.name === playlist.name)) return;
     playlists.push(playlist);
     await this.savePlaylists(playlists);
   },
   async addTrackToPlaylists(track: Track, playlistNames: string[]) {
     const playlists = await this.getPlaylists();
+    let changed = false;
     for (const pl of playlists) {
       if (playlistNames.includes(pl.name)) {
         const trackId = track.id.toString();
         if (!pl.trackIds.includes(trackId)) {
           pl.trackIds.push(trackId);
+          changed = true;
         }
       }
     }
-    await this.savePlaylists(playlists);
-    
-    
+    if (changed) {
+      await this.savePlaylists(playlists);
+    }
     await this.saveTrackData(track);
   },
   async removeTrackFromPlaylist(trackId: string, playlistName: string) {
@@ -44,6 +47,7 @@ export const PlaylistStorage = {
     for (const pl of playlists) {
       if (pl.name === playlistName) {
         pl.trackIds = pl.trackIds.filter(id => id !== trackId);
+        break;
       }
     }
     await this.savePlaylists(playlists);
@@ -69,22 +73,27 @@ export const PlaylistStorage = {
   },
   async getPlaylistTracks(playlist: Playlist) {
     const tracks: Track[] = [];
+    const failedIds: string[] = [];
     for (const id of playlist.trackIds) {
-      
       const storedTrack = await this.getTrackData(id);
       if (storedTrack) {
         tracks.push(storedTrack);
         continue;
       }
-      
-      
       try {
         const track = await MusicAPI.resolveTrackById(id);
         if (track) {
           tracks.push(track);
           await this.saveTrackData(track);
+        } else {
+          failedIds.push(id);
         }
-      } catch {}
+      } catch {
+        failedIds.push(id);
+      }
+    }
+    if (failedIds.length > 0) {
+      console.warn(`[PlaylistStorage] Failed to resolve ${failedIds.length} track(s) in "${playlist.name}":`, failedIds);
     }
     return tracks;
   },

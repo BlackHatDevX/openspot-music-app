@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { View, StyleSheet, StatusBar, ScrollView, TouchableOpacity, Text, Modal, TextInput, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlaylistList } from '@/components/PlaylistList';
@@ -48,12 +48,7 @@ export default function LibraryScreen() {
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [playlistCovers, setPlaylistCovers] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    fetchPlaylists();
-    fetchSavedMedia();
-  }, []);
-
-  const fetchSavedMedia = async () => {
+  const fetchSavedMedia = useCallback(async () => {
     const allKeys = await AsyncStorage.getAllKeys();
     const savedKeys = allKeys.filter(key => key.startsWith('saved_'));
     const savedItems = await Promise.all(
@@ -63,7 +58,7 @@ export default function LibraryScreen() {
       })
     );
     setSavedMedia(savedItems.filter(Boolean));
-  };
+  }, []);
 
   const handleRemoveSavedMedia = async (key: string) => {
     await AsyncStorage.removeItem(key);
@@ -86,14 +81,7 @@ export default function LibraryScreen() {
     setPlaylistTracks(tracks);
   };
 
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchPlaylists();
-      fetchSavedMedia();
-    }, [])
-  );
-
-  const fetchPlaylists = async () => {
+  const fetchPlaylists = useCallback(async () => {
     const pls = await PlaylistStorage.getPlaylists();
     
     const filteredPlaylists = pls.filter(pl => pl.name !== 'offline');
@@ -109,7 +97,14 @@ export default function LibraryScreen() {
       }
     }
     setPlaylistCovers(covers);
-  };
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchPlaylists();
+      fetchSavedMedia();
+    }, [fetchPlaylists, fetchSavedMedia])
+  );
 
   const handlePlaylistPress = async (playlist: Playlist) => {
     await refreshSelectedPlaylistTracks(playlist.name);
@@ -231,7 +226,7 @@ export default function LibraryScreen() {
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('components.tracks')}</Text>
           <FlatList
             data={likedTracks}
-            keyExtractor={(item, index) => `${item.id}_${index}`}
+            keyExtractor={(item) => item.id.toString()}
             renderItem={({ item, index }) => {
               const isActiveTrack = currentTrack?.id?.toString() === item.id?.toString();
               const isCurrentlyPlaying = isActiveTrack && isPlaying;
@@ -383,7 +378,7 @@ export default function LibraryScreen() {
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{t('components.tracks')}</Text>
           <FlatList
             data={playlistTracks}
-            keyExtractor={(item, index) => `${item.id}_${index}`}
+            keyExtractor={(item) => item.id.toString()}
             renderItem={({ item, index }) => {
               const isActiveTrack = currentTrack?.id?.toString() === item.id?.toString();
               const isCurrentlyPlaying = isActiveTrack && isPlaying;

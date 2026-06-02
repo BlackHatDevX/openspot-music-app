@@ -185,80 +185,51 @@ export default function SettingsScreen() {
   }, [currentVersion]);
 
   useEffect(() => {
-    const loadRegion = async () => {
-      try {
-        const storedRegion = await AsyncStorage.getItem(REGION_OVERRIDE_KEY);
-        if (storedRegion && storedRegion.trim()) {
-          setRegion(storedRegion);
-        }
-      } catch (error) {
-        console.error('Failed to load region setting:', error);
-      }
-    };
+    let isMounted = true;
 
-    const loadLanguage = async () => {
+    const loadAllSettings = async () => {
       try {
-        const storedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
+        const [storedRegion, storedLanguage, storedProvider, storedTrending, storedRotating, cachedMap] = await Promise.all([
+          AsyncStorage.getItem(REGION_OVERRIDE_KEY),
+          AsyncStorage.getItem(LANGUAGE_KEY),
+          AsyncStorage.getItem(PROVIDER_KEY),
+          AsyncStorage.getItem(TRENDING_ENABLED_KEY),
+          AsyncStorage.getItem(ROTATING_COVER_KEY),
+          AsyncStorage.getItem(REGION_URL_MAP_KEY),
+        ]);
+
+        if (!isMounted) return;
+
+        if (storedRegion && storedRegion.trim()) setRegion(storedRegion);
         if (storedLanguage && storedLanguage.trim()) {
           setLanguage(storedLanguage);
           await i18n.changeLanguage(storedLanguage);
         }
-      } catch (error) {
-        console.error('Failed to load language setting:', error);
-      }
-    };
+        if (storedProvider && storedProvider.trim()) setProvider(storedProvider);
+        if (storedTrending !== null) setTrendingEnabled(storedTrending === 'true');
+        if (storedRotating !== null) setRotatingCover(storedRotating === 'true');
 
-    const loadProvider = async () => {
-      try {
-        const storedProvider = await AsyncStorage.getItem(PROVIDER_KEY);
-        if (storedProvider && storedProvider.trim()) {
-          setProvider(storedProvider);
-        }
-      } catch (error) {
-        console.error('Failed to load provider setting:', error);
-      }
-    };
-
-    const loadTrendingEnabled = async () => {
-      try {
-        const stored = await AsyncStorage.getItem(TRENDING_ENABLED_KEY);
-        if (stored !== null) {
-          setTrendingEnabled(stored === 'true');
-        }
-      } catch (error) {
-        console.error('Failed to load trending setting:', error);
-      }
-    };
-
-    const loadRotatingCover = async () => {
-      try {
-        const stored = await AsyncStorage.getItem(ROTATING_COVER_KEY);
-        if (stored !== null) {
-          setRotatingCover(stored === 'true');
-        }
-      } catch (error) {
-        console.error('Failed to load rotating cover setting:', error);
-      }
-    };
-
-    void loadRegion();
-    void loadLanguage();
-    void loadProvider();
-    void loadTrendingEnabled();
-    void loadRotatingCover();
-    void (async () => {
-      try {
-        const cached = await AsyncStorage.getItem(REGION_URL_MAP_KEY);
-        if (cached) {
-          const parsed = JSON.parse(cached);
+        if (cachedMap) {
+          const parsed = JSON.parse(cachedMap);
           const merged = ['auto', ...Object.keys(parsed)];
           setRegionOptions(merged);
           setRegion((current) => (merged.includes(current) ? current : 'auto'));
         }
-      } catch {}
-      await refreshRegionOptionsIfStale();
-    })();
-    void checkForUpdates();
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+
+      if (isMounted) {
+        await refreshRegionOptionsIfStale();
+        void checkForUpdates();
+      }
+    };
+
+    void loadAllSettings();
+
+    return () => {
+      isMounted = false;
+    };
   }, [i18n, checkForUpdates]);
 
   const handleRegionChange = async (nextRegion: string) => {

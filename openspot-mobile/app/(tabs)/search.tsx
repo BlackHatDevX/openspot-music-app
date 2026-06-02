@@ -12,6 +12,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function SearchScreen() {
   const searchState = useSearch();
+  const { setQuery, setSearchType, searchTracks } = searchState;
   const { handleTrackSelect, musicQueue, isPlaying, currentTrack } = useContext(MusicPlayerContext);
   const colorScheme = useColorScheme();
   const isDark = colorScheme !== 'light';
@@ -28,13 +29,13 @@ export default function SearchScreen() {
     if (q === lastQRef.current) return;
 
     lastQRef.current = q;
-    searchState.setQuery(q);
+    setQuery(q);
     const type = params.type;
     if (type && typeof type === 'string') {
-      searchState.setSearchType(type as 'track' | 'album' | 'artist' | 'playlist');
+      setSearchType(type as 'track' | 'album' | 'artist' | 'playlist');
     }
-    searchState.searchTracks(q, type as 'track' | 'album' | 'artist' | 'playlist');
-  }, [params.q, params.type, searchState]);
+    searchTracks(q, type as 'track' | 'album' | 'artist' | 'playlist');
+  }, [params.q, params.type, setQuery, setSearchType, searchTracks]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: background }]}>
