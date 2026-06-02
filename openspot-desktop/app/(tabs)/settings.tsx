@@ -31,7 +31,7 @@ const YOUTUBE_URL = 'https://www.youtube.com/@nerdsClub';
 const TWITTER_URL = 'https://twitter.com/jash_gro';
 const GITHUB_URL = 'https://github.com/BlackHatDevX';
 const UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/update-desktop.json';
-const TRENDING_URL = 'https://raw.githubusercontent.com/BlackHatDevX/openspot-config/refs/heads/main/trending.json';
+const KWORD_URL = 'https://kworb.net/spotify/';
 const REGION_OVERRIDE_KEY = 'openspot_region_override_v1';
 const REGION_URL_MAP_KEY = 'openspot_region_url_map_v1';
 const REGION_URL_MAP_TIMESTAMP_KEY = 'openspot_region_url_map_ts_v1';
@@ -133,10 +133,15 @@ export default function SettingsScreen() {
 
   const loadRegionOptions = async () => {
     try {
-      const response = await fetch(TRENDING_URL);
-      const data = await response.json();
-      const supportedRegions = Object.keys(data || {}).filter((key) => Array.isArray(data[key]));
-      const mergedOptions = ['auto', ...supportedRegions];
+      const res = await fetch(KWORD_URL);
+      const html = await res.text();
+      const regions: string[] = [];
+      const regex = /<tr><td class="mp text">([^<]+)<\/td>\s*<td class="mp text">[\s\S]*?<a href="([^"]+)">Weekly<\/a>/g;
+      let match;
+      while ((match = regex.exec(html)) !== null) {
+        regions.push(match[1].trim());
+      }
+      const mergedOptions = ['auto', ...regions];
       setRegionOptions(mergedOptions);
       setRegion((current) => (mergedOptions.includes(current) ? current : 'auto'));
       await AsyncStorage.setItem(REGION_URL_MAP_KEY, JSON.stringify(mergedOptions));
