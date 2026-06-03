@@ -80,7 +80,7 @@
 
 <!-- Text CTA -->
 <h3>
- Download(v2.1.5) 👉 <a href="https://blackhatdevx.github.io/openspot-music-app/">HERE</a>
+ Download(v3.1.5) 👉 <a href="https://blackhatdevx.github.io/openspot-music-app/">HERE</a>
 </h3>
 <i>release date: 03/06/2026</i>
 
