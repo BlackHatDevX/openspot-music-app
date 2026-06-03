@@ -80,8 +80,9 @@
 
 <!-- Text CTA -->
 <h3>
- Download 👉 <a href="https://blackhatdevx.github.io/openspot-music-app/">HERE</a>
+ Download(v2.1.5) 👉 <a href="https://blackhatdevx.github.io/openspot-music-app/">HERE</a>
 </h3>
+<i>release date: 03/06/2026</i>
 
 <br>
 
@@ -89,19 +90,19 @@
 
 </div>
 
+### What's New in v3.1.5
 
-## ✨ Upcoming in (v3.1.5)
-- Import Music directly from spotify playlist url
-- Fixed: Empty playlists/album/missing songs in some countries issue  
-- Fixed: Download gets killed in background issue
-- Fixed: Offline mode issues
+- Import music directly from any public Spotify playlist URL.
+- Added support for Trending (from Spotify) in 75+ countries.
+- Fixed an issue where some playlists, albums, or songs appeared empty or incomplete in certain countries.
+- Fixed downloads being interrupted or killed while running in the background.
+- Fixed various offline mode issues for a more reliable listening experience.
+- Minor bug fixes and performance improvements.
 
-### If you have any suggestion (new add-on or fix) or wanna test the preview(v3.1.5) build, msg me on telegram
+### If you have any suggestion (new add-on or fix), message me on telegram
 > https://t.me/deveIoper_X
 
-
-
-
+---
 
 ## ✨ Features
 
@@ -130,6 +131,7 @@
 - **Search** – find songs, public playlists, albums, and artists
 - **Offline Listening** – download tracks and play them without internet
 - **Custom Playlists** – create, manage, and organize your own collections
+- **Import Music** directly from spotify playlist url
 - **Trending Songs** – region‑based trending tracks powered by IPinfo
 - **Artist Albums & Playlists** – full discography browsing now supported
 
