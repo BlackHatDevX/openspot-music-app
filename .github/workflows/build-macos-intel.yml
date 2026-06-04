@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: macos-26-intel
     defaults:
       run:
         working-directory: openspot-desktop
