@@ -1,24 +1,45 @@
 {
-  "name": "OpenSpot Music",
-  "identifier": "com.devx.openspot",
+  "name": "Openspot",
+  "subtitle": "A source for all of my apps",
+  "description": "Welcome to my source! Here you'll find all of my apps.",
+  "iconURL": "https://raw.githubusercontent.com/BlackHatDevX/openspot-music-app/refs/heads/main/openspot-desktop/src-tauri/icons/Square150x150Logo.png",
+  "website": "https://blackhatdevx.github.io/openspot-music-app/",
+  "patreonURL": "",
+  "tintColor": "#6156e2",
+  "featuredApps": [
+    "com.devx.openspot"
+  ],
   "apps": [
     {
-      "name": "OpenSpot Music",
+      "name": "OpenSpot",
       "bundleIdentifier": "com.devx.openspot",
+      "marketplaceID": "",
       "developerName": "BlackHatDevX",
-      "subtitle": "Stream & download high-quality music",
-      "localizedDescription": "Stream & download high-quality music, free, no ads, no login.",
-      "iconURL": "https://github.com/user-attachments/assets/9f56500d-d950-48c6-a362-bcbc74be88cb",
-      "tintColor": "1db954",
+      "subtitle": "Stream & download high-quality music, free, no ads, no login.",
+      "localizedDescription": "OpenSpot is a free, open-source music app that lets you stream and download high-quality tracks across all your devices. ",
+      "iconURL": "https://raw.githubusercontent.com/BlackHatDevX/openspot-music-app/refs/heads/main/openspot-desktop/src-tauri/icons/Square150x150Logo.png",
+      "tintColor": "#3fc464",
+      "category": "entertainment",
+      "screenshots": [],
       "versions": [
         {
-          "version": "3.1.5",
-          "buildVersion": "37",
-          "date": "2026-05-05T13:00:00Z",
           "downloadURL": "https://github.com/BlackHatDevX/openspot-music-app/releases/download/v3.1.5/OpenSpot-3.1.5-release.ipa",
-          "size": 10881816
+          "size": 10900000,
+          "version": "3.1.5",
+          "buildVersion": null,
+          "date": "2026-06-12T11:59:00+05:30",
+          "localizedDescription": "- Import music directly from any public Spotify playlist URL.\n- Added support for Trending (from Spotify) in 75+ countries.\n- Fixed an issue where some playlists, albums, or songs appeared empty or incomplete in certain countries.\n- Fixed downloads being interrupted or killed while running in the background.\n- Fixed various offline mode issues for a more reliable listening experience.\n- Minor bug fixes and performance improvements.",
+          "minOSVersion": null
         }
-      ]
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSMicrophoneUsageDescription": "This app uses the microphone to record audio for voice features."
+        }
+      },
+      "patreon": {}
     }
-  ]
+  ],
+  "news": []
 }
