@@ -1,5 +1,10 @@
 import { Track, SearchResponse } from '@/types/music';
-
+const sanitizeQuery = (query: string): string => {
+  return query
+    .replace(/\bvideo\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 type YtApiSearchItem = {
   type?: string;
   videoId?: string;
@@ -253,19 +258,36 @@ export class YTMusicAPI {
     throw new Error('No usable audio URL');
   }
 
-
-  static async search(params: { q: string; type?: 'track' }): Promise<SearchResponse> {
+static async search(params: { q: string; type?: 'track' }): Promise<SearchResponse> {
     try {
-      const results = await this.fetchFromAnyInstance<YtApiSearchItem[]>(
-        `/api/v1/search?q=${encodeURIComponent(params.q)}&type=video&fields=videoId,title,author,lengthSeconds,videoThumbnails`
-      );
+      const cleanedQuery = sanitizeQuery(params.q);
+      let results: YtApiSearchItem[] = [];
+      
+      try {
+        results = await this.fetchFromAnyInstance<YtApiSearchItem[]>(
+          `/api/v1/search?q=${encodeURIComponent(cleanedQuery)}&type=all`
+        );
+      } catch (err) {
+        results = await this.fetchFromAnyInstance<YtApiSearchItem[]>(
+          `/api/v1/search?q=${encodeURIComponent(cleanedQuery)}`
+        );
+      }
+
+      if (!Array.isArray(results)) {
+        console.warn('[YTMusicAPI] Search results is not an array:', results);
+        return { tracks: [], albums: [], artists: [], playlists: [], pagination: { offset: 0, total: 0, hasMore: false } };
+      }
 
       const seen = new Set<string>();
       const tracks: Track[] = [];
+      
       for (const item of results) {
-        if (!item.videoId || seen.has(item.videoId)) continue;
-        seen.add(item.videoId);
-        tracks.push(this.normalizeTrack(item));
+        const id = item.videoId || (item as any).id;
+        if (!id || seen.has(id)) continue;
+        if (item.type && item.type !== 'video' && item.type !== 'stream') continue;
+
+        seen.add(id);
+        tracks.push(this.normalizeTrack({ ...item, videoId: id }));
       }
 
       return {
@@ -280,7 +302,7 @@ export class YTMusicAPI {
       return { tracks: [], albums: [], artists: [], playlists: [], pagination: { offset: 0, total: 0, hasMore: false } };
     }
   }
-
+  
   static async getStreamUrl(trackId: string): Promise<string> {
     console.log('[YTMusicAPI] getStreamUrl:', { trackId });
     try {
